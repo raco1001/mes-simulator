@@ -1,0 +1,103 @@
+# ============================================
+# Backend (.NET / ASP.NET Core)
+# ============================================
+servers/backend/bin/
+servers/backend/obj/
+servers/backend/**/bin/
+servers/backend/**/obj/
+servers/backend/.vs/
+servers/backend/.vscode/
+servers/backend/*.user
+servers/backend/*.suo
+servers/backend/*.userosscache
+servers/backend/*.sln.docstates
+
+# ============================================
+# Pipeline (Python)
+# ============================================
+servers/pipeline/.venv/
+servers/pipeline/venv/
+servers/pipeline/env/
+servers/pipeline/.pytest_cache/
+servers/pipeline/**/__pycache__/
+servers/pipeline/**/*.pyc
+servers/pipeline/**/*.pyo
+servers/pipeline/**/*.pyd
+servers/pipeline/.Python
+servers/pipeline/pip-log.txt
+servers/pipeline/pip-delete-this-directory.txt
+servers/pipeline/.mypy_cache/
+servers/pipeline/.ruff_cache/
+servers/pipeline/*.egg-info/
+servers/pipeline/dist/
+servers/pipeline/build/
+servers/pipeline/.coverage
+servers/pipeline/htmlcov/
+
+# ============================================
+# Unity Client
+# ============================================
+client/unity/Library/
+client/unity/Temp/
+client/unity/Logs/
+client/unity/obj/
+client/unity/*.csproj
+client/unity/*.sln
+client/unity/*.suo
+client/unity/*.user
+client/unity/*.userprefs
+client/unity/.vs/
+client/unity/.vscode/
+client/unity/.idea/
+client/unity/[Ll]ocal/
+client/unity/[Aa]ssets/AssetStoreTools*
+client/unity/[Pp]ackages/packages-lock.json
+client/unity/[Uu]sually[Ll]arge[Ff]iles/
+
+# ============================================
+# Infrastructure (Docker, Kafka, DB configs)
+# ============================================
+infrastructure/**/.env
+infrastructure/**/.env.local
+infrastructure/**/data/
+infrastructure/**/logs/
+infrastructure/**/volumes/
+
+# ============================================
+# Shared (Schemas, Constants)
+# ============================================
+shared/**/node_modules/
+shared/**/dist/
+shared/**/build/
+shared/**/__pycache__/
+shared/**/*.pyc
+shared/**/.venv/
+
+# ============================================
+# Docker
+# ============================================
+docker/.env
+docker/.env.local
+docker-compose.override.yml
+
+# ============================================
+# IDE / Editor
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# OS
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
