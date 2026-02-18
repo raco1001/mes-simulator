@@ -1,0 +1,62 @@
+# Application 서비스만 기동 (Backend + Frontend + Pipeline)
+# 전제: docker-compose.infra.yml 로 인프라가 이미 기동 중 (factory-network 사용)
+# 사용: cd docker && docker compose -f docker-compose.infra.yml -f docker-compose.app.yml up -d
+#  또는 인프라가 이미 떠 있으면: docker compose -f docker-compose.app.yml up -d
+
+services:
+  mes-backend:
+    build:
+      context: ../servers/backend
+      dockerfile: DotnetEngine/Dockerfile
+    image: mes-backend:latest
+    container_name: mes-backend
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__MongoDB: "mongodb://admin:admin123@mongodb:27017/factory_mes?authSource=admin"
+    networks:
+      - factory-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mes-frontend:
+    build:
+      context: ../servers/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:5000"
+    image: mes-frontend:latest
+    container_name: mes-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      mes-backend:
+        condition: service_healthy
+    networks:
+      - factory-network
+
+  mes-pipeline:
+    build:
+      context: ../servers/pipeline
+      dockerfile: Dockerfile
+    image: mes-pipeline:latest
+    container_name: mes-pipeline
+    environment:
+      PIPELINE_KAFKA_BOOTSTRAP_SERVERS: "kafka:9093"
+      PIPELINE_MONGODB_URL: "mongodb://admin:admin123@mongodb:27017/factory_mes?authSource=admin"
+      PIPELINE_MONGODB_DATABASE: "factory_mes"
+      PIPELINE_KAFKA_TOPIC_ASSET_EVENTS: "factory.asset.events"
+      PIPELINE_KAFKA_CONSUMER_GROUP_ID: "pipeline-asset-consumer"
+    networks:
+      - factory-network
+    restart: unless-stopped
+
+networks:
+  factory-network:
+    external: true

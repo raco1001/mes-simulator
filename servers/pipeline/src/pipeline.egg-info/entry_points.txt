@@ -1,2 +1,3 @@
 [console_scripts]
+pipeline-asset-worker = workers.asset_worker:main
 pipeline-health = workers.health_worker:main

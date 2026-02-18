@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset Created Event",
+  "description": "새로운 asset이 생성되었을 때 발생하는 이벤트",
+  "type": "object",
+  "required": ["eventType", "assetId", "timestamp", "payload"],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "const": "asset.created",
+      "description": "이벤트 타입 식별자"
+    },
+    "assetId": {
+      "type": "string",
+      "description": "Asset의 고유 식별자 (예: freezer-1, conveyor-1)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "이벤트 발생 시각 (ISO 8601 형식)"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Asset 타입 (예: freezer, conveyor, sensor)",
+          "examples": ["freezer", "conveyor", "sensor"]
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "연결된 다른 asset들의 ID 목록",
+          "default": []
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 메타데이터 (자유 형식)",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "eventType": "asset.created",
+      "assetId": "freezer-1",
+      "timestamp": "2026-02-18T10:00:00Z",
+      "payload": {
+        "type": "freezer",
+        "connections": ["conveyor-1"],
+        "metadata": {
+          "location": "factory-floor-a",
+          "capacity": "1000L"
+        }
+      }
+    }
+  ]
+}

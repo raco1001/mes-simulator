@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset API Schema",
+  "description": "Asset 관련 API 스키마 정의",
+  "type": "object",
+  "definitions": {
+    "AssetDto": {
+      "type": "object",
+      "required": ["id", "type", "createdAt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Asset ID"
+        },
+        "type": {
+          "type": "string",
+          "description": "Asset 타입 (예: freezer, conveyor, sensor)"
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "연결된 다른 asset들의 ID 목록"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 메타데이터",
+          "additionalProperties": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "생성 시각"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "마지막 업데이트 시각"
+        }
+      }
+    },
+    "StateDto": {
+      "type": "object",
+      "required": ["assetId", "status", "updatedAt"],
+      "properties": {
+        "assetId": {
+          "type": "string",
+          "description": "Asset ID"
+        },
+        "currentTemp": {
+          "type": "number",
+          "nullable": true,
+          "description": "현재 온도 (섭씨)"
+        },
+        "currentPower": {
+          "type": "number",
+          "nullable": true,
+          "description": "현재 전력 소비량 (와트)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["normal", "warning", "error"],
+          "description": "현재 상태"
+        },
+        "lastEventType": {
+          "type": "string",
+          "nullable": true,
+          "description": "마지막으로 이 상태를 업데이트한 이벤트 타입"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "마지막 업데이트 시각"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 상태 메타데이터",
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/assets": {
+      "get": {
+        "summary": "모든 asset 목록 조회",
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/AssetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}": {
+      "get": {
+        "summary": "특정 asset 정보 조회",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/AssetDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset을 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/api/states": {
+      "get": {
+        "summary": "모든 asset의 현재 상태 조회",
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/StateDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/states/{assetId}": {
+      "get": {
+        "summary": "특정 asset의 현재 상태 조회",
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/StateDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "State를 찾을 수 없음"
+          }
+        }
+      }
+    }
+  }
+}

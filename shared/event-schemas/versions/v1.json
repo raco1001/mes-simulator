@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Event Schema Version 1",
+  "description": "이벤트 스키마 버전 1 정의",
+  "type": "object",
+  "required": ["version", "releasedAt", "schemas"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1",
+      "description": "스키마 버전"
+    },
+    "releasedAt": {
+      "type": "string",
+      "format": "date",
+      "description": "버전 출시일"
+    },
+    "schemas": {
+      "type": "object",
+      "description": "이 버전에 포함된 스키마 목록",
+      "properties": {
+        "asset.created": {
+          "type": "string",
+          "description": "asset.created 스키마 파일 경로"
+        },
+        "asset.health.updated": {
+          "type": "string",
+          "description": "asset.health.updated 스키마 파일 경로"
+        },
+        "alert.generated": {
+          "type": "string",
+          "description": "alert.generated 스키마 파일 경로"
+        }
+      }
+    },
+    "topics": {
+      "type": "string",
+      "description": "토픽 정의 파일 경로"
+    },
+    "notes": {
+      "type": "string",
+      "description": "버전별 변경 사항 및 노트"
+    }
+  },
+  "version": "v1",
+  "releasedAt": "2026-02-19",
+  "schemas": {
+    "asset.created": "schemas/asset.created.json",
+    "asset.health.updated": "schemas/asset.health.updated.json",
+    "alert.generated": "schemas/alert.generated.json"
+  },
+  "topics": "topics/topics.json",
+  "notes": "MVP 초기 버전. 3개 핵심 이벤트 스키마 정의 완료."
+}

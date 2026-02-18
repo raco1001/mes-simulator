@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Kafka Topics Definition",
+  "description": "Factory MES 시스템의 Kafka 토픽 정의",
+  "type": "object",
+  "required": ["topics"],
+  "properties": {
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "events"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Kafka 토픽 이름 (규칙: {domain}.{entity}.{event})"
+          },
+          "description": {
+            "type": "string",
+            "description": "토픽 설명"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "이 토픽에서 처리할 이벤트 타입 목록"
+          },
+          "partitions": {
+            "type": "integer",
+            "description": "토픽 파티션 수 (기본값: 3)",
+            "default": 3,
+            "minimum": 1
+          },
+          "replicationFactor": {
+            "type": "integer",
+            "description": "복제 팩터 (기본값: 1)",
+            "default": 1,
+            "minimum": 1
+          }
+        }
+      }
+    }
+  },
+  "topics": [
+    {
+      "name": "factory.asset.events",
+      "description": "모든 asset 관련 이벤트를 수집하는 통합 토픽",
+      "events": [
+        "asset.created",
+        "asset.health.updated",
+        "alert.generated"
+      ],
+      "partitions": 3,
+      "replicationFactor": 1
+    },
+    {
+      "name": "factory.asset.health",
+      "description": "Asset health 상태 업데이트 전용 토픽",
+      "events": [
+        "asset.health.updated"
+      ],
+      "partitions": 3,
+      "replicationFactor": 1
+    },
+    {
+      "name": "factory.asset.alert",
+      "description": "Asset 알림 전용 토픽",
+      "events": [
+        "alert.generated"
+      ],
+      "partitions": 3,
+      "replicationFactor": 1
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset Health Updated Event",
+  "description": "Asset의 health 상태가 업데이트되었을 때 발생하는 이벤트",
+  "type": "object",
+  "required": ["eventType", "assetId", "timestamp", "payload"],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "const": "asset.health.updated",
+      "description": "이벤트 타입 식별자"
+    },
+    "assetId": {
+      "type": "string",
+      "description": "Asset의 고유 식별자"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "이벤트 발생 시각 (ISO 8601 형식)"
+    },
+    "payload": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "description": "온도 값 (섭씨)",
+          "examples": [-5, 20, 25]
+        },
+        "power": {
+          "type": "number",
+          "description": "전력 소비량 (와트)",
+          "minimum": 0,
+          "examples": [120, 150, 200]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["normal", "warning", "error"],
+          "description": "현재 상태",
+          "default": "normal"
+        },
+        "humidity": {
+          "type": "number",
+          "description": "습도 (%)",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "vibration": {
+          "type": "number",
+          "description": "진동 수준",
+          "minimum": 0
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 health 메트릭 (자유 형식)",
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "eventType": "asset.health.updated",
+      "assetId": "freezer-1",
+      "timestamp": "2026-02-18T10:00:00Z",
+      "payload": {
+        "temperature": -5,
+        "power": 120,
+        "status": "normal"
+      }
+    },
+    {
+      "eventType": "asset.health.updated",
+      "assetId": "freezer-1",
+      "timestamp": "2026-02-18T10:05:00Z",
+      "payload": {
+        "temperature": -3,
+        "power": 150,
+        "status": "warning",
+        "humidity": 45
+      }
+    }
+  ]
+}

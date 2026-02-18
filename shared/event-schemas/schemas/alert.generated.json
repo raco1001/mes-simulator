@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Alert Generated Event",
+  "description": "Asset에서 알림이 생성되었을 때 발생하는 이벤트",
+  "type": "object",
+  "required": ["eventType", "assetId", "timestamp", "payload"],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "const": "alert.generated",
+      "description": "이벤트 타입 식별자"
+    },
+    "assetId": {
+      "type": "string",
+      "description": "Alert가 발생한 Asset의 고유 식별자"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "이벤트 발생 시각 (ISO 8601 형식)"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["severity", "message"],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error", "critical"],
+          "description": "알림 심각도"
+        },
+        "message": {
+          "type": "string",
+          "description": "알림 메시지"
+        },
+        "threshold": {
+          "type": "number",
+          "description": "임계값 (threshold가 초과되었을 때 알림 발생)"
+        },
+        "current": {
+          "type": "number",
+          "description": "현재 값"
+        },
+        "metric": {
+          "type": "string",
+          "description": "메트릭 이름 (예: temperature, power)",
+          "examples": ["temperature", "power", "humidity"]
+        },
+        "code": {
+          "type": "string",
+          "description": "알림 코드 (시스템 내부 식별용)",
+          "examples": ["TEMP_HIGH", "POWER_OVERLOAD", "CONNECTION_LOST"]
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 알림 정보 (자유 형식)",
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "eventType": "alert.generated",
+      "assetId": "freezer-1",
+      "timestamp": "2026-02-18T10:00:00Z",
+      "payload": {
+        "severity": "warning",
+        "message": "Temperature above threshold",
+        "threshold": -10,
+        "current": -5,
+        "metric": "temperature",
+        "code": "TEMP_HIGH"
+      }
+    },
+    {
+      "eventType": "alert.generated",
+      "assetId": "conveyor-1",
+      "timestamp": "2026-02-18T10:05:00Z",
+      "payload": {
+        "severity": "error",
+        "message": "Power consumption exceeded safe limit",
+        "threshold": 200,
+        "current": 250,
+        "metric": "power",
+        "code": "POWER_OVERLOAD",
+        "metadata": {
+          "duration": 300,
+          "recommendedAction": "Reduce load or check equipment"
+        }
+      }
+    }
+  ]
+}
