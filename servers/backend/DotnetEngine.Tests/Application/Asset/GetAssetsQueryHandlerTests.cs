@@ -1,11 +1,8 @@
 using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Handlers;
-using DotnetEngine.Application.Asset.Ports;
-using DotnetEngine.Domain.Asset.ValueObjects;
-using DotnetEngine.Infrastructure.Mongo;
+using DotnetEngine.Application.Asset.Ports.Driven;
 using Moq;
 using Xunit;
-using DomainAsset = DotnetEngine.Domain.Asset.ValueObjects.Asset;
 
 namespace DotnetEngine.Tests.Application.Asset;
 
@@ -16,21 +13,22 @@ public class GetAssetsQueryHandlerTests
     {
         // Arrange
         var mockRepository = new Mock<IAssetRepository>();
-        var assets = new List<DomainAsset>
+        var now = DateTimeOffset.UtcNow;
+        var assets = new List<AssetDto>
         {
-            new DomainAsset
+            new()
             {
                 Id = "freezer-1",
                 Type = "freezer",
                 Connections = new List<string> { "conveyor-1" },
                 Metadata = new Dictionary<string, object>(),
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
+                CreatedAt = now,
+                UpdatedAt = now
             }
         };
         mockRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<IReadOnlyList<DomainAsset>>(assets));
+            .Returns(Task.FromResult<IReadOnlyList<AssetDto>>(assets));
 
         var handler = new GetAssetsQueryHandler(mockRepository.Object);
 
@@ -51,7 +49,7 @@ public class GetAssetsQueryHandlerTests
         var mockRepository = new Mock<IAssetRepository>();
         mockRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<IReadOnlyList<DomainAsset>>(new List<DomainAsset>()));
+            .Returns(Task.FromResult<IReadOnlyList<AssetDto>>(new List<AssetDto>()));
 
         var handler = new GetAssetsQueryHandler(mockRepository.Object);
 
@@ -68,18 +66,19 @@ public class GetAssetsQueryHandlerTests
     {
         // Arrange
         var mockRepository = new Mock<IAssetRepository>();
-        var asset = new DomainAsset
+        var now = DateTimeOffset.UtcNow;
+        var asset = new AssetDto
         {
             Id = "freezer-1",
             Type = "freezer",
             Connections = new List<string>(),
             Metadata = new Dictionary<string, object>(),
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
         mockRepository
             .Setup(r => r.GetByIdAsync("freezer-1", It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<DomainAsset?>(asset));
+            .Returns(Task.FromResult<AssetDto?>(asset));
 
         var handler = new GetAssetsQueryHandler(mockRepository.Object);
 
@@ -99,7 +98,7 @@ public class GetAssetsQueryHandlerTests
         var mockRepository = new Mock<IAssetRepository>();
         mockRepository
             .Setup(r => r.GetByIdAsync("not-found", It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<DomainAsset?>(null));
+            .Returns(Task.FromResult<AssetDto?>(null));
 
         var handler = new GetAssetsQueryHandler(mockRepository.Object);
 

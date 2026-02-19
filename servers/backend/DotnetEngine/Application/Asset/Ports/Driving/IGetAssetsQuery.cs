@@ -1,6 +1,6 @@
 using DotnetEngine.Application.Asset.Dto;
 
-namespace DotnetEngine.Application.Asset.Ports;
+namespace DotnetEngine.Application.Asset.Ports.Driving;
 
 /// <summary>
 /// Asset 목록 조회 Port (Primary Port).

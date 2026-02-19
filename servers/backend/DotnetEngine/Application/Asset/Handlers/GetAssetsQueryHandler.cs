@@ -1,8 +1,6 @@
 using DotnetEngine.Application.Asset.Dto;
-using DotnetEngine.Application.Asset.Ports;
-using DotnetEngine.Domain.Asset.ValueObjects;
-using DotnetEngine.Infrastructure.Mongo;
-using DomainAsset = DotnetEngine.Domain.Asset.ValueObjects.Asset;
+using DotnetEngine.Application.Asset.Ports.Driving;
+using DotnetEngine.Application.Asset.Ports.Driven;
 
 namespace DotnetEngine.Application.Asset.Handlers;
 
@@ -13,7 +11,7 @@ public sealed class GetAssetsQueryHandler : IGetAssetsQuery
 {
     private readonly IAssetRepository _repository;
 
-    public GetAssetsQueryHandler(IAssetRepository repository)
+    public  GetAssetsQueryHandler(IAssetRepository repository)
     {
         _repository = repository;
     }
@@ -21,25 +19,16 @@ public sealed class GetAssetsQueryHandler : IGetAssetsQuery
     public async Task<IReadOnlyList<AssetDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var assets = await _repository.GetAllAsync(cancellationToken);
-        return assets.Select(ToDto).ToList();
+        if (assets.Count == 0)
+        {
+            return new List<AssetDto>();
+        }
+        return assets;
     }
 
     public async Task<AssetDto?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         var asset = await _repository.GetByIdAsync(id, cancellationToken);
-        return asset == null ? null : ToDto(asset);
-    }
-
-    private static AssetDto ToDto(DomainAsset asset)
-    {
-        return new AssetDto
-        {
-            Id = asset.Id,
-            Type = asset.Type,
-            Connections = asset.Connections,
-            Metadata = asset.Metadata,
-            CreatedAt = asset.CreatedAt,
-            UpdatedAt = asset.UpdatedAt
-        };
+        return asset;
     }
 }

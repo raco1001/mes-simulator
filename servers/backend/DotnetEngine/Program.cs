@@ -1,5 +1,6 @@
 using DotnetEngine.Application.Asset.Handlers;
-using DotnetEngine.Application.Asset.Ports;
+using DotnetEngine.Application.Asset.Ports.Driving;
+using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Health.Handlers;
 using DotnetEngine.Application.Health.Ports;
 using DotnetEngine.Infrastructure.Mongo;
@@ -32,13 +33,22 @@ builder.Services.AddCors(options =>
 
 var mongoConnectionString = builder.Configuration.GetConnectionString("MongoDB")
     ?? "mongodb://admin:admin123@localhost:27017/factory_mes?authSource=admin";
-var mongoClient = new MongoClient(mongoConnectionString);
-var mongoDatabase = mongoClient.GetDatabase("factory_mes");
-builder.Services.AddSingleton<IMongoDatabase>(mongoDatabase);
+
+builder.Services.AddSingleton<IMongoClient>(
+    new MongoClient(mongoConnectionString));
+
+builder.Services.AddScoped(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    return client.GetDatabase("factory_mes");
+});
+
 builder.Services.AddScoped<IAssetRepository, MongoAssetRepository>();
 
 builder.Services.AddScoped<IGetAssetsQuery, GetAssetsQueryHandler>();
 builder.Services.AddScoped<IGetStatesQuery, GetStatesQueryHandler>();
+builder.Services.AddScoped<ICreateAssetCommand, CreateAssetCommandHandler>();
+builder.Services.AddScoped<IUpdateAssetCommand, UpdateAssetCommandHandler>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

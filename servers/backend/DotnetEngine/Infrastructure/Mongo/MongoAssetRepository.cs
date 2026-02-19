@@ -1,5 +1,6 @@
-using DotnetEngine.Domain.Asset.ValueObjects;
-using MongoDB.Bson;
+
+using DotnetEngine.Application.Asset.Dto;
+using DotnetEngine.Application.Asset.Ports.Driven;
 using MongoDB.Driver;
 
 namespace DotnetEngine.Infrastructure.Mongo;
@@ -10,88 +11,120 @@ namespace DotnetEngine.Infrastructure.Mongo;
 public sealed class MongoAssetRepository : IAssetRepository
 {
     private readonly IMongoDatabase _database;
-    private readonly IMongoCollection<BsonDocument> _assetsCollection;
-    private readonly IMongoCollection<BsonDocument> _statesCollection;
+    private readonly IMongoCollection<MongoAssetDocument> _assetsCollection;
+    private readonly IMongoCollection<MongoAssetStateDocument> _statesCollection;
 
     public MongoAssetRepository(IMongoDatabase database)
     {
         _database = database;
-        _assetsCollection = _database.GetCollection<BsonDocument>("assets");
-        _statesCollection = _database.GetCollection<BsonDocument>("states");
+        _assetsCollection = _database.GetCollection<MongoAssetDocument>("assets");
+        _statesCollection = _database.GetCollection<MongoAssetStateDocument>("states");
     }
 
-    public async Task<IReadOnlyList<Asset>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AssetDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var cursor = await _assetsCollection.FindAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: cancellationToken);
+        var cursor = await _assetsCollection.FindAsync(FilterDefinition<MongoAssetDocument>.Empty, cancellationToken: cancellationToken);
         var documents = await cursor.ToListAsync(cancellationToken);
 
-        return documents.Select(ToAsset).ToList();
+        if (documents.Count == 0)
+        {
+            return new List<AssetDto>();
+        }
+        return documents.Select(ToAssetDto).ToList();
     }
 
-    public async Task<Asset?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<AssetDto?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
+        var filter = Builders<MongoAssetDocument>.Filter.Eq(d => d.Id, id);
         var document = await _assetsCollection.Find(filter).FirstOrDefaultAsync(cancellationToken);
 
-        return document == null ? null : ToAsset(document);
+        return document is null ? null : ToAssetDto(document);
     }
 
-    public async Task<IReadOnlyList<AssetState>> GetAllStatesAsync(CancellationToken cancellationToken = default)
+    public async Task<AssetDto> AddAsync(AssetDto assetDto, CancellationToken cancellationToken = default)
     {
-        var cursor = await _statesCollection.FindAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: cancellationToken);
+        var document = ToAssetDocument(assetDto);
+        await _assetsCollection.InsertOneAsync(document, cancellationToken: cancellationToken);
+        return ToAssetDto(document);
+    }
+
+    public async Task<AssetDto?> UpdateAsync(string id, AssetDto assetDto, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoAssetDocument>.Filter.Eq(d => d.Id, id);
+        var document = ToAssetDocument(assetDto);
+        var result = await _assetsCollection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = false }, cancellationToken);
+        return result.ModifiedCount > 0 ? ToAssetDto(document) : null;
+    }
+
+    public async Task<IReadOnlyList<StateDto>> GetAllStatesAsync(CancellationToken cancellationToken = default)
+    {
+        var cursor = await _statesCollection.FindAsync(FilterDefinition<MongoAssetStateDocument>.Empty, cancellationToken: cancellationToken);
         var documents = await cursor.ToListAsync(cancellationToken);
 
-        return documents.Select(ToAssetState).ToList();
+        if (documents.Count == 0)
+        {
+            return new List<StateDto>();
+        }
+        return documents.Select(ToStateDto).ToList();
     }
 
-    public async Task<AssetState?> GetStateByAssetIdAsync(string assetId, CancellationToken cancellationToken = default)
+    public async Task<StateDto?> GetStateByAssetIdAsync(string assetId, CancellationToken cancellationToken = default)
     {
-        var filter = Builders<BsonDocument>.Filter.Eq("assetId", assetId);
+        var filter = Builders<MongoAssetStateDocument>.Filter.Eq(d => d.AssetId, assetId);
         var document = await _statesCollection.Find(filter).FirstOrDefaultAsync(cancellationToken);
 
-        return document == null ? null : ToAssetState(document);
+        return document is null ? null : ToStateDto(document);
     }
 
-    private static Asset ToAsset(BsonDocument doc)
+    private static AssetDto ToAssetDto(MongoAssetDocument doc)
     {
-        return new Asset
+        return new AssetDto
         {
-            Id = doc["_id"].AsString,
-            Type = doc["type"].AsString,
-            Connections = doc.Contains("connections")
-                ? doc["connections"].AsBsonArray.Select(x => x.AsString).ToList()
-                : new List<string>(),
-            Metadata = doc.Contains("metadata")
-                ? doc["metadata"].AsBsonDocument.ToDictionary(
-                    x => x.Name,
-                    x => (object)x.Value.AsBsonValue)
-                : new Dictionary<string, object>(),
-            CreatedAt = doc["createdAt"].ToUniversalTime(),
-            UpdatedAt = doc["updatedAt"].ToUniversalTime()
+            Id = doc.Id,
+            Type = doc.Type,
+            Connections = doc.Connections,
+            Metadata = doc.Metadata,
+            CreatedAt = doc.CreatedAt,
+            UpdatedAt = doc.UpdatedAt
         };
     }
 
-    private static AssetState ToAssetState(BsonDocument doc)
+    private static MongoAssetDocument ToAssetDocument(AssetDto dto)
     {
-        return new AssetState
+        return new MongoAssetDocument
         {
-            AssetId = doc["assetId"].AsString,
-            CurrentTemp = doc.Contains("currentTemp") && !doc["currentTemp"].IsBsonNull
-                ? doc["currentTemp"].AsDouble
-                : null,
-            CurrentPower = doc.Contains("currentPower") && !doc["currentPower"].IsBsonNull
-                ? doc["currentPower"].AsDouble
-                : null,
-            Status = doc["status"].AsString,
-            LastEventType = doc.Contains("lastEventType") && !doc["lastEventType"].IsBsonNull
-                ? doc["lastEventType"].AsString
-                : null,
-            UpdatedAt = doc["updatedAt"].ToUniversalTime(),
-            Metadata = doc.Contains("metadata")
-                ? doc["metadata"].AsBsonDocument.ToDictionary(
-                    x => x.Name,
-                    x => (object)x.Value.AsBsonValue)
-                : new Dictionary<string, object>()
+            Id = dto.Id,
+            Type = dto.Type,
+            Connections = dto.Connections,
+            Metadata = dto.Metadata,
+            CreatedAt = dto.CreatedAt,
+            UpdatedAt = dto.UpdatedAt
+        };
+    }
+    private static MongoAssetStateDocument ToStateDocument(StateDto dto){
+        return new MongoAssetStateDocument
+        {
+            AssetId = dto.AssetId,
+            CurrentTemp = dto.CurrentTemp,
+            CurrentPower = dto.CurrentPower,
+            Status = dto.Status,
+            LastEventType = dto.LastEventType,
+            UpdatedAt = dto.UpdatedAt,
+            Metadata = dto.Metadata
+        };
+    }
+
+    private static StateDto ToStateDto(MongoAssetStateDocument doc)
+    {
+        return new StateDto
+        {
+            AssetId = doc.AssetId,
+            CurrentTemp = doc.CurrentTemp,
+            CurrentPower = doc.CurrentPower,
+            Status = doc.Status,
+            LastEventType = doc.LastEventType,
+            UpdatedAt = doc.UpdatedAt,
+            Metadata = doc.Metadata
         };
     }
 }

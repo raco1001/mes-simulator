@@ -1,7 +1,6 @@
 using DotnetEngine.Application.Asset.Dto;
-using DotnetEngine.Application.Asset.Ports;
-using DotnetEngine.Domain.Asset.ValueObjects;
-using DotnetEngine.Infrastructure.Mongo;
+using DotnetEngine.Application.Asset.Ports.Driving;
+using DotnetEngine.Application.Asset.Ports.Driven;
 
 namespace DotnetEngine.Application.Asset.Handlers;
 
@@ -20,26 +19,20 @@ public sealed class GetStatesQueryHandler : IGetStatesQuery
     public async Task<IReadOnlyList<StateDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var states = await _repository.GetAllStatesAsync(cancellationToken);
-        return states.Select(ToDto).ToList();
+        if (states.Count == 0)
+        {
+            return new List<StateDto>();
+        }
+        return states;
     }
 
     public async Task<StateDto?> GetByAssetIdAsync(string assetId, CancellationToken cancellationToken = default)
     {
         var state = await _repository.GetStateByAssetIdAsync(assetId, cancellationToken);
-        return state == null ? null : ToDto(state);
-    }
-
-    private static StateDto ToDto(AssetState state)
-    {
-        return new StateDto
+        if (state is null)
         {
-            AssetId = state.AssetId,
-            CurrentTemp = state.CurrentTemp,
-            CurrentPower = state.CurrentPower,
-            Status = state.Status,
-            LastEventType = state.LastEventType,
-            UpdatedAt = state.UpdatedAt,
-            Metadata = state.Metadata
-        };
+            return null;
+        }
+        return state;
     }
 }
