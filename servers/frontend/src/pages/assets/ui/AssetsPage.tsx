@@ -7,7 +7,7 @@ import {
   type CreateAssetRequest,
   type UpdateAssetRequest,
 } from '@/entities/asset'
-import { runSimulation } from '@/entities/simulation'
+import { getRunEvents, runSimulation, type EventDto } from '@/entities/simulation'
 import './AssetsPage.css'
 
 export function AssetsPage() {
@@ -24,6 +24,9 @@ export function AssetsPage() {
     message: string
   } | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
+  const [runEvents, setRunEvents] = useState<EventDto[] | null>(null)
+  const [runEventsLoading, setRunEventsLoading] = useState(false)
+  const [runEventsError, setRunEventsError] = useState<string | null>(null)
   const [editingAsset, setEditingAsset] = useState<AssetDto | null>(null)
   const [editType, setEditType] = useState('')
   const [editConnections, setEditConnections] = useState('')
@@ -157,6 +160,8 @@ export function AssetsPage() {
   const handleSimulationClick = async () => {
     setSimulationError(null)
     setSimulationResult(null)
+    setRunEvents(null)
+    setRunEventsError(null)
     setSimulationLoading(true)
     try {
       const triggerAssetId = assets[0]?.id ?? ''
@@ -177,6 +182,25 @@ export function AssetsPage() {
     } finally {
       setSimulationLoading(false)
     }
+  }
+
+  const handleShowEvents = async () => {
+    if (!simulationResult?.runId) return
+    setRunEventsError(null)
+    setRunEventsLoading(true)
+    try {
+      const list = await getRunEvents(simulationResult.runId)
+      setRunEvents(list)
+    } catch (err) {
+      setRunEventsError(err instanceof Error ? err.message : 'Failed to load events')
+    } finally {
+      setRunEventsLoading(false)
+    }
+  }
+
+  const payloadSummary = (p?: Record<string, unknown>) => {
+    if (!p || Object.keys(p).length === 0) return '-'
+    return JSON.stringify(p)
   }
 
   if (loading) {
@@ -371,9 +395,51 @@ export function AssetsPage() {
           <p className="assets-simulation-status assets-simulation-error">{simulationError}</p>
         )}
         {simulationResult && (
-          <p className="assets-simulation-status">
-            {simulationResult.message} (runId: {simulationResult.runId})
-          </p>
+          <>
+            <p className="assets-simulation-status">
+              {simulationResult.message} (runId: {simulationResult.runId})
+            </p>
+            <button
+              type="button"
+              onClick={handleShowEvents}
+              className="assets-events-btn"
+              disabled={runEventsLoading}
+            >
+              {runEventsLoading ? '불러오는 중…' : '이벤트 보기'}
+            </button>
+            {runEventsError && (
+              <p className="assets-simulation-status assets-simulation-error">{runEventsError}</p>
+            )}
+            {runEvents && (
+              <div className="assets-run-events">
+                <h3>실행 결과 이벤트</h3>
+                {runEvents.length === 0 ? (
+                  <p className="assets-page-empty">이벤트 없음</p>
+                ) : (
+                  <table className="assets-table">
+                    <thead>
+                      <tr>
+                        <th>Asset ID</th>
+                        <th>Event Type</th>
+                        <th>Occurred At</th>
+                        <th>Payload</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {runEvents.map((evt, i) => (
+                        <tr key={`${evt.assetId}-${evt.occurredAt}-${i}`}>
+                          <td>{evt.assetId}</td>
+                          <td>{evt.eventType}</td>
+                          <td>{new Date(evt.occurredAt).toLocaleString()}</td>
+                          <td className="assets-event-payload">{payloadSummary(evt.payload)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

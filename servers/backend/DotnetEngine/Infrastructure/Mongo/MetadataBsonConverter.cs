@@ -6,11 +6,13 @@ namespace DotnetEngine.Infrastructure.Mongo;
 /// <summary>
 /// Converts API DTO Metadata (Dictionary with possible JsonElement values) to/from BsonDocument
 /// so that MongoDB can serialize it without JsonElement.
+/// MongoDB collection convention: camelCase for all keys.
 /// </summary>
 public static class MetadataBsonConverter
 {
     /// <summary>
     /// Converts metadata dictionary to BsonDocument. Handles JsonElement and other .NET types.
+    /// Keys are normalized to camelCase for MongoDB.
     /// </summary>
     public static BsonDocument ToBsonDocument(IReadOnlyDictionary<string, object>? metadata)
     {
@@ -22,13 +24,14 @@ public static class MetadataBsonConverter
         {
             var value = ToBsonValue(kv.Value);
             if (value != null)
-                doc[kv.Key] = value;
+                doc[ToCamelCaseKey(kv.Key)] = value;
         }
         return doc;
     }
 
     /// <summary>
     /// Converts BsonDocument to dictionary for API response (JSON-serializable).
+    /// Keys are normalized to camelCase.
     /// </summary>
     public static IReadOnlyDictionary<string, object> ToDictionary(BsonDocument? doc)
     {
@@ -40,9 +43,27 @@ public static class MetadataBsonConverter
         {
             var value = ToObject(element.Value);
             if (value != null)
-                dict[element.Name] = value;
+                dict[ToCamelCaseKey(element.Name)] = value;
         }
         return dict;
+    }
+
+    /// <summary>
+    /// Normalizes a key to camelCase (e.g. asset_id -> assetId, current_temp -> currentTemp).
+    /// </summary>
+    public static string ToCamelCaseKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return key;
+        var parts = key.Split('_');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var p = parts[i];
+            if (string.IsNullOrEmpty(p)) continue;
+            parts[i] = i == 0
+                ? char.ToLowerInvariant(p[0]) + p[1..].ToLowerInvariant()
+                : char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant();
+        }
+        return string.Concat(parts);
     }
 
     private static BsonValue? ToBsonValue(object? value)
@@ -71,7 +92,7 @@ public static class MetadataBsonConverter
             {
                 var v = ToBsonValue(kv.Value);
                 if (v != null)
-                    sub[kv.Key] = v;
+                    sub[ToCamelCaseKey(kv.Key)] = v;
             }
             return sub;
         }
@@ -123,7 +144,7 @@ public static class MetadataBsonConverter
         var doc = new BsonDocument();
         foreach (var prop in je.EnumerateObject())
         {
-            doc[prop.Name] = JsonElementToBsonValue(prop.Value);
+            doc[ToCamelCaseKey(prop.Name)] = JsonElementToBsonValue(prop.Value);
         }
         return doc;
     }
@@ -161,7 +182,7 @@ public static class MetadataBsonConverter
             {
                 var v = ToObject(element.Value);
                 if (v != null)
-                    sub[element.Name] = v;
+                    sub[ToCamelCaseKey(element.Name)] = v;
             }
             return sub;
         }

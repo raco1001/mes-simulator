@@ -1,4 +1,4 @@
-"""MongoDB asset repository."""
+"""MongoDB asset repository. Writes state with camelCase keys per MongoDB convention."""
 from datetime import datetime
 from typing import Any
 
@@ -8,6 +8,23 @@ from pymongo.database import Database
 
 from config.settings import Settings
 from pipelines.asset_dto import AssetStateDto
+
+
+def _to_camel_case_key(key: str) -> str:
+    """Convert snake_case to camelCase (e.g. asset_id -> assetId)."""
+    if not key:
+        return key
+    parts = key.split("_")
+    return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
+
+
+def _dict_keys_to_camel(obj: Any) -> Any:
+    """Recursively convert dict keys to camelCase for MongoDB."""
+    if isinstance(obj, dict):
+        return {_to_camel_case_key(k): _dict_keys_to_camel(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_dict_keys_to_camel(i) for i in obj]
+    return obj
 
 
 class AssetRepository:
@@ -81,14 +98,18 @@ class AssetRepository:
         )
 
     def save_state(self, state_dto: AssetStateDto) -> None:
-        """Save or update asset state."""
+        """Save or update asset state. Uses camelCase keys for MongoDB convention."""
         db = self._get_database()
         states: Collection = db["states"]
 
-        state_dict = state_dto.model_dump()
+        state_dict = state_dto.model_dump(by_alias=True)
+        state_dict = _dict_keys_to_camel(state_dict)
         states.update_one(
             {"assetId": state_dto.asset_id},
-            {"$set": state_dict},
+            {
+                "$set": state_dict,
+                "$setOnInsert": {"_id": state_dto.asset_id},
+            },
             upsert=True,
         )
 

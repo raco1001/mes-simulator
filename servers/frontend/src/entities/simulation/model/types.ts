@@ -22,3 +22,15 @@ export interface RunResultDto {
   runId: string
   message: string
 }
+
+/**
+ * Domain event (GET /api/simulation/runs/{runId}/events item)
+ */
+export interface EventDto {
+  assetId: string
+  eventType: string
+  occurredAt: string
+  simulationRunId?: string
+  relationshipId?: string
+  payload?: Record<string, unknown>
+}

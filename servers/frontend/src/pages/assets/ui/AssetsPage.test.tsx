@@ -15,6 +15,7 @@ vi.mock('@/entities/asset', () => ({
 
 vi.mock('@/entities/simulation', () => ({
   runSimulation: vi.fn(),
+  getRunEvents: vi.fn(),
 }))
 
 describe('AssetsPage', () => {
