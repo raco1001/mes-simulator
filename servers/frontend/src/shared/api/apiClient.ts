@@ -1,4 +1,4 @@
-import type { AssetDto, StateDto } from './types'
+import type { AssetDto, StateDto, CreateAssetRequest, UpdateAssetRequest } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
@@ -58,6 +58,26 @@ class ApiClient {
    */
   async getStateByAssetId(assetId: string): Promise<StateDto> {
     return this.request<StateDto>(`/api/states/${assetId}`)
+  }
+
+  /**
+   * Asset 생성
+   */
+  async createAsset(body: CreateAssetRequest): Promise<AssetDto> {
+    return this.request<AssetDto>('/api/assets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  }
+
+  /**
+   * 특정 asset 수정
+   */
+  async updateAsset(id: string, body: UpdateAssetRequest): Promise<AssetDto> {
+    return this.request<AssetDto>(`/api/assets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    })
   }
 }
 

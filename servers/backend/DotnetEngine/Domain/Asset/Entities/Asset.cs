@@ -7,7 +7,7 @@ public sealed class Asset
 {
     public string Id { get; private set; } = string.Empty;
     public string Type { get; private set; } = string.Empty;
-    public IReadOnlyList<string> Connections { get; private set; } = Array.Empty<string>();
+    public IReadOnlyList<string> Connections { get; private set; } = [];
     public IReadOnlyDictionary<string, object> Metadata { get; private set; } = new Dictionary<string, object>();
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -28,7 +28,7 @@ public sealed class Asset
         {
             Id = id ?? throw new ArgumentNullException(nameof(id)),
             Type = type ?? throw new ArgumentNullException(nameof(type)),
-            Connections = connections ?? Array.Empty<string>(),
+            Connections = connections ?? [],
             Metadata = metadata ?? new Dictionary<string, object>(),
             CreatedAt = now,
             UpdatedAt = now
@@ -50,7 +50,7 @@ public sealed class Asset
         {
             Id = id,
             Type = type,
-            Connections = connections ?? Array.Empty<string>(),
+            Connections = connections ?? [],
             Metadata = metadata ?? new Dictionary<string, object>(),
             CreatedAt = createdAt,
             UpdatedAt = updatedAt
@@ -65,7 +65,7 @@ public sealed class Asset
 
     public void UpdateConnections(IReadOnlyList<string> connections)
     {
-        Connections = connections ?? Array.Empty<string>();
+        Connections = connections ?? [];
         TouchUpdatedAt();
     }
 

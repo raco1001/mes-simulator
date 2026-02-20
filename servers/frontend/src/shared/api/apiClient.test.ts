@@ -127,4 +127,61 @@ describe('ApiClient', () => {
       expect(result).toEqual(mockState)
     })
   })
+
+  describe('createAsset', () => {
+    it('should POST create asset and return AssetDto', async () => {
+      const body = { type: 'freezer', connections: ['conveyor-1'], metadata: { capacity: 1000 } }
+      const mockAsset: AssetDto = {
+        id: 'freezer-new',
+        type: 'freezer',
+        connections: ['conveyor-1'],
+        metadata: { capacity: 1000 },
+        createdAt: '2026-02-18T10:00:00Z',
+        updatedAt: '2026-02-18T10:00:00Z',
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAsset,
+      } as Response)
+
+      const result = await apiClient.createAsset(body)
+
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost:5000/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      expect(result).toEqual(mockAsset)
+    })
+  })
+
+  describe('updateAsset', () => {
+    it('should PUT update asset and return AssetDto', async () => {
+      const id = 'freezer-1'
+      const body = { type: 'freezer', connections: ['conveyor-1', 'conveyor-2'] }
+      const mockAsset: AssetDto = {
+        id: 'freezer-1',
+        type: 'freezer',
+        connections: ['conveyor-1', 'conveyor-2'],
+        metadata: {},
+        createdAt: '2026-02-18T10:00:00Z',
+        updatedAt: '2026-02-18T11:00:00Z',
+      }
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockAsset,
+      } as Response)
+
+      const result = await apiClient.updateAsset(id, body)
+
+      expect(mockFetch).toHaveBeenCalledWith(`http://localhost:5000/api/assets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      expect(result).toEqual(mockAsset)
+    })
+  })
 })

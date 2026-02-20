@@ -6,6 +6,6 @@ namespace DotnetEngine.Application.Asset.Dto;
 public sealed record CreateAssetRequest
 {
     public required string Type { get; init; }
-    public IReadOnlyList<string> Connections { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Connections { get; init; } = [];
     public IReadOnlyDictionary<string, object> Metadata { get; init; } = new Dictionary<string, object>();
 }

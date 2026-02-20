@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace DotnetEngine.Infrastructure.Mongo;
@@ -17,7 +18,7 @@ public sealed class MongoAssetStateDocument
     [BsonElement("lastEventType")]
     public string? LastEventType { get; set; }
     [BsonElement("updatedAt")]
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     [BsonElement("metadata")]
-    public IReadOnlyDictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+    public BsonDocument Metadata { get; set; } = new BsonDocument();
 }

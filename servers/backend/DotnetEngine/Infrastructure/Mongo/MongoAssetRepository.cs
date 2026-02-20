@@ -83,9 +83,9 @@ public sealed class MongoAssetRepository : IAssetRepository
             Id = doc.Id,
             Type = doc.Type,
             Connections = doc.Connections,
-            Metadata = doc.Metadata,
-            CreatedAt = doc.CreatedAt,
-            UpdatedAt = doc.UpdatedAt
+            Metadata = MetadataBsonConverter.ToDictionary(doc.Metadata),
+            CreatedAt = ToDateTimeOffset(doc.CreatedAt),
+            UpdatedAt = ToDateTimeOffset(doc.UpdatedAt)
         };
     }
 
@@ -96,12 +96,20 @@ public sealed class MongoAssetRepository : IAssetRepository
             Id = dto.Id,
             Type = dto.Type,
             Connections = dto.Connections,
-            Metadata = dto.Metadata,
-            CreatedAt = dto.CreatedAt,
-            UpdatedAt = dto.UpdatedAt
+            Metadata = MetadataBsonConverter.ToBsonDocument(dto.Metadata),
+            CreatedAt = dto.CreatedAt.UtcDateTime,
+            UpdatedAt = dto.UpdatedAt.UtcDateTime
         };
     }
-    private static MongoAssetStateDocument ToStateDocument(StateDto dto){
+
+    private static DateTimeOffset ToDateTimeOffset(DateTime dt)
+    {
+        var utc = dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+        return new DateTimeOffset(utc, TimeSpan.Zero);
+    }
+
+    private static MongoAssetStateDocument ToStateDocument(StateDto dto)
+    {
         return new MongoAssetStateDocument
         {
             AssetId = dto.AssetId,
@@ -109,8 +117,8 @@ public sealed class MongoAssetRepository : IAssetRepository
             CurrentPower = dto.CurrentPower,
             Status = dto.Status,
             LastEventType = dto.LastEventType,
-            UpdatedAt = dto.UpdatedAt,
-            Metadata = dto.Metadata
+            UpdatedAt = dto.UpdatedAt.UtcDateTime,
+            Metadata = MetadataBsonConverter.ToBsonDocument(dto.Metadata)
         };
     }
 
@@ -123,8 +131,8 @@ public sealed class MongoAssetRepository : IAssetRepository
             CurrentPower = doc.CurrentPower,
             Status = doc.Status,
             LastEventType = doc.LastEventType,
-            UpdatedAt = doc.UpdatedAt,
-            Metadata = doc.Metadata
+            UpdatedAt = ToDateTimeOffset(doc.UpdatedAt),
+            Metadata = MetadataBsonConverter.ToDictionary(doc.Metadata)
         };
     }
 }

@@ -21,3 +21,17 @@ export interface StateDto {
   updatedAt: string
   metadata: Record<string, unknown>
 }
+
+/** Asset 생성 요청 (POST /api/assets) */
+export interface CreateAssetRequest {
+  type: string
+  connections: string[]
+  metadata: Record<string, unknown>
+}
+
+/** Asset 수정 요청 (PUT /api/assets/:id) */
+export interface UpdateAssetRequest {
+  type?: string
+  connections: string[]
+  metadata?: Record<string, unknown>
+}
