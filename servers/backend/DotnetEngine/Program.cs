@@ -3,6 +3,11 @@ using DotnetEngine.Application.Asset.Ports.Driving;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Health.Handlers;
 using DotnetEngine.Application.Health.Ports;
+using DotnetEngine.Application.Relationship.Handlers;
+using DotnetEngine.Application.Relationship.Ports.Driving;
+using DotnetEngine.Application.Relationship.Ports.Driven;
+using DotnetEngine.Application.Simulation.Handlers;
+using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Infrastructure.Mongo;
 using MongoDB.Driver;
 
@@ -44,11 +49,19 @@ builder.Services.AddScoped(sp =>
 });
 
 builder.Services.AddScoped<IAssetRepository, MongoAssetRepository>();
+builder.Services.AddScoped<IRelationshipRepository, MongoRelationshipRepository>();
 
 builder.Services.AddScoped<IGetAssetsQuery, GetAssetsQueryHandler>();
 builder.Services.AddScoped<IGetStatesQuery, GetStatesQueryHandler>();
 builder.Services.AddScoped<ICreateAssetCommand, CreateAssetCommandHandler>();
 builder.Services.AddScoped<IUpdateAssetCommand, UpdateAssetCommandHandler>();
+
+builder.Services.AddScoped<IGetRelationshipsQuery, GetRelationshipsQueryHandler>();
+builder.Services.AddScoped<ICreateRelationshipCommand, CreateRelationshipCommandHandler>();
+builder.Services.AddScoped<IUpdateRelationshipCommand, UpdateRelationshipCommandHandler>();
+builder.Services.AddScoped<IDeleteRelationshipCommand, DeleteRelationshipCommandHandler>();
+
+builder.Services.AddScoped<IRunSimulationCommand, RunSimulationCommandHandler>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

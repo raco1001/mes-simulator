@@ -135,5 +135,54 @@ db.states.createIndex({ assetId: 1 }, { unique: true, name: "assetId_unique" });
 db.states.createIndex({ status: 1 });
 db.states.createIndex({ updatedAt: -1 });
 
+// ============================================
+// 4. relationships 컬렉션 (에셋 간 관계)
+// ============================================
+db.createCollection('relationships', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['_id', 'fromAssetId', 'toAssetId', 'relationshipType', 'createdAt', 'updatedAt'],
+      properties: {
+        _id: {
+          bsonType: 'string',
+          description: 'Relationship ID (required)'
+        },
+        fromAssetId: {
+          bsonType: 'string',
+          description: '시작 에셋 ID (required)'
+        },
+        toAssetId: {
+          bsonType: 'string',
+          description: '대상 에셋 ID (required)'
+        },
+        relationshipType: {
+          bsonType: 'string',
+          description: '관계 종류 (required)'
+        },
+        properties: {
+          bsonType: 'object',
+          description: '관계 단위 속성 (optional)'
+        },
+        createdAt: {
+          bsonType: 'date',
+          description: 'Creation timestamp (required)'
+        },
+        updatedAt: {
+          bsonType: 'date',
+          description: 'Last update timestamp (required)'
+        }
+      }
+    }
+  }
+});
+
+// relationships 인덱스
+db.relationships.createIndex({ fromAssetId: 1 });
+db.relationships.createIndex({ toAssetId: 1 });
+db.relationships.createIndex({ relationshipType: 1 });
+db.relationships.createIndex({ updatedAt: -1 });
+db.relationships.createIndex({ fromAssetId: 1, toAssetId: 1 });
+
 print('Collections and indexes created successfully!');
-print('Collections: assets, events, states');
+print('Collections: assets, events, states, relationships');

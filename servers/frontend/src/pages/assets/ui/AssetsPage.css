@@ -70,6 +70,65 @@
   border-radius: 4px;
 }
 
+.assets-create-form .form-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.metadata-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.metadata-row .metadata-key,
+.metadata-row .metadata-value {
+  flex: 1;
+  max-width: 180px;
+}
+
+.metadata-remove {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  color: #c62828;
+  background: transparent;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.metadata-add {
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  color: #1565c0;
+  background: transparent;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.assets-edit-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.assets-edit-modal {
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.assets-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .assets-simulation-btn {
   margin-right: 1rem;
 }
@@ -77,6 +136,10 @@
 .assets-simulation-status {
   margin-top: 0.75rem;
   color: #2e7d32;
+}
+
+.assets-simulation-error {
+  color: #c62828;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -97,5 +160,10 @@
     background: #333;
     border-color: #555;
     color: #fff;
+  }
+
+  .assets-edit-modal {
+    border-color: #444;
+    background: #262626;
   }
 }

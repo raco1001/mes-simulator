@@ -137,6 +137,50 @@ Asset의 현재 상태를 저장하는 컬렉션입니다. **핵심 컬렉션**�
 
 ---
 
+### 4. relationships
+
+에셋 간 관계를 first-class 엔티티로 저장하는 컬렉션입니다. 관계 종류·방향·관계 단위 속성을 표현합니다.
+
+**스키마:**
+```javascript
+{
+  "_id": String,              // Relationship ID
+  "fromAssetId": String,      // 시작 에셋 ID
+  "toAssetId": String,        // 대상 에셋 ID
+  "relationshipType": String,// 관계 종류 (예: feeds_into, contains, located_in)
+  "properties": Object,       // 관계 단위 속성 (자유 형식, optional)
+  "createdAt": Date,         // 생성 시각
+  "updatedAt": Date          // 마지막 업데이트 시각
+}
+```
+
+**예시:**
+```json
+{
+  "_id": "rel-001",
+  "fromAssetId": "freezer-1",
+  "toAssetId": "conveyor-1",
+  "relationshipType": "feeds_into",
+  "properties": { "flowRate": 100 },
+  "createdAt": ISODate("2026-02-20T10:00:00Z"),
+  "updatedAt": ISODate("2026-02-20T10:00:00Z")
+}
+```
+
+**인덱스:**
+- `_id`: 기본 unique 인덱스 (자동 생성)
+- `fromAssetId`: 시작 에셋 기준 조회
+- `toAssetId`: 대상 에셋 기준 조회
+- `relationshipType`: 관계 타입별 조회
+- `updatedAt`: 최근 업데이트 순 조회
+- `{ fromAssetId: 1, toAssetId: 1 }`: from-to 쌍 조회
+
+**제약사항:**
+- `_id`, `fromAssetId`, `toAssetId`, `relationshipType`, `createdAt`, `updatedAt` 필수
+- `properties`는 선택
+
+---
+
 ## 데이터 흐름
 
 ```
