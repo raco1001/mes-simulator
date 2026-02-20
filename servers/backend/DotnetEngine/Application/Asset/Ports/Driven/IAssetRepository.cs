@@ -13,4 +13,5 @@ public interface IAssetRepository
     Task<AssetDto?> UpdateAsync(string id, AssetDto assetDto, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<StateDto>> GetAllStatesAsync(CancellationToken cancellationToken = default);
     Task<StateDto?> GetStateByAssetIdAsync(string assetId, CancellationToken cancellationToken = default);
+    Task UpsertStateAsync(StateDto state, CancellationToken cancellationToken = default);
 }

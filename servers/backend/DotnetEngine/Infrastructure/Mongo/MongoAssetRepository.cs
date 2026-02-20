@@ -76,6 +76,24 @@ public sealed class MongoAssetRepository : IAssetRepository
         return document is null ? null : ToStateDto(document);
     }
 
+    public async Task UpsertStateAsync(StateDto state, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoAssetStateDocument>.Filter.Eq(d => d.AssetId, state.AssetId);
+        var existing = await _statesCollection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+
+        var doc = ToStateDocument(state);
+        if (existing != null)
+        {
+            doc.Id = existing.Id;
+            await _statesCollection.ReplaceOneAsync(filter, doc, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            doc.Id = state.AssetId;
+            await _statesCollection.InsertOneAsync(doc, cancellationToken: cancellationToken);
+        }
+    }
+
     private static AssetDto ToAssetDto(MongoAssetDocument doc)
     {
         return new AssetDto
@@ -112,6 +130,7 @@ public sealed class MongoAssetRepository : IAssetRepository
     {
         return new MongoAssetStateDocument
         {
+            Id = dto.AssetId,
             AssetId = dto.AssetId,
             CurrentTemp = dto.CurrentTemp,
             CurrentPower = dto.CurrentPower,

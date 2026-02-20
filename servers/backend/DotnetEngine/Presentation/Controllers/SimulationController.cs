@@ -19,13 +19,17 @@ public sealed class SimulationController : ControllerBase
     }
 
     /// <summary>
-    /// POST /api/simulation/run — 시뮬레이션 1회 실행. 에셋·관계 기반 최소 시뮬레이션 후 결과 반환.
+    /// POST /api/simulation/runs — 시뮬레이션 런 1회 실행. 트리거 에셋 + BFS 전파, runId 반환.
     /// </summary>
-    [HttpPost("run")]
-    [ProducesResponseType(typeof(RunResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Run(CancellationToken cancellationToken)
+    [HttpPost("runs")]
+    [ProducesResponseType(typeof(RunResult), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateRun([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        var result = await _runSimulationCommand.RunAsync(cancellationToken);
-        return Ok(result);
+        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
+            return BadRequest(new { error = "triggerAssetId is required" });
+
+        var result = await _runSimulationCommand.RunAsync(request, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, result);
     }
 }

@@ -20,9 +20,8 @@ export function AssetsPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [simulationLoading, setSimulationLoading] = useState(false)
   const [simulationResult, setSimulationResult] = useState<{
+    runId: string
     message: string
-    assetsCount: number
-    relationshipsCount: number
   } | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
   const [editingAsset, setEditingAsset] = useState<AssetDto | null>(null)
@@ -160,11 +159,18 @@ export function AssetsPage() {
     setSimulationResult(null)
     setSimulationLoading(true)
     try {
-      const result = await runSimulation()
+      const triggerAssetId = assets[0]?.id ?? ''
+      if (!triggerAssetId) {
+        setSimulationError('트리거로 사용할 에셋이 없습니다. 에셋을 먼저 추가하세요.')
+        return
+      }
+      const result = await runSimulation({
+        triggerAssetId,
+        maxDepth: 3,
+      })
       setSimulationResult({
+        runId: result.runId,
         message: result.message,
-        assetsCount: result.assetsCount,
-        relationshipsCount: result.relationshipsCount,
       })
     } catch (err) {
       setSimulationError(err instanceof Error ? err.message : 'Simulation request failed')
@@ -366,7 +372,7 @@ export function AssetsPage() {
         )}
         {simulationResult && (
           <p className="assets-simulation-status">
-            {simulationResult.message} (에셋 {simulationResult.assetsCount}개, 관계 {simulationResult.relationshipsCount}개)
+            {simulationResult.message} (runId: {simulationResult.runId})
           </p>
         )}
       </section>

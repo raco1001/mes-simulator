@@ -1,2 +1,2 @@
 export { runSimulation } from './api/simulationApi'
-export type { RunResultDto } from './model/types'
+export type { RunResultDto, RunSimulationRequestDto, StatePatchDto } from './model/types'

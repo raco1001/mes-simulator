@@ -112,9 +112,8 @@ describe('AssetsPage', () => {
     const user = userEvent.setup()
     vi.mocked(runSimulation).mockResolvedValue({
       success: true,
+      runId: 'run-123',
       message: 'Simulation run completed',
-      assetsCount: 1,
-      relationshipsCount: 0,
     })
 
     render(<AssetsPage />)
@@ -127,8 +126,12 @@ describe('AssetsPage', () => {
 
     await waitFor(() => {
       expect(runSimulation).toHaveBeenCalledTimes(1)
+      expect(runSimulation).toHaveBeenCalledWith({
+        triggerAssetId: 'freezer-1',
+        maxDepth: 3,
+      })
     })
     expect(screen.getByText(/Simulation run completed/)).toBeInTheDocument()
-    expect(screen.getByText(/에셋 1개, 관계 0개/)).toBeInTheDocument()
+    expect(screen.getByText(/runId: run-123/)).toBeInTheDocument()
   })
 })

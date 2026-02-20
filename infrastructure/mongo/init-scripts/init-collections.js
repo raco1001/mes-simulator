@@ -71,6 +71,18 @@ db.createCollection('events', {
           bsonType: 'date',
           description: 'Event timestamp (required)'
         },
+        simulationRunId: {
+          bsonType: ['string', 'null'],
+          description: 'Simulation run ID when event is from a run (optional)'
+        },
+        relationshipId: {
+          bsonType: ['string', 'null'],
+          description: 'Relationship ID when event is about a relationship (optional)'
+        },
+        occurredAt: {
+          bsonType: ['date', 'null'],
+          description: 'Occurrence time (optional; use timestamp if not set)'
+        },
         payload: {
           bsonType: 'object',
           description: 'Event payload'
@@ -84,6 +96,7 @@ db.createCollection('events', {
 db.events.createIndex({ assetId: 1, timestamp: -1 });
 db.events.createIndex({ eventType: 1 });
 db.events.createIndex({ timestamp: -1 });
+db.events.createIndex({ simulationRunId: 1 });
 // TTL 인덱스: 90일 후 자동 삭제 (선택사항)
 // db.events.createIndex({ timestamp: 1 }, { expireAfterSeconds: 7776000 });
 
@@ -184,5 +197,46 @@ db.relationships.createIndex({ relationshipType: 1 });
 db.relationships.createIndex({ updatedAt: -1 });
 db.relationships.createIndex({ fromAssetId: 1, toAssetId: 1 });
 
+// ============================================
+// 5. simulation_runs 컬렉션 (시뮬레이션 런 세션)
+// ============================================
+db.createCollection('simulation_runs', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['_id', 'startedAt', 'triggerAssetId', 'maxDepth'],
+      properties: {
+        _id: {
+          bsonType: 'string',
+          description: 'Run ID (required)'
+        },
+        startedAt: {
+          bsonType: 'date',
+          description: 'Run start timestamp (required)'
+        },
+        endedAt: {
+          bsonType: ['date', 'null'],
+          description: 'Run end timestamp (optional)'
+        },
+        triggerAssetId: {
+          bsonType: 'string',
+          description: 'Trigger asset ID (required)'
+        },
+        trigger: {
+          bsonType: 'object',
+          description: 'State patch applied at trigger (optional)'
+        },
+        maxDepth: {
+          bsonType: 'int',
+          description: 'Max BFS depth (required)'
+        }
+      }
+    }
+  }
+});
+
+db.simulation_runs.createIndex({ startedAt: -1 });
+db.simulation_runs.createIndex({ triggerAssetId: 1 });
+
 print('Collections and indexes created successfully!');
-print('Collections: assets, events, states, relationships');
+print('Collections: assets, events, states, relationships, simulation_runs');

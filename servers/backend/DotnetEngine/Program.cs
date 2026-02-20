@@ -7,6 +7,7 @@ using DotnetEngine.Application.Relationship.Handlers;
 using DotnetEngine.Application.Relationship.Ports.Driving;
 using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Handlers;
+using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Infrastructure.Mongo;
 using MongoDB.Driver;
@@ -50,6 +51,8 @@ builder.Services.AddScoped(sp =>
 
 builder.Services.AddScoped<IAssetRepository, MongoAssetRepository>();
 builder.Services.AddScoped<IRelationshipRepository, MongoRelationshipRepository>();
+builder.Services.AddScoped<ISimulationRunRepository, MongoSimulationRunRepository>();
+builder.Services.AddScoped<IEventRepository, MongoEventRepository>();
 
 builder.Services.AddScoped<IGetAssetsQuery, GetAssetsQueryHandler>();
 builder.Services.AddScoped<IGetStatesQuery, GetStatesQueryHandler>();

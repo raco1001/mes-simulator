@@ -7,5 +7,5 @@ namespace DotnetEngine.Application.Simulation.Ports.Driving;
 /// </summary>
 public interface IRunSimulationCommand
 {
-    Task<RunResult> RunAsync(CancellationToken cancellationToken = default);
+    Task<RunResult> RunAsync(RunSimulationRequest request, CancellationToken cancellationToken = default);
 }

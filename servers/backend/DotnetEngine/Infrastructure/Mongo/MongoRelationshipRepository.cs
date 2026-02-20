@@ -30,6 +30,14 @@ public sealed class MongoRelationshipRepository : IRelationshipRepository
         return document is null ? null : ToDto(document);
     }
 
+    public async Task<IReadOnlyList<RelationshipDto>> GetOutgoingAsync(string fromAssetId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoRelationshipDocument>.Filter.Eq(d => d.FromAssetId, fromAssetId);
+        var cursor = await _collection.FindAsync(filter, cancellationToken: cancellationToken);
+        var documents = await cursor.ToListAsync(cancellationToken);
+        return documents.Count == 0 ? new List<RelationshipDto>() : documents.Select(ToDto).ToList();
+    }
+
     public async Task<RelationshipDto> AddAsync(RelationshipDto dto, CancellationToken cancellationToken = default)
     {
         var document = ToDocument(dto);
