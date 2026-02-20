@@ -1,15 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { AssetList } from './AssetList'
-import { apiClient } from '@/shared/api'
-import type { AssetDto, StateDto } from '@/shared/api'
+import { getAssets } from '@/entities/asset'
+import { getStates } from '@/entities/state'
+import type { AssetDto } from '@/entities/asset'
+import type { StateDto } from '@/entities/state'
 
-// Mock API client
-vi.mock('@/shared/api', () => ({
-  apiClient: {
-    getAssets: vi.fn(),
-    getStates: vi.fn(),
-  },
+vi.mock('@/entities/asset', () => ({
+  getAssets: vi.fn(),
+  getAssetById: vi.fn(),
+  createAsset: vi.fn(),
+  updateAsset: vi.fn(),
+}))
+vi.mock('@/entities/state', () => ({
+  getStates: vi.fn(),
+  getStateByAssetId: vi.fn(),
 }))
 
 describe('AssetList', () => {
@@ -58,10 +63,10 @@ describe('AssetList', () => {
   })
 
   it('renders loading state initially', () => {
-    vi.mocked(apiClient.getAssets).mockImplementation(
+    vi.mocked(getAssets).mockImplementation(
       () => new Promise(() => {}), // Never resolves
     )
-    vi.mocked(apiClient.getStates).mockImplementation(
+    vi.mocked(getStates).mockImplementation(
       () => new Promise(() => {}), // Never resolves
     )
 
@@ -70,8 +75,8 @@ describe('AssetList', () => {
   })
 
   it('renders assets with states', async () => {
-    vi.mocked(apiClient.getAssets).mockResolvedValue(mockAssets)
-    vi.mocked(apiClient.getStates).mockResolvedValue(mockStates)
+    vi.mocked(getAssets).mockResolvedValue(mockAssets)
+    vi.mocked(getStates).mockResolvedValue(mockStates)
 
     render(<AssetList />)
 
@@ -90,8 +95,8 @@ describe('AssetList', () => {
   })
 
   it('renders error message on API failure', async () => {
-    vi.mocked(apiClient.getAssets).mockRejectedValue(new Error('API Error'))
-    vi.mocked(apiClient.getStates).mockRejectedValue(new Error('API Error'))
+    vi.mocked(getAssets).mockRejectedValue(new Error('API Error'))
+    vi.mocked(getStates).mockRejectedValue(new Error('API Error'))
 
     render(<AssetList />)
 
@@ -101,8 +106,8 @@ describe('AssetList', () => {
   })
 
   it('renders empty state when no assets', async () => {
-    vi.mocked(apiClient.getAssets).mockResolvedValue([])
-    vi.mocked(apiClient.getStates).mockResolvedValue([])
+    vi.mocked(getAssets).mockResolvedValue([])
+    vi.mocked(getStates).mockResolvedValue([])
 
     render(<AssetList />)
 
@@ -112,8 +117,8 @@ describe('AssetList', () => {
   })
 
   it('displays N/A for assets without state', async () => {
-    vi.mocked(apiClient.getAssets).mockResolvedValue(mockAssets)
-    vi.mocked(apiClient.getStates).mockResolvedValue([])
+    vi.mocked(getAssets).mockResolvedValue(mockAssets)
+    vi.mocked(getStates).mockResolvedValue([])
 
     render(<AssetList />)
 

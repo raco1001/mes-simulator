@@ -1,4 +1,14 @@
 # ============================================
+# Frontend (React)
+# ============================================
+servers/frontend/node_modules/
+servers/frontend/dist/
+servers/frontend/build/
+servers/frontend/.coverage
+servers/frontend/htmlcov/
+.pnpm-store/
+
+# ============================================
 # Backend (.NET / ASP.NET Core)
 # ============================================
 servers/backend/bin/
@@ -33,26 +43,6 @@ servers/pipeline/dist/
 servers/pipeline/build/
 servers/pipeline/.coverage
 servers/pipeline/htmlcov/
-
-# ============================================
-# Unity Client
-# ============================================
-client/unity/Library/
-client/unity/Temp/
-client/unity/Logs/
-client/unity/obj/
-client/unity/*.csproj
-client/unity/*.sln
-client/unity/*.suo
-client/unity/*.user
-client/unity/*.userprefs
-client/unity/.vs/
-client/unity/.vscode/
-client/unity/.idea/
-client/unity/[Ll]ocal/
-client/unity/[Aa]ssets/AssetStoreTools*
-client/unity/[Pp]ackages/packages-lock.json
-client/unity/[Uu]sually[Ll]arge[Ff]iles/
 
 # ============================================
 # Infrastructure (Docker, Kafka, DB configs)
@@ -101,3 +91,5 @@ Thumbs.db
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+temp.phases.md

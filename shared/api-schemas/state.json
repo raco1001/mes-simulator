@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "State API Schema",
+  "description": "State 관련 API 스키마 정의",
+  "type": "object",
+  "definitions": {
+    "StateDto": {
+      "type": "object",
+      "required": ["assetId", "status", "updatedAt"],
+      "properties": {
+        "assetId": { "type": "string", "description": "Asset ID" },
+        "currentTemp": {
+          "type": "number",
+          "nullable": true,
+          "description": "현재 온도 (섭씨)"
+        },
+        "currentPower": {
+          "type": "number",
+          "nullable": true,
+          "description": "현재 전력 소비량 (와트)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["normal", "warning", "error"],
+          "description": "현재 상태"
+        },
+        "lastEventType": {
+          "type": "string",
+          "nullable": true,
+          "description": "마지막으로 이 상태를 업데이트한 이벤트 타입"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "마지막 업데이트 시각"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 상태 메타데이터",
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/states": {
+      "get": {
+        "summary": "모든 asset의 현재 상태 조회",
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/StateDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/states/{assetId}": {
+      "get": {
+        "summary": "특정 asset의 현재 상태 조회",
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/definitions/StateDto" }
+              }
+            }
+          },
+          "404": { "description": "State를 찾을 수 없음" }
+        }
+      }
+    }
+  }
+}

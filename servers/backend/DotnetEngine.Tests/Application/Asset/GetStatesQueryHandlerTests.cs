@@ -1,8 +1,7 @@
 using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Handlers;
-using DotnetEngine.Application.Asset.Ports;
-using DotnetEngine.Domain.Asset.ValueObjects;
-using DotnetEngine.Infrastructure.Mongo;
+using DotnetEngine.Application.Asset.Ports.Driving;
+using DotnetEngine.Application.Asset.Ports.Driven;
 using Moq;
 using Xunit;
 
@@ -15,16 +14,17 @@ public class GetStatesQueryHandlerTests
     {
         // Arrange
         var mockRepository = new Mock<IAssetRepository>();
-        var states = new List<AssetState>
+        var now = DateTimeOffset.UtcNow;
+        var states = new List<StateDto>
         {
-            new AssetState
+            new()
             {
                 AssetId = "freezer-1",
                 CurrentTemp = -5.0,
                 CurrentPower = 120.0,
                 Status = "normal",
                 LastEventType = "asset.health.updated",
-                UpdatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = now,
                 Metadata = new Dictionary<string, object>()
             }
         };
@@ -51,7 +51,7 @@ public class GetStatesQueryHandlerTests
         // Arrange
         var mockRepository = new Mock<IAssetRepository>();
         mockRepository.Setup(r => r.GetAllStatesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<AssetState>());
+            .ReturnsAsync(new List<StateDto>());
 
         var handler = new GetStatesQueryHandler(mockRepository.Object);
 
@@ -68,14 +68,15 @@ public class GetStatesQueryHandlerTests
     {
         // Arrange
         var mockRepository = new Mock<IAssetRepository>();
-        var state = new AssetState
+        var now = DateTimeOffset.UtcNow;
+        var state = new StateDto
         {
             AssetId = "freezer-1",
             CurrentTemp = -5.0,
             CurrentPower = 120.0,
             Status = "normal",
             LastEventType = "asset.health.updated",
-            UpdatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = now,
             Metadata = new Dictionary<string, object>()
         };
         mockRepository.Setup(r => r.GetStateByAssetIdAsync("freezer-1", It.IsAny<CancellationToken>()))
@@ -99,7 +100,7 @@ public class GetStatesQueryHandlerTests
         // Arrange
         var mockRepository = new Mock<IAssetRepository>();
         mockRepository.Setup(r => r.GetStateByAssetIdAsync("not-found", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((AssetState?)null);
+            .ReturnsAsync((StateDto?)null);
 
         var handler = new GetStatesQueryHandler(mockRepository.Object);
 

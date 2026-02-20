@@ -8,19 +8,14 @@
       "type": "object",
       "required": ["id", "type", "createdAt"],
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Asset ID"
-        },
+        "id": { "type": "string", "description": "Asset ID" },
         "type": {
           "type": "string",
           "description": "Asset 타입 (예: freezer, conveyor, sensor)"
         },
         "connections": {
           "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "items": { "type": "string" },
           "description": "연결된 다른 asset들의 ID 목록"
         },
         "metadata": {
@@ -44,10 +39,7 @@
       "type": "object",
       "required": ["assetId", "status", "updatedAt"],
       "properties": {
-        "assetId": {
-          "type": "string",
-          "description": "Asset ID"
-        },
+        "assetId": { "type": "string", "description": "Asset ID" },
         "currentTemp": {
           "type": "number",
           "nullable": true,
@@ -79,6 +71,42 @@
           "additionalProperties": true
         }
       }
+    },
+    "CreateAssetRequest": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Asset 타입 (예: freezer, conveyor, sensor)"
+        },
+        "connections": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "연결된 다른 asset들의 ID 목록"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 메타데이터",
+          "additionalProperties": true
+        }
+      }
+    },
+    "UpdateAssetRequest": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "description": "Asset 타입" },
+        "connections": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "연결된 asset ID 목록"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "추가 메타데이터",
+          "additionalProperties": true
+        }
+      }
     }
   },
   "paths": {
@@ -92,13 +120,33 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/AssetDto"
-                  }
+                  "items": { "$ref": "#/definitions/AssetDto" }
                 }
               }
             }
           }
+        }
+      },
+      "post": {
+        "summary": "Asset 생성",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/definitions/CreateAssetRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "생성됨",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/definitions/AssetDto" }
+              }
+            }
+          },
+          "400": { "description": "검증 실패" }
         }
       }
     },
@@ -110,9 +158,7 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -120,15 +166,42 @@
             "description": "성공",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/definitions/AssetDto"
-                }
+                "schema": { "$ref": "#/definitions/AssetDto" }
               }
             }
           },
-          "404": {
-            "description": "Asset을 찾을 수 없음"
+          "404": { "description": "Asset을 찾을 수 없음" }
+        }
+      },
+      "put": {
+        "summary": "특정 asset 수정",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
           }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/definitions/UpdateAssetRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/definitions/AssetDto" }
+              }
+            }
+          },
+          "400": { "description": "검증 실패" },
+          "404": { "description": "Asset을 찾을 수 없음" }
         }
       }
     },
@@ -142,9 +215,7 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/StateDto"
-                  }
+                  "items": { "$ref": "#/definitions/StateDto" }
                 }
               }
             }
@@ -160,9 +231,7 @@
             "name": "assetId",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -170,15 +239,11 @@
             "description": "성공",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/definitions/StateDto"
-                }
+                "schema": { "$ref": "#/definitions/StateDto" }
               }
             }
           },
-          "404": {
-            "description": "State를 찾을 수 없음"
-          }
+          "404": { "description": "State를 찾을 수 없음" }
         }
       }
     }

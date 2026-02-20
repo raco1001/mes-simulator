@@ -6,7 +6,8 @@ Factory MES 시스템의 REST API 스키마 정의입니다.
 
 ```
 api-schemas/
-├── assets.json      # Asset 관련 API 스키마
+├── assets.json         # Asset 관련 API 스키마
+├── relationships.json  # Relationship(에셋 간 관계) API 스키마
 └── README.md
 ```
 
@@ -16,6 +17,16 @@ api-schemas/
 
 - `GET /api/assets` - 모든 asset 목록 조회
 - `GET /api/assets/{id}` - 특정 asset 정보 조회
+- `POST /api/assets` - Asset 생성
+- `PUT /api/assets/{id}` - 특정 asset 수정
+
+### Relationships
+
+- `GET /api/relationships` - 모든 relationship 목록 조회
+- `GET /api/relationships/{id}` - 특정 relationship 조회
+- `POST /api/relationships` - Relationship 생성
+- `PUT /api/relationships/{id}` - 특정 relationship 수정
+- `DELETE /api/relationships/{id}` - 특정 relationship 삭제
 
 ### States
 
@@ -53,6 +64,20 @@ api-schemas/
   "metadata": {
     "humidity": 45
   }
+}
+```
+
+### RelationshipDto
+
+```json
+{
+  "id": "rel-001",
+  "fromAssetId": "freezer-1",
+  "toAssetId": "conveyor-1",
+  "relationshipType": "feeds_into",
+  "properties": { "flowRate": 100 },
+  "createdAt": "2026-02-20T10:00:00Z",
+  "updatedAt": "2026-02-20T10:00:00Z"
 }
 ```
 

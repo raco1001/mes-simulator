@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using DotnetEngine.Application.Asset.Dto;
-using DotnetEngine.Application.Asset.Ports;
-using DotnetEngine.Domain.Asset.ValueObjects;
-using DotnetEngine.Infrastructure.Mongo;
+using DotnetEngine.Application.Asset.Ports.Driving;
+using DotnetEngine.Application.Asset.Ports.Driven;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,19 +26,22 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 // Remove existing registrations
                 services.RemoveAll<IGetAssetsQuery>();
                 services.RemoveAll<IGetStatesQuery>();
+                services.RemoveAll<ICreateAssetCommand>();
+                services.RemoveAll<IUpdateAssetCommand>();
 
                 // Mock repositories
                 var mockAssetRepository = new Mock<IAssetRepository>();
-                var assets = new List<Asset>
+                var now = DateTimeOffset.UtcNow;
+                var assets = new List<AssetDto>
                 {
-                    new Asset
+                    new()
                     {
                         Id = "freezer-1",
                         Type = "freezer",
                         Connections = new List<string> { "conveyor-1" },
                         Metadata = new Dictionary<string, object>(),
-                        CreatedAt = DateTimeOffset.UtcNow,
-                        UpdatedAt = DateTimeOffset.UtcNow
+                        CreatedAt = now,
+                        UpdatedAt = now
                     }
                 };
                 mockAssetRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -47,18 +49,34 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 mockAssetRepository.Setup(r => r.GetByIdAsync("freezer-1", It.IsAny<CancellationToken>()))
                     .ReturnsAsync(assets[0]);
                 mockAssetRepository.Setup(r => r.GetByIdAsync("not-found", It.IsAny<CancellationToken>()))
-                    .ReturnsAsync((Asset?)null);
+                    .ReturnsAsync((AssetDto?)null);
 
-                var states = new List<AssetState>
+                mockAssetRepository.Setup(r => r.AddAsync(It.IsAny<AssetDto>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((AssetDto a, CancellationToken _) => a);
+                var updatedAsset = new AssetDto
                 {
-                    new AssetState
+                    Id = "freezer-1",
+                    Type = "conveyor",
+                    Connections = new List<string>(),
+                    Metadata = new Dictionary<string, object>(),
+                    CreatedAt = now,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
+                mockAssetRepository.Setup(r => r.UpdateAsync("freezer-1", It.IsAny<AssetDto>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(updatedAsset);
+                mockAssetRepository.Setup(r => r.UpdateAsync("not-found", It.IsAny<AssetDto>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((AssetDto?)null);
+
+                var states = new List<StateDto>
+                {
+                    new()
                     {
                         AssetId = "freezer-1",
                         CurrentTemp = -5.0,
                         CurrentPower = 120.0,
                         Status = "normal",
                         LastEventType = "asset.health.updated",
-                        UpdatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = now,
                         Metadata = new Dictionary<string, object>()
                     }
                 };
@@ -67,11 +85,13 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 mockAssetRepository.Setup(r => r.GetStateByAssetIdAsync("freezer-1", It.IsAny<CancellationToken>()))
                     .ReturnsAsync(states[0]);
                 mockAssetRepository.Setup(r => r.GetStateByAssetIdAsync("not-found", It.IsAny<CancellationToken>()))
-                    .ReturnsAsync((AssetState?)null);
+                    .ReturnsAsync((StateDto?)null);
 
                 services.AddSingleton(mockAssetRepository.Object);
                 services.AddScoped<IGetAssetsQuery, DotnetEngine.Application.Asset.Handlers.GetAssetsQueryHandler>();
                 services.AddScoped<IGetStatesQuery, DotnetEngine.Application.Asset.Handlers.GetStatesQueryHandler>();
+                services.AddScoped<ICreateAssetCommand, DotnetEngine.Application.Asset.Handlers.CreateAssetCommandHandler>();
+                services.AddScoped<IUpdateAssetCommand, DotnetEngine.Application.Asset.Handlers.UpdateAssetCommandHandler>();
             });
         }).CreateClient();
     }
@@ -136,6 +156,46 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
     public async Task GetStateByAssetId_Returns404_WhenNotFound()
     {
         var response = await _client.GetAsync("/api/states/not-found");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostAssets_Returns201AndAsset()
+    {
+        var request = new CreateAssetRequest
+        {
+            Type = "sensor",
+            Connections = Array.Empty<string>(),
+            Metadata = new Dictionary<string, object>()
+        };
+        var response = await _client.PostAsJsonAsync("/api/assets", request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<AssetDto>();
+        Assert.NotNull(dto);
+        Assert.Equal("sensor", dto.Type);
+        Assert.NotNull(dto.Id);
+    }
+
+    [Fact]
+    public async Task PutAsset_Returns200AndAsset_WhenExists()
+    {
+        var request = new UpdateAssetRequest { Type = "conveyor", Connections = Array.Empty<string>(), Metadata = null };
+        var response = await _client.PutAsJsonAsync("/api/assets/freezer-1", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<AssetDto>();
+        Assert.NotNull(dto);
+        Assert.Equal("freezer-1", dto.Id);
+        Assert.Equal("conveyor", dto.Type);
+    }
+
+    [Fact]
+    public async Task PutAsset_Returns404_WhenNotFound()
+    {
+        var request = new UpdateAssetRequest { Type = "conveyor" };
+        var response = await _client.PutAsJsonAsync("/api/assets/not-found", request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
