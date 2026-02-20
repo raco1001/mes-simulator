@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AssetsPage } from './AssetsPage'
-import { apiClient } from '@/shared/api'
-import type { AssetDto } from '@/shared/api'
+import { getAssets, createAsset } from '@/entities/asset'
+import type { AssetDto } from '@/entities/asset'
 
-vi.mock('@/shared/api', () => ({
-  apiClient: {
-    getAssets: vi.fn(),
-    createAsset: vi.fn(),
-  },
+vi.mock('@/entities/asset', () => ({
+  getAssets: vi.fn(),
+  createAsset: vi.fn(),
+  getAssetById: vi.fn(),
+  updateAsset: vi.fn(),
 }))
 
 describe('AssetsPage', () => {
@@ -26,7 +26,7 @@ describe('AssetsPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(apiClient.getAssets).mockResolvedValue(mockAssets)
+    vi.mocked(getAssets).mockResolvedValue(mockAssets)
   })
 
   it('renders asset list from getAssets', async () => {
@@ -40,13 +40,13 @@ describe('AssetsPage', () => {
 
   it('calls createAsset on form submit with type and connections', async () => {
     const user = userEvent.setup()
-    vi.mocked(apiClient.createAsset).mockResolvedValue({
+    vi.mocked(createAsset).mockResolvedValue({
       ...mockAssets[0],
       id: 'new-1',
       type: 'conveyor',
       connections: ['freezer-1'],
     })
-    vi.mocked(apiClient.getAssets).mockResolvedValue(mockAssets)
+    vi.mocked(getAssets).mockResolvedValue(mockAssets)
 
     render(<AssetsPage />)
 
@@ -59,8 +59,8 @@ describe('AssetsPage', () => {
     await user.click(screen.getByRole('button', { name: '생성' }))
 
     await waitFor(() => {
-      expect(apiClient.createAsset).toHaveBeenCalledTimes(1)
-      expect(apiClient.createAsset).toHaveBeenCalledWith({
+      expect(createAsset).toHaveBeenCalledTimes(1)
+      expect(createAsset).toHaveBeenCalledWith({
         type: 'conveyor',
         connections: ['freezer-1'],
         metadata: {},
@@ -78,8 +78,8 @@ describe('AssetsPage', () => {
 
     await user.click(screen.getByRole('button', { name: '시뮬레이션 실행' }))
 
-    expect(apiClient.createAsset).not.toHaveBeenCalled()
-    expect(apiClient.getAssets).toHaveBeenCalledTimes(1)
+    expect(createAsset).not.toHaveBeenCalled()
+    expect(getAssets).toHaveBeenCalledTimes(1)
     expect(screen.getByText(/시뮬레이션 요청됨/)).toBeInTheDocument()
   })
 })

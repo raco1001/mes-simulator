@@ -1,21 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { renderAppAtRoute } from '@/test/utils'
-import { apiClient } from '@/shared/api'
-import type { AssetDto, StateDto } from '@/shared/api'
+import { getAssets } from '@/entities/asset'
+import { getStates } from '@/entities/state'
+import type { AssetDto } from '@/entities/asset'
+import type { StateDto } from '@/entities/state'
 
-vi.mock('@/shared/api', () => ({
-  apiClient: {
-    getAssets: vi.fn(),
-    getStates: vi.fn(),
-  },
+vi.mock('@/entities/asset', () => ({
+  getAssets: vi.fn(),
+  getAssetById: vi.fn(),
+  createAsset: vi.fn(),
+  updateAsset: vi.fn(),
+}))
+vi.mock('@/entities/state', () => ({
+  getStates: vi.fn(),
+  getStateByAssetId: vi.fn(),
 }))
 
 describe('AppLayout and routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(apiClient.getAssets).mockResolvedValue([])
-    vi.mocked(apiClient.getStates).mockResolvedValue([])
+    vi.mocked(getAssets).mockResolvedValue([])
+    vi.mocked(getStates).mockResolvedValue([])
   })
 
   it('shows nav links 메인 and 에셋 설정', async () => {
@@ -38,8 +44,8 @@ describe('AppLayout and routes', () => {
       },
     ]
     const mockStates: StateDto[] = []
-    vi.mocked(apiClient.getAssets).mockResolvedValue(mockAssets)
-    vi.mocked(apiClient.getStates).mockResolvedValue(mockStates)
+    vi.mocked(getAssets).mockResolvedValue(mockAssets)
+    vi.mocked(getStates).mockResolvedValue(mockStates)
 
     renderAppAtRoute('/')
 
@@ -48,7 +54,7 @@ describe('AppLayout and routes', () => {
   })
 
   it('shows assets settings page at /assets', async () => {
-    vi.mocked(apiClient.getAssets).mockResolvedValue([])
+    vi.mocked(getAssets).mockResolvedValue([])
 
     renderAppAtRoute('/assets')
 

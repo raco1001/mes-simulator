@@ -1,6 +1,5 @@
 /**
- * Backend API 타입 정의
- * shared/api-schemas/assets.json 기반
+ * Asset entity types (shared/api-schemas/assets.json 기반)
  */
 
 export interface AssetDto {
@@ -10,16 +9,6 @@ export interface AssetDto {
   metadata: Record<string, unknown>
   createdAt: string
   updatedAt: string
-}
-
-export interface StateDto {
-  assetId: string
-  currentTemp: number | null
-  currentPower: number | null
-  status: 'normal' | 'warning' | 'error'
-  lastEventType: string | null
-  updatedAt: string
-  metadata: Record<string, unknown>
 }
 
 /** Asset 생성 요청 (POST /api/assets) */

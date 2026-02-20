@@ -1,2 +1,1 @@
-export { apiClient } from './apiClient'
-export type { AssetDto, StateDto, CreateAssetRequest, UpdateAssetRequest } from './types'
+export { httpClient } from './httpClient'

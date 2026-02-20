@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { apiClient, type AssetDto, type CreateAssetRequest } from '@/shared/api'
+import {
+  getAssets,
+  createAsset,
+  type AssetDto,
+  type CreateAssetRequest,
+} from '@/entities/asset'
 import './AssetsPage.css'
 
 export function AssetsPage() {
@@ -14,7 +19,7 @@ export function AssetsPage() {
   const loadAssets = async () => {
     try {
       setLoading(true)
-      const data = await apiClient.getAssets()
+      const data = await getAssets()
       setAssets(data)
       setError(null)
     } catch (err) {
@@ -47,7 +52,7 @@ export function AssetsPage() {
       metadata: {},
     }
     try {
-      await apiClient.createAsset(body)
+      await createAsset(body)
       setFormType('')
       setFormConnections('')
       await loadAssets()

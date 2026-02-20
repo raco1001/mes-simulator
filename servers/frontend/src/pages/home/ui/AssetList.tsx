@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { apiClient, type AssetDto, type StateDto } from '@/shared/api'
+import { getAssets, type AssetDto } from '@/entities/asset'
+import { getStates, type StateDto } from '@/entities/state'
 import './AssetList.css'
 
 interface AssetWithState extends AssetDto {
@@ -16,8 +17,8 @@ export function AssetList() {
       try {
         setLoading(true)
         const [assetsData, statesData] = await Promise.all([
-          apiClient.getAssets(),
-          apiClient.getStates(),
+          getAssets(),
+          getStates(),
         ])
 
         // Asset과 State를 결합
