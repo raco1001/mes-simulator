@@ -9,6 +9,8 @@ using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Handlers;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Application.Simulation.Rules;
+using DotnetEngine.Infrastructure.Kafka;
 using DotnetEngine.Infrastructure.Mongo;
 using MongoDB.Driver;
 
@@ -53,6 +55,13 @@ builder.Services.AddScoped<IAssetRepository, MongoAssetRepository>();
 builder.Services.AddScoped<IRelationshipRepository, MongoRelationshipRepository>();
 builder.Services.AddScoped<ISimulationRunRepository, MongoSimulationRunRepository>();
 builder.Services.AddScoped<IEventRepository, MongoEventRepository>();
+
+builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection(KafkaOptions.SectionName));
+builder.Services.AddScoped<IEventPublisher, KafkaEventPublisher>();
+
+builder.Services.AddScoped<IPropagationRule, SuppliesRule>();
+builder.Services.AddScoped<IPropagationRule, ContainsRule>();
+builder.Services.AddScoped<IPropagationRule, ConnectedToRule>();
 
 builder.Services.AddScoped<IGetAssetsQuery, GetAssetsQueryHandler>();
 builder.Services.AddScoped<IGetStatesQuery, GetStatesQueryHandler>();

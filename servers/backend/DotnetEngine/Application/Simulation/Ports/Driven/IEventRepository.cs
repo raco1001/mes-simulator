@@ -8,4 +8,5 @@ namespace DotnetEngine.Application.Simulation.Ports.Driven;
 public interface IEventRepository
 {
     Task AppendAsync(EventDto dto, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<EventDto>> GetBySimulationRunIdAsync(string simulationRunId, CancellationToken cancellationToken = default);
 }

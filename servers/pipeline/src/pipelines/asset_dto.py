@@ -27,6 +27,17 @@ class AssetHealthUpdatedEventDto(BaseModel):
     payload: dict[str, Any]
 
 
+class SimulationStateUpdatedEventDto(BaseModel):
+    """Simulation state updated event DTO (backend propagation)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    event_type: str = Field(..., alias="eventType")
+    asset_id: str = Field(..., alias="assetId")
+    timestamp: datetime
+    payload: dict[str, Any]
+
+
 class AssetStateDto(BaseModel):
     """Asset state DTO for MongoDB storage."""
 

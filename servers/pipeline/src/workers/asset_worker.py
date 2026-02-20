@@ -4,11 +4,16 @@ import logging
 import signal
 import sys
 from datetime import datetime
+from typing import Any
 
 from config.settings import Settings
 from domains.asset.constants import AssetConstants
 from messaging.consumer.kafka_consumer import AssetEventConsumer
-from pipelines.asset_dto import AssetCreatedEventDto, AssetHealthUpdatedEventDto
+from pipelines.asset_dto import (
+    AssetCreatedEventDto,
+    AssetHealthUpdatedEventDto,
+    SimulationStateUpdatedEventDto,
+)
 from pipelines.asset_pipeline import asset_state_to_dto, calculate_state
 from repositories.mongo.asset_repository import AssetRepository
 
@@ -67,6 +72,19 @@ class AssetWorker:
             payload=event.payload,
         )
 
+    def process_simulation_state_updated(self, event: SimulationStateUpdatedEventDto) -> None:
+        """Process simulation.state.updated event (backend propagation)."""
+        logger.info(f"Processing simulation.state.updated: {event.asset_id}")
+        state = calculate_state(event)
+        state_dto = asset_state_to_dto(state)
+        self.repository.save_state(state_dto)
+        self.repository.save_event(
+            asset_id=event.asset_id,
+            event_type=event.event_type,
+            timestamp=event.timestamp,
+            payload=event.payload,
+        )
+
     def process_event(self, event: dict) -> None:
         """Process event based on event type."""
         event_type = event.get("eventType")
@@ -78,6 +96,9 @@ class AssetWorker:
             elif event_type == AssetConstants.EventType.ASSET_HEALTH_UPDATED:
                 event_dto = AssetHealthUpdatedEventDto(**event)
                 self.process_health_updated(event_dto)
+            elif event_type == AssetConstants.EventType.SIMULATION_STATE_UPDATED:
+                event_dto = SimulationStateUpdatedEventDto(**event)
+                self.process_simulation_state_updated(event_dto)
             else:
                 logger.warning(f"Unknown event type: {event_type}")
         except Exception as e:

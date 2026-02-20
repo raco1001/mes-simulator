@@ -6,11 +6,12 @@ using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Application.Simulation.Rules;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
 /// <summary>
-/// 시뮬레이션 실행 Use Case 구현. 트리거 에셋 + BFS 1회 전파, SimulationRun 세션 및 이벤트 기록.
+/// 시뮬레이션 실행 Use Case 구현. 트리거 에셋 + BFS 규칙 기반 전파, SimulationRun 세션, 이벤트 DB 저장 및 Kafka 발행.
 /// </summary>
 public sealed class RunSimulationCommandHandler : IRunSimulationCommand
 {
@@ -20,17 +21,23 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
     private readonly IRelationshipRepository _relationshipRepository;
     private readonly ISimulationRunRepository _simulationRunRepository;
     private readonly IEventRepository _eventRepository;
+    private readonly IEventPublisher _eventPublisher;
+    private readonly IEnumerable<IPropagationRule> _rules;
 
     public RunSimulationCommandHandler(
         IAssetRepository assetRepository,
         IRelationshipRepository relationshipRepository,
         ISimulationRunRepository simulationRunRepository,
-        IEventRepository eventRepository)
+        IEventRepository eventRepository,
+        IEventPublisher eventPublisher,
+        IEnumerable<IPropagationRule> rules)
     {
         _assetRepository = assetRepository;
         _relationshipRepository = relationshipRepository;
         _simulationRunRepository = simulationRunRepository;
         _eventRepository = eventRepository;
+        _eventPublisher = eventPublisher;
+        _rules = rules;
     }
 
     public async Task<RunResult> RunAsync(RunSimulationRequest request, CancellationToken cancellationToken = default)
@@ -69,7 +76,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             await _assetRepository.UpsertStateAsync(mergedState, cancellationToken);
 
             var occurredAt = DateTimeOffset.UtcNow;
-            await _eventRepository.AppendAsync(new EventDto
+            var nodeEvent = new EventDto
             {
                 AssetId = assetId,
                 EventType = EventTypeStateUpdated,
@@ -80,14 +87,62 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 {
                     ["depth"] = depth,
                     ["status"] = mergedState.Status,
+                    ["temperature"] = mergedState.CurrentTemp ?? 0d,
+                    ["power"] = mergedState.CurrentPower ?? 0d,
                 },
-            }, cancellationToken);
+            };
+            await _eventRepository.AppendAsync(nodeEvent, cancellationToken);
+            await _eventPublisher.PublishAsync(nodeEvent, cancellationToken);
 
             var outgoing = await _relationshipRepository.GetOutgoingAsync(assetId, cancellationToken);
-            foreach (RelationshipDto rel in outgoing)
+            foreach (var rel in outgoing)
             {
-                if (!visited.Contains(rel.ToAssetId))
-                    queue.Enqueue((rel.ToAssetId, patch, depth + 1));
+                if (visited.Contains(rel.ToAssetId))
+                    continue;
+
+                var ctx = new PropagationContext
+                {
+                    FromAssetId = assetId,
+                    FromState = mergedState,
+                    Relationship = rel,
+                    ToAssetId = rel.ToAssetId,
+                    ToState = null,
+                    IncomingPatch = patch,
+                    Depth = depth + 1,
+                    SimulationRunId = runId,
+                };
+
+                IPropagationRule? appliedRule = null;
+                foreach (var rule in _rules)
+                {
+                    if (rule.CanApply(ctx))
+                    {
+                        appliedRule = rule;
+                        break;
+                    }
+                }
+
+                StatePatchDto nextPatch;
+                IReadOnlyList<EventDto> ruleEvents;
+                if (appliedRule != null)
+                {
+                    var result = appliedRule.Apply(ctx);
+                    nextPatch = result.OutgoingPatch;
+                    ruleEvents = result.Events;
+                }
+                else
+                {
+                    nextPatch = patch;
+                    ruleEvents = [];
+                }
+
+                queue.Enqueue((rel.ToAssetId, nextPatch, depth + 1));
+
+                foreach (var evt in ruleEvents)
+                {
+                    await _eventRepository.AppendAsync(evt, cancellationToken);
+                    await _eventPublisher.PublishAsync(evt, cancellationToken);
+                }
             }
         }
 
