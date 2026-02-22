@@ -103,6 +103,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 EventType = EventTypes.SimulationStateUpdated,
                 OccurredAt = occurredAt,
                 SimulationRunId = runId,
+                RunTick = runTick,
                 RelationshipId = null,
                 Payload = new Dictionary<string, object>
                 {

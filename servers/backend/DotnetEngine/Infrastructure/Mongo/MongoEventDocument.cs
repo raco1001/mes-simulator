@@ -21,6 +21,9 @@ public sealed class MongoEventDocument
     [BsonElement("simulationRunId")]
     public string? SimulationRunId { get; set; }
 
+    [BsonElement("runTick")]
+    public int? RunTick { get; set; }
+
     [BsonElement("relationshipId")]
     public string? RelationshipId { get; set; }
 

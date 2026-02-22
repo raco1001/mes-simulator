@@ -29,6 +29,7 @@ public sealed class ConnectedToRule : IPropagationRule
             EventType = EventTypes.SimulationStateUpdated,
             OccurredAt = occurredAt,
             SimulationRunId = ctx.SimulationRunId,
+            RunTick = ctx.RunTick,
             RelationshipId = ctx.Relationship.Id,
             Payload = payload,
         };

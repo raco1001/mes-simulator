@@ -1,3 +1,6 @@
+using DotnetEngine.Application.Alert.Handlers;
+using DotnetEngine.Application.Alert.Ports.Driving;
+using DotnetEngine.Application.Alert.Ports.Driven;
 using DotnetEngine.Application.Asset.Handlers;
 using DotnetEngine.Application.Asset.Ports.Driving;
 using DotnetEngine.Application.Asset.Ports.Driven;
@@ -12,6 +15,7 @@ using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Rules;
+using DotnetEngine.Infrastructure.Alert;
 using DotnetEngine.Infrastructure.Kafka;
 using DotnetEngine.Infrastructure.Mongo;
 using MongoDB.Driver;
@@ -62,6 +66,10 @@ builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection(KafkaO
 builder.Services.AddScoped<IEventPublisher, KafkaEventPublisher>();
 builder.Services.AddScoped<IEngineStateApplier, EngineStateApplier>();
 
+builder.Services.AddSingleton<IAlertStore, InMemoryAlertStore>();
+builder.Services.AddScoped<IGetAlertsQuery, GetAlertsQueryHandler>();
+builder.Services.AddHostedService<KafkaAlertConsumerService>();
+
 builder.Services.AddScoped<IPropagationRule, SuppliesRule>();
 builder.Services.AddScoped<IPropagationRule, ContainsRule>();
 builder.Services.AddScoped<IPropagationRule, ConnectedToRule>();
@@ -79,6 +87,7 @@ builder.Services.AddScoped<IDeleteRelationshipCommand, DeleteRelationshipCommand
 builder.Services.AddScoped<IRunSimulationCommand, RunSimulationCommandHandler>();
 builder.Services.AddScoped<IStartContinuousRunCommand, StartContinuousRunCommandHandler>();
 builder.Services.AddScoped<IStopSimulationRunCommand, StopSimulationRunCommandHandler>();
+builder.Services.AddScoped<IReplayRunCommand, ReplayRunCommandHandler>();
 builder.Services.AddHostedService<SimulationEngineService>();
 
 builder.Services.AddEndpointsApiExplorer();

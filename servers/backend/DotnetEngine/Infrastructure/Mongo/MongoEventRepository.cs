@@ -19,6 +19,7 @@ public sealed class MongoEventRepository : IEventRepository
 
     public async Task AppendAsync(EventDto dto, CancellationToken cancellationToken = default)
     {
+        var runTick = dto.RunTick ?? TryGetTickFromPayload(dto.Payload);
         var document = new MongoEventDocument
         {
             Id = ObjectId.GenerateNewId().ToString(),
@@ -26,6 +27,7 @@ public sealed class MongoEventRepository : IEventRepository
             EventType = dto.EventType,
             Timestamp = dto.OccurredAt.UtcDateTime,
             SimulationRunId = dto.SimulationRunId,
+            RunTick = runTick,
             RelationshipId = dto.RelationshipId,
             OccurredAt = dto.OccurredAt.UtcDateTime,
             Payload = MetadataBsonConverter.ToBsonDocument(dto.Payload),
@@ -33,10 +35,25 @@ public sealed class MongoEventRepository : IEventRepository
         await _collection.InsertOneAsync(document, cancellationToken: cancellationToken);
     }
 
-    public async Task<IReadOnlyList<EventDto>> GetBySimulationRunIdAsync(string simulationRunId, CancellationToken cancellationToken = default)
+    private static int? TryGetTickFromPayload(IReadOnlyDictionary<string, object> payload)
     {
-        var filter = Builders<MongoEventDocument>.Filter.Eq(d => d.SimulationRunId, simulationRunId);
-        var sort = Builders<MongoEventDocument>.Sort.Ascending(d => d.OccurredAt).Ascending(d => d.Timestamp);
+        if (!payload.TryGetValue("tick", out var tickObj))
+            return null;
+        return tickObj switch
+        {
+            int i => i,
+            long l => (int)l,
+            _ => null,
+        };
+    }
+
+    public async Task<IReadOnlyList<EventDto>> GetBySimulationRunIdAsync(string simulationRunId, int? tickMax = null, CancellationToken cancellationToken = default)
+    {
+        var filterBuilder = Builders<MongoEventDocument>.Filter;
+        var filter = filterBuilder.Eq(d => d.SimulationRunId, simulationRunId);
+        if (tickMax.HasValue)
+            filter = filterBuilder.And(filter, filterBuilder.Lte(d => d.RunTick, tickMax.Value));
+        var sort = Builders<MongoEventDocument>.Sort.Ascending(d => d.RunTick).Ascending(d => d.OccurredAt).Ascending(d => d.Timestamp);
         var cursor = await _collection.FindAsync(filter, new FindOptions<MongoEventDocument, MongoEventDocument> { Sort = sort }, cancellationToken);
         var documents = await cursor.ToListAsync(cancellationToken);
         return documents.Select(ToDto).ToList();
@@ -51,6 +68,7 @@ public sealed class MongoEventRepository : IEventRepository
             EventType = doc.EventType,
             OccurredAt = new DateTimeOffset(occurredAt, TimeSpan.Zero),
             SimulationRunId = doc.SimulationRunId,
+            RunTick = doc.RunTick,
             RelationshipId = doc.RelationshipId,
             Payload = MetadataBsonConverter.ToDictionary(doc.Payload),
         };
