@@ -49,3 +49,4 @@ Backend·Frontend 간 REST API 계약을 정의한 JSON 스키마와 엔드포�
 
 - [infrastructure/mongo/MODEL.md](../../infrastructure/mongo/MODEL.md) — MongoDB 문서 구조 (스키마와 필드 매핑)
 - [Event schemas](../../shared/event-schemas/) — 이벤트 페이로드 스키마(별도 디렉터리)
+- [event-replay-contract.md](event-replay-contract.md) — 시뮬레이션 이벤트 Replay 계약 (runId, tick, 재생 순서)

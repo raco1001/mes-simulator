@@ -26,6 +26,7 @@ public sealed class SuppliesRule : IPropagationRule
         var occurredAt = DateTimeOffset.UtcNow;
         var payload = new Dictionary<string, object>
         {
+            ["tick"] = ctx.RunTick,
             ["depth"] = ctx.Depth,
             ["relationshipType"] = "Supplies",
             ["fromAssetId"] = ctx.FromAssetId,

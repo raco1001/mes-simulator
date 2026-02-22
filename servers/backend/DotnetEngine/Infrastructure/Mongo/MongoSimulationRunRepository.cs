@@ -47,6 +47,13 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
         await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
+    public async Task UpdateTickIndexAsync(string id, int tickIndex, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoSimulationRunDocument>.Filter.Eq(d => d.Id, id);
+        var update = Builders<MongoSimulationRunDocument>.Update.Set(d => d.TickIndex, tickIndex);
+        await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
     public async Task EndAsync(string id, DateTimeOffset endedAt, CancellationToken cancellationToken = default)
     {
         var filter = Builders<MongoSimulationRunDocument>.Filter.Eq(d => d.Id, id);
@@ -70,6 +77,7 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
             TriggerAssetId = doc.TriggerAssetId,
             Trigger = MetadataBsonConverter.ToDictionary(doc.Trigger),
             MaxDepth = doc.MaxDepth,
+            TickIndex = doc.TickIndex,
         };
     }
 
@@ -84,6 +92,7 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
             TriggerAssetId = dto.TriggerAssetId,
             Trigger = MetadataBsonConverter.ToBsonDocument(dto.Trigger),
             MaxDepth = dto.MaxDepth,
+            TickIndex = dto.TickIndex,
         };
     }
 

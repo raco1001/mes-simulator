@@ -7,7 +7,13 @@ import {
   type CreateAssetRequest,
   type UpdateAssetRequest,
 } from '@/entities/asset'
-import { getRunEvents, runSimulation, type EventDto } from '@/entities/simulation'
+import {
+  getRunEvents,
+  runSimulation,
+  startContinuousRun,
+  stopRun,
+  type EventDto,
+} from '@/entities/simulation'
 import './AssetsPage.css'
 
 export function AssetsPage() {
@@ -24,6 +30,9 @@ export function AssetsPage() {
     message: string
   } | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
+  const [continuousRunId, setContinuousRunId] = useState<string | null>(null)
+  const [continuousStartLoading, setContinuousStartLoading] = useState(false)
+  const [stopLoading, setStopLoading] = useState(false)
   const [runEvents, setRunEvents] = useState<EventDto[] | null>(null)
   const [runEventsLoading, setRunEventsLoading] = useState(false)
   const [runEventsError, setRunEventsError] = useState<string | null>(null)
@@ -195,6 +204,48 @@ export function AssetsPage() {
       setRunEventsError(err instanceof Error ? err.message : 'Failed to load events')
     } finally {
       setRunEventsLoading(false)
+    }
+  }
+
+  const handleStartContinuousClick = async () => {
+    setSimulationError(null)
+    setContinuousStartLoading(true)
+    try {
+      const triggerAssetId = assets[0]?.id ?? ''
+      if (!triggerAssetId) {
+        setSimulationError('트리거로 사용할 에셋이 없습니다. 에셋을 먼저 추가하세요.')
+        return
+      }
+      const result = await startContinuousRun({ triggerAssetId, maxDepth: 3 })
+      if (result.success) {
+        setContinuousRunId(result.runId)
+        setSimulationResult({ runId: result.runId, message: '지속 시뮬레이션 시작됨' })
+        setRunEvents(null)
+        setRunEventsError(null)
+      } else {
+        setSimulationError(result.message ?? '지속 실행을 시작할 수 없습니다.')
+      }
+    } catch (err) {
+      setSimulationError(err instanceof Error ? err.message : 'Start continuous run failed')
+    } finally {
+      setContinuousStartLoading(false)
+    }
+  }
+
+  const handleStopClick = async () => {
+    if (!continuousRunId) return
+    setSimulationError(null)
+    setStopLoading(true)
+    try {
+      await stopRun(continuousRunId)
+      setContinuousRunId(null)
+      setSimulationResult(null)
+      setRunEvents(null)
+      setRunEventsError(null)
+    } catch (err) {
+      setSimulationError(err instanceof Error ? err.message : 'Stop run failed')
+    } finally {
+      setStopLoading(false)
     }
   }
 
@@ -391,6 +442,24 @@ export function AssetsPage() {
         >
           {simulationLoading ? '실행 중…' : '시뮬레이션 실행'}
         </button>
+        <button
+          type="button"
+          onClick={handleStartContinuousClick}
+          className="assets-simulation-btn"
+          disabled={continuousStartLoading || !assets[0]?.id}
+        >
+          {continuousStartLoading ? '시작 중…' : '지속 실행 시작'}
+        </button>
+        {continuousRunId && (
+          <button
+            type="button"
+            onClick={handleStopClick}
+            className="assets-simulation-btn"
+            disabled={stopLoading}
+          >
+            {stopLoading ? '중단 중…' : '중단'}
+          </button>
+        )}
         {simulationError && (
           <p className="assets-simulation-status assets-simulation-error">{simulationError}</p>
         )}

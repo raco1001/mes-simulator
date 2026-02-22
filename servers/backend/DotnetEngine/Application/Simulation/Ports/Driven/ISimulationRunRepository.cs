@@ -13,5 +13,6 @@ public interface ISimulationRunRepository
     Task<SimulationRunDto?> GetByIdAsync(string id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SimulationRunDto>> GetRunningAsync(CancellationToken cancellationToken = default);
     Task UpdateStatusAsync(string id, SimulationRunStatus status, DateTimeOffset? endedAt, CancellationToken cancellationToken = default);
+    Task UpdateTickIndexAsync(string id, int tickIndex, CancellationToken cancellationToken = default);
     Task EndAsync(string id, DateTimeOffset endedAt, CancellationToken cancellationToken = default);
 }

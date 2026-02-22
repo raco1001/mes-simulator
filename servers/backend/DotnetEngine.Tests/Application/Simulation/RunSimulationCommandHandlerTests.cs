@@ -26,6 +26,8 @@ public class RunSimulationCommandHandlerTests
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
         mockRunRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<SimulationRunStatus>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        mockRunRepo.Setup(r => r.UpdateTickIndexAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
         mockRunRepo.Setup(r => r.EndAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -36,6 +38,7 @@ public class RunSimulationCommandHandlerTests
 
         Assert.NotNull(capturedDto);
         Assert.Equal(SimulationRunStatus.Pending, capturedDto.Status);
+        Assert.Equal(0, capturedDto.TickIndex);
     }
 
     [Fact]
@@ -48,6 +51,8 @@ public class RunSimulationCommandHandlerTests
             .Callback<SimulationRunDto, CancellationToken>((dto, _) => createdRunId = dto.Id)
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
         mockRunRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<SimulationRunStatus>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mockRunRepo.Setup(r => r.UpdateTickIndexAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         mockRunRepo.Setup(r => r.EndAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -72,6 +77,8 @@ public class RunSimulationCommandHandlerTests
             .Callback<SimulationRunDto, CancellationToken>((dto, _) => createdRunId = dto.Id)
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
         mockRunRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<SimulationRunStatus>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mockRunRepo.Setup(r => r.UpdateTickIndexAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         mockRunRepo.Setup(r => r.EndAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -142,6 +149,41 @@ public class RunSimulationCommandHandlerTests
         mockPublisher.Verify(p => p.PublishAsync(It.Is<EventDto>(e => e.SimulationRunId == runId), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task RunOnePropagationAsync_EventPayload_ContainsTickFromRequestRunTick()
+    {
+        EventDto? capturedEvent = null;
+        var mockEventRepo = new Mock<IEventRepository>();
+        mockEventRepo.Setup(r => r.AppendAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
+            .Callback<EventDto, CancellationToken>((e, _) => capturedEvent = e)
+            .Returns(Task.CompletedTask);
+        var mockAssetRepo = new Mock<IAssetRepository>();
+        mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((StateDto?)null);
+        mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var mockRelRepo = new Mock<IRelationshipRepository>();
+        mockRelRepo.Setup(r => r.GetOutgoingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<RelationshipDto>());
+        var mockPublisher = new Mock<IEventPublisher>();
+        mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var handler = CreateHandler(
+            assetRepository: mockAssetRepo.Object,
+            relationshipRepository: mockRelRepo.Object,
+            eventRepository: mockEventRepo.Object,
+            eventPublisher: mockPublisher.Object);
+        var runId = "run-1";
+        var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3, RunTick = 5 };
+
+        await handler.RunOnePropagationAsync(runId, request, CancellationToken.None);
+
+        Assert.NotNull(capturedEvent);
+        Assert.True(capturedEvent.Payload.ContainsKey("tick"));
+        Assert.Equal(5, capturedEvent.Payload["tick"]);
+    }
+
     private static RunSimulationCommandHandler CreateHandler(
         IAssetRepository? assetRepository = null,
         IRelationshipRepository? relationshipRepository = null,
@@ -182,6 +224,8 @@ public class RunSimulationCommandHandlerTests
         m.Setup(r => r.CreateAsync(It.IsAny<SimulationRunDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
         m.Setup(r => r.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<SimulationRunStatus>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        m.Setup(r => r.UpdateTickIndexAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         m.Setup(r => r.EndAsync(It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);

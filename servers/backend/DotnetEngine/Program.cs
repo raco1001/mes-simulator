@@ -6,6 +6,7 @@ using DotnetEngine.Application.Health.Ports;
 using DotnetEngine.Application.Relationship.Handlers;
 using DotnetEngine.Application.Relationship.Ports.Driving;
 using DotnetEngine.Application.Relationship.Ports.Driven;
+using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Handlers;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
@@ -74,6 +75,9 @@ builder.Services.AddScoped<IUpdateRelationshipCommand, UpdateRelationshipCommand
 builder.Services.AddScoped<IDeleteRelationshipCommand, DeleteRelationshipCommandHandler>();
 
 builder.Services.AddScoped<IRunSimulationCommand, RunSimulationCommandHandler>();
+builder.Services.AddScoped<IStartContinuousRunCommand, StartContinuousRunCommandHandler>();
+builder.Services.AddScoped<IStopSimulationRunCommand, StopSimulationRunCommandHandler>();
+builder.Services.AddHostedService<SimulationEngineService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

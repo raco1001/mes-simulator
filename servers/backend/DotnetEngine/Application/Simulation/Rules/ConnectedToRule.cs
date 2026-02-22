@@ -17,6 +17,7 @@ public sealed class ConnectedToRule : IPropagationRule
         var occurredAt = DateTimeOffset.UtcNow;
         var payload = new Dictionary<string, object>
         {
+            ["tick"] = ctx.RunTick,
             ["depth"] = ctx.Depth,
             ["relationshipType"] = "ConnectedTo",
             ["fromAssetId"] = ctx.FromAssetId,

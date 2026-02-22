@@ -25,4 +25,7 @@ public sealed class MongoSimulationRunDocument
 
     [BsonElement("maxDepth")]
     public int MaxDepth { get; set; }
+
+    [BsonElement("tickIndex")]
+    public int TickIndex { get; set; }
 }

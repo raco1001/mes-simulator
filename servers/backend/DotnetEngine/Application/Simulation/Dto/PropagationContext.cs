@@ -16,4 +16,6 @@ public sealed record PropagationContext
     public required StatePatchDto IncomingPatch { get; init; }
     public int Depth { get; init; }
     public required string SimulationRunId { get; init; }
+    /// <summary>Run 전역 tick (이벤트 payload.tick에 포함).</summary>
+    public int RunTick { get; init; }
 }

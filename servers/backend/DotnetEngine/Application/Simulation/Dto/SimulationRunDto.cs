@@ -15,4 +15,6 @@ public sealed record SimulationRunDto
     /// <summary>상태 패치 표현 (currentTemp, currentPower, status, lastEventType 등).</summary>
     public IReadOnlyDictionary<string, object> Trigger { get; init; } = new Dictionary<string, object>();
     public int MaxDepth { get; init; }
+    /// <summary>Run 전역 tick 번호. 지속 Run에서만 엔진이 증가.</summary>
+    public int TickIndex { get; init; }
 }

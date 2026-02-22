@@ -57,6 +57,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             TriggerAssetId = request.TriggerAssetId,
             Trigger = triggerDict,
             MaxDepth = maxDepth,
+            TickIndex = 0,
         };
         await _simulationRunRepository.CreateAsync(runDto, cancellationToken);
         await _simulationRunRepository.UpdateStatusAsync(runId, SimulationRunStatus.Running, null, cancellationToken);
@@ -75,6 +76,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
 
     public async Task RunOnePropagationAsync(string runId, RunSimulationRequest request, CancellationToken cancellationToken = default)
     {
+        var runTick = request.RunTick;
         var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var queue = new Queue<(string AssetId, StatePatchDto Patch, int Depth)>();
@@ -103,6 +105,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 RelationshipId = null,
                 Payload = new Dictionary<string, object>
                 {
+                    ["tick"] = runTick,
                     ["depth"] = depth,
                     ["status"] = mergedState.Status,
                     ["temperature"] = mergedState.CurrentTemp ?? 0d,
@@ -128,6 +131,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                     IncomingPatch = patch,
                     Depth = depth + 1,
                     SimulationRunId = runId,
+                    RunTick = runTick,
                 };
 
                 IPropagationRule? appliedRule = null;

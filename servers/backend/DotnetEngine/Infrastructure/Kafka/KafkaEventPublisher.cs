@@ -45,6 +45,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
             eventType = dto.EventType,
             assetId = dto.AssetId,
             timestamp = dto.OccurredAt.UtcDateTime,
+            runId = dto.SimulationRunId,
             payload = dto.Payload,
         };
         var json = JsonSerializer.Serialize(message, JsonOptions);
