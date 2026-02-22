@@ -18,6 +18,7 @@
 | 7b.1    | 파이프라인: 이상 시 AlertEvent 발행   | 완료   |
 | 7b.2    | 백엔드: AlertEvent 소비 → 클라이언트 전달 | 완료   |
 | 7c.1    | Replay 모드: runId(·tick 상한) 기준 재실행/재생 | 완료   |
+| UI-1    | 캔버스 기반 에셋·관계 편집 (기초)                | 완료   |
 
 ---
 
@@ -155,9 +156,26 @@
 
 ---
 
+### Phase UI-1 — 캔버스 기반 에셋·관계 편집 (기초)
+
+- **목표**: 목록/테이블 대신 캔버스에 에셋을 노드로, 관계를 엣지로 표시하고, 기본 CRUD와 관계 생성을 API와 연동.
+- **계획·완료 내용**:
+  - **의존성**: `@xyflow/react` (React Flow v12) 추가, 패키지 매니저 pnpm.
+  - **라우트·네비**: `/canvas` 경로, AppLayout에 "캔버스" 링크 추가.
+  - **캔버스 페이지**: `pages/canvas/` (AssetsCanvasPage, AssetNode). 마운트 시 getAssets + getRelationships 병렬 호출 → 노드(에셋)·엣지(관계) 구성. 노드 타입 `asset`, 커스텀 AssetNode(타입·메타 요약, Handle source/target).
+  - **에셋 생성**: 툴바 "에셋 추가" → 모달(type, metadata) → createAsset → 새 노드 추가.
+  - **에셋 수정**: 노드 클릭 → 사이드 패널(type, metadata) → updateAsset, connections는 엣지에서 유도.
+  - **관계 생성**: 두 노드 선택 시 "관계 만들기" 활성화 → 다이얼로그(relationshipType, properties) → createRelationship → 새 엣지 추가. 동일 from→to 중복 시 버튼 비활성화.
+  - **스타일**: AssetsCanvasPage.css, React Flow Controls/Background, fitView.
+  - **테스트**: AssetsCanvasPage.test.tsx(로드 후 노드·버튼 노출, 로딩 표시). test/setup.ts에 ResizeObserver 목 추가.
+- **산출물**: package.json(@xyflow/react), app/routes.tsx·AppLayout.tsx, pages/canvas/(index, ui/AssetsCanvasPage, AssetNode, CSS, test), 문서 [canvas-page-and-asset-node-ui.md](../frontend/canvas-page-and-asset-node-ui.md).
+
+---
+
 ## 3. 참고 문서
 
 - [temp.phases.md](../../temp.phases.md) — Phase 6 이상 단계별 로드맵·완료 기준
+- [temp.uiux.integration.phases.md](../../temp.uiux.integration.phases.md) — UI/UX 통합 Phase (UI-1 완료, UI-2~UI-7 정의)
 - [simulation-engine-tick-rules.md](../backend/simulation-engine-tick-rules.md) — 에셋 tick 스키마·due 엔진 규칙
 - [simulation-api.md](../backend/simulation-api.md) — 시뮬레이션 API·Run·전파 진입점
 - [simulation-engine-architecture.md](../backend/simulation-engine-architecture.md) — Simulation 모듈 구조, apply(event), IEngineStateApplier (Phase 7a)

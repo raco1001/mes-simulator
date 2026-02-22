@@ -3,6 +3,7 @@ import { AppLayout } from '@/app/layout/AppLayout'
 import { AssetList } from '@/pages/home/ui/AssetList'
 import { AssetsPage } from '@/pages/assets'
 import { RelationshipsPage } from '@/pages/relationships'
+import { AssetsCanvasPage } from '@/pages/canvas'
 
 export const router = createBrowserRouter([
   {
@@ -12,6 +13,7 @@ export const router = createBrowserRouter([
       { index: true, element: <AssetList /> },
       { path: 'assets', element: <AssetsPage /> },
       { path: 'relationships', element: <RelationshipsPage /> },
+      { path: 'canvas', element: <AssetsCanvasPage /> },
     ],
   },
   // 추후 로그인 추가 시 예: { path: 'login', element: <LoginPage /> }

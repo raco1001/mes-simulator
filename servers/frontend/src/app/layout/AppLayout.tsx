@@ -14,6 +14,9 @@ export function AppLayout() {
         <NavLink to="/relationships" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
           관계
         </NavLink>
+        <NavLink to="/canvas" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
+          캔버스
+        </NavLink>
       </nav>
       <main className="app-main">
         <Outlet />
