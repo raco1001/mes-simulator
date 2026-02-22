@@ -3,6 +3,7 @@ using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Relationship.Ports.Driven;
+using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
@@ -42,14 +43,15 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
 
     public async Task<RunResult> RunAsync(RunSimulationRequest request, CancellationToken cancellationToken = default)
     {
-        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
         var runId = Guid.NewGuid().ToString("N");
+        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
         var startedAt = DateTimeOffset.UtcNow;
         var triggerDict = StatePatchToDictionary(request.Patch);
 
         var runDto = new SimulationRunDto
         {
             Id = runId,
+            Status = SimulationRunStatus.Pending,
             StartedAt = startedAt,
             EndedAt = null,
             TriggerAssetId = request.TriggerAssetId,
@@ -57,7 +59,23 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             MaxDepth = maxDepth,
         };
         await _simulationRunRepository.CreateAsync(runDto, cancellationToken);
+        await _simulationRunRepository.UpdateStatusAsync(runId, SimulationRunStatus.Running, null, cancellationToken);
 
+        await RunOnePropagationAsync(runId, request, cancellationToken);
+
+        await _simulationRunRepository.EndAsync(runId, DateTimeOffset.UtcNow, cancellationToken);
+
+        return new RunResult
+        {
+            Success = true,
+            RunId = runId,
+            Message = "Simulation run completed",
+        };
+    }
+
+    public async Task RunOnePropagationAsync(string runId, RunSimulationRequest request, CancellationToken cancellationToken = default)
+    {
+        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var queue = new Queue<(string AssetId, StatePatchDto Patch, int Depth)>();
         queue.Enqueue((request.TriggerAssetId, request.Patch ?? new StatePatchDto(), 0));
@@ -145,15 +163,6 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 }
             }
         }
-
-        await _simulationRunRepository.EndAsync(runId, DateTimeOffset.UtcNow, cancellationToken);
-
-        return new RunResult
-        {
-            Success = true,
-            RunId = runId,
-            Message = "Simulation run completed",
-        };
     }
 
     private static StateDto MergeState(string assetId, StateDto? current, StatePatchDto patch)

@@ -1,3 +1,5 @@
+using DotnetEngine.Application.Simulation;
+
 namespace DotnetEngine.Application.Simulation.Dto;
 
 /// <summary>
@@ -6,6 +8,7 @@ namespace DotnetEngine.Application.Simulation.Dto;
 public sealed record SimulationRunDto
 {
     public required string Id { get; init; }
+    public required SimulationRunStatus Status { get; init; }
     public required DateTimeOffset StartedAt { get; init; }
     public DateTimeOffset? EndedAt { get; init; }
     public required string TriggerAssetId { get; init; }

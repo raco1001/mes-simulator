@@ -8,6 +8,9 @@ public sealed class MongoSimulationRunDocument
     [BsonId]
     public string Id { get; set; } = string.Empty;
 
+    [BsonElement("status")]
+    public string Status { get; set; } = "Pending";
+
     [BsonElement("startedAt")]
     public DateTime StartedAt { get; set; }
 

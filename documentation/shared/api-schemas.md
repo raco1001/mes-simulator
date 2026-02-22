@@ -19,6 +19,7 @@ Backend·Frontend 간 REST API 계약을 정의한 JSON 스키마와 엔드포�
   - GET/POST /api/assets, GET/PUT /api/assets/{id}
   - GET /api/states, GET /api/states/{assetId}
 - **AssetDto**: id, type, connections, metadata, createdAt, updatedAt
+  - **metadata** (시뮬레이션 tick용, 선택): `tickIntervalMs` (number, ms), `tickPhaseMs` (number, ms). 0 또는 미설정 시 Run 전역 tick 사용. 자세한 규칙은 [simulation-engine-tick-rules.md](../backend/simulation-engine-tick-rules.md) 참고.
 - **CreateAssetRequest**: type(필수), connections, metadata
 - **UpdateAssetRequest**: type, connections, metadata (모두 선택)
 

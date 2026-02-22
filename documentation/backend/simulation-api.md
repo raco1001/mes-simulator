@@ -48,3 +48,4 @@
 
 - 시뮬레이션 전파 규칙·이벤트 Kafka 발행 등은 Phase 4 이후 문서에서 다룸.
 - [temp.phases.md](../../temp.phases.md) 에 Phase 3.5·4 작업 목록 정리됨.
+- **에셋별 tick 스키마·엔진 규칙**: [simulation-engine-tick-rules.md](simulation-engine-tick-rules.md) — tickIntervalMs/tickPhaseMs, due 에셋만 처리, 6.4 설계 방향.
