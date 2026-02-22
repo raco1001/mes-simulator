@@ -14,7 +14,7 @@
 
 ## 2. 현재 상태 요약
 
-(Phase 1·2·3 완료 시점 기준)
+(Phase 1·2·3·3.5·4 완료 시점 기준)
 
 | 항목                 | 상태    | 비고                                                                              |
 | -------------------- | ------- | --------------------------------------------------------------------------------- |
@@ -24,7 +24,7 @@
 | 관계 종류            | ✅      | Relationship API: fromAssetId, toAssetId, relationshipType, properties            |
 | 관계 방향            | ✅      | fromAssetId → toAssetId 로 방향 명시. (Direction enum은 확장 시 선택)             |
 | 관계 단위 속성       | ✅      | properties(관계 단위 속성) 저장·조회 가능                                         |
-| 시뮬레이션           | ✅ 뼈대 | POST /api/simulation/run 호출·에셋·관계 개수 반환. 전파·이벤트·run 세션은 미구현. |
+| 시뮬레이션           | ✅      | POST /api/simulation/runs(트리거·patch·maxDepth)→runId. BFS 규칙 기반 전파(Supplies/Contains/ConnectedTo), 이벤트 DB·Kafka 발행. GET runs/{runId}/events. Pipeline이 simulation.state.updated 소비. |
 
 **이미 준비된 것**
 
@@ -70,11 +70,17 @@ Phase 1·2·3 완료로 관계 모델 확장(ADR-20260220, 별도 엔티티)과 
 - **주요 작업**: IRelationshipRepository에 GetOutgoing(및 GetIncoming) 추가, simulation_runs 컬렉션·도메인, RunSimulation 유스케이스 BFS 전파, POST /api/simulation/runs (triggerAssetId, patch, maxDepth → runId).
 - **완료 기준**: 트리거 에셋 + patch로 1회 전파 동작, runId로 실행 구분·events 기록.
 
-### Phase 4: 규칙 기반 전파 + 파이프라인 이벤트
+### Phase 4: 규칙 기반 전파 + 파이프라인 이벤트 — 완료
 
 - **목표**: "상태 전파 시뮬레이션" 완성. Pipeline이 소비할 이벤트 규약 맞추기.
 - **주요 작업**: IPropagationRule·PropagationResult 도입, 룰 2~3개(예: Supplies, Contains, Controls), RunSimulation에 룰 적용, 이벤트 Kafka 발행, GET /api/simulation/runs/{runId}/events.
 - **완료 기준**: 트리거 → 룰 기반 전파 → 이벤트 DB 저장·Kafka 발행, Pipeline 소비 가능.
+- **구현 내용**:
+  - **전파 룰 엔진**: PropagationContext·PropagationResult·IPropagationRule 정의. SuppliesRule(온도/전력 전달), ContainsRule(상태 전파), ConnectedToRule(패치 전달) 구현. 관계 타입 문자열로 CanApply 판단, 첫 적용 룰만 사용, 미적용 시 기존 patch 그대로 fallback.
+  - **RunSimulation 루프**: BFS 시 이웃별 PropagationContext 구성 → 룰 순서 적용 → OutgoingPatch로 enqueue, 생성 이벤트 수집 후 이벤트 DB append·Kafka PublishAsync 호출.
+  - **이벤트 퍼블리시**: IEventPublisher Port, KafkaOptions(Kafka:BootstrapServers, TopicAssetEvents), KafkaEventPublisher(Confluent.Kafka). 메시지 형식 eventType·assetId·timestamp·payload. 토픽 factory.asset.events.
+  - **API**: IEventRepository.GetBySimulationRunIdAsync, Mongo 구현. GET /api/simulation/runs/{runId}/events — run 존재 시 해당 run 이벤트 목록 반환, 없으면 404.
+  - **Pipeline**: simulation.state.updated 이벤트 타입·SimulationStateUpdatedEventDto·process_simulation_state_updated 추가. payload(temperature, power, status)로 calculate_state·save_state·save_event.
 
 ### Phase 5: 실행 결과 조회 + UI
 

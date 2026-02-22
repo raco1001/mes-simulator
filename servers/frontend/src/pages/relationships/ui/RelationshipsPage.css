@@ -1,0 +1,112 @@
+.relationships-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.relationships-page h1 {
+  margin-bottom: 1.5rem;
+}
+
+.relationships-page-section {
+  margin-bottom: 2rem;
+}
+
+.relationships-page-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.relationships-page-loading,
+.relationships-page-empty {
+  text-align: center;
+  padding: 2rem;
+}
+
+.relationships-page-error {
+  color: #d32f2f;
+  margin-bottom: 1rem;
+}
+
+.relationships-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.relationships-table thead {
+  background-color: #f5f5f5;
+}
+
+.relationships-table th,
+.relationships-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.relationships-table th {
+  font-weight: 600;
+  color: #555;
+}
+
+.relationships-properties {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relationships-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.relationships-form label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.relationships-form input,
+.relationships-form textarea {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.relationships-form textarea {
+  font-family: inherit;
+  resize: vertical;
+}
+
+.relationships-edit-btn,
+.relationships-delete-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-right: 0.5rem;
+}
+
+.relationships-delete-btn {
+  color: #c62828;
+  background: transparent;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+}
+
+.relationships-edit-modal {
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.relationships-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

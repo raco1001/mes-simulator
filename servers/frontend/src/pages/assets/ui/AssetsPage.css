@@ -142,6 +142,28 @@
   color: #c62828;
 }
 
+.assets-events-btn {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.assets-run-events {
+  margin-top: 1rem;
+}
+
+.assets-run-events h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.assets-event-payload {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (prefers-color-scheme: dark) {
   .assets-table {
     background: #1a1a1a;
