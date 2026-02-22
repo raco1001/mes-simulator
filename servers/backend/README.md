@@ -35,6 +35,12 @@ dotnet test DotnetEngine.Tests/DotnetEngine.Tests.csproj
 
 기획·구현 결과·실무 확장 요소는 **[documentation/backend/asset-command-and-query.md](../../documentation/backend/asset-command-and-query.md)** 에 정리되어 있음.
 
+### Simulation 모듈 (시뮬레이션 런·이벤트)
+
+- **Domain** (`Domain/Simulation/`): `EventKind`, `SimulationRunStatus` (ValueObjects), `EventTypes` (Constants). 이벤트 계열(Command/Observation) 및 런 상태 정의.
+- **Application**: Ports(Driving/Driven), Handlers, Dto, Rules, Workers(`SimulationEngineService`). Use Case 및 주기적 전파 오케스트레이션(Workers).
+- **Adapter**: SimulationController, MongoSimulationRunRepository, KafkaEventPublisher.
+
 새 모듈 추가 시 동일하게 Port → 테스트 선행 → Handler/Adapter 구현 순서로 확장할 수 있음.
 
 ## 환경 설정

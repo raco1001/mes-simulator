@@ -7,7 +7,7 @@ using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using Microsoft.Extensions.Hosting;
 
-namespace DotnetEngine.Application.Simulation;
+namespace DotnetEngine.Application.Simulation.Workers;
 
 /// <summary>
 /// Status=Running인 Run에 대해 주기적으로 due 에셋 수집 후 전파·이벤트를 발생시키는 BackgroundService.

@@ -13,11 +13,12 @@ runId와 tick(seq)만으로 이벤트 스트림을 재구성할 수 있도록 �
 | **runId** | 시뮬레이션 Run 식별자 | `simulationRunId` (EventDto), Kafka 메시지 `runId` |
 | **tick** | Run 전역 tick 번호 (해당 전파 스텝) | `payload.tick` |
 | **occurredAt** | 이벤트 발생 시각 | `occurredAt` |
-| **eventType** | 이벤트 타입 | `eventType` |
+| **eventType** | 이벤트 타입 (Command 또는 Observation 계열) | `eventType` |
 | **payload** | 이벤트별 데이터 (tick 포함) | `payload` |
 
 - DB(events 컬렉션): EventDto 기준으로 `SimulationRunId`, `OccurredAt`, `EventType`, `Payload`(내부에 `tick`) 저장.
 - Kafka(factory.asset.events): `runId`, `eventType`, `assetId`, `timestamp`, `payload`(내부에 `tick`) 발행.
+- `eventType`은 Command 또는 Observation 계열이며, 상세 분류는 [event-types.md](event-types.md)를 참고하세요.
 
 ---
 

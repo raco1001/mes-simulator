@@ -3,8 +3,9 @@ using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Relationship.Ports.Driven;
-using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
+using DotnetEngine.Domain.Simulation.Constants;
+using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Application.Simulation.Rules;
@@ -16,8 +17,6 @@ namespace DotnetEngine.Application.Simulation.Handlers;
 /// </summary>
 public sealed class RunSimulationCommandHandler : IRunSimulationCommand
 {
-    private const string EventTypeStateUpdated = "simulation.state.updated";
-
     private readonly IAssetRepository _assetRepository;
     private readonly IRelationshipRepository _relationshipRepository;
     private readonly ISimulationRunRepository _simulationRunRepository;
@@ -99,7 +98,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             var nodeEvent = new EventDto
             {
                 AssetId = assetId,
-                EventType = EventTypeStateUpdated,
+                EventType = EventTypes.SimulationStateUpdated,
                 OccurredAt = occurredAt,
                 SimulationRunId = runId,
                 RelationshipId = null,
@@ -178,7 +177,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             CurrentTemp = patch.CurrentTemp ?? current?.CurrentTemp,
             CurrentPower = patch.CurrentPower ?? current?.CurrentPower,
             Status = patch.Status ?? current?.Status ?? "normal",
-            LastEventType = patch.LastEventType ?? current?.LastEventType ?? EventTypeStateUpdated,
+            LastEventType = patch.LastEventType ?? current?.LastEventType ?? EventTypes.SimulationStateUpdated,
             UpdatedAt = now,
             Metadata = current?.Metadata ?? new Dictionary<string, object>(),
         };

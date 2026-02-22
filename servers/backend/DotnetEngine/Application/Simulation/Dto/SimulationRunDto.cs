@@ -1,4 +1,4 @@
-using DotnetEngine.Application.Simulation;
+using DotnetEngine.Domain.Simulation.ValueObjects;
 
 namespace DotnetEngine.Application.Simulation.Dto;
 

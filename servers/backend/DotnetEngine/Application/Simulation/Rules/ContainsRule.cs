@@ -1,4 +1,5 @@
 using DotnetEngine.Application.Simulation.Dto;
+using DotnetEngine.Domain.Simulation.Constants;
 
 namespace DotnetEngine.Application.Simulation.Rules;
 
@@ -7,8 +8,6 @@ namespace DotnetEngine.Application.Simulation.Rules;
 /// </summary>
 public sealed class ContainsRule : IPropagationRule
 {
-    private const string EventType = "simulation.state.updated";
-
     public bool CanApply(PropagationContext ctx) =>
         string.Equals(ctx.Relationship.RelationshipType, "Contains", StringComparison.OrdinalIgnoreCase);
 
@@ -21,7 +20,7 @@ public sealed class ContainsRule : IPropagationRule
             CurrentTemp = incoming.CurrentTemp,
             CurrentPower = incoming.CurrentPower,
             Status = incoming.Status ?? fromState?.Status ?? "normal",
-            LastEventType = incoming.LastEventType ?? EventType,
+            LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
         };
         var occurredAt = DateTimeOffset.UtcNow;
         var payload = new Dictionary<string, object>
@@ -36,7 +35,7 @@ public sealed class ContainsRule : IPropagationRule
         var evt = new EventDto
         {
             AssetId = ctx.ToAssetId,
-            EventType = EventType,
+            EventType = EventTypes.SimulationStateUpdated,
             OccurredAt = occurredAt,
             SimulationRunId = ctx.SimulationRunId,
             RelationshipId = ctx.Relationship.Id,

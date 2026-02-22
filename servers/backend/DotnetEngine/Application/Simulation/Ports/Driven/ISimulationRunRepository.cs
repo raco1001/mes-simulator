@@ -1,5 +1,5 @@
-using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
+using DotnetEngine.Domain.Simulation.ValueObjects;
 
 namespace DotnetEngine.Application.Simulation.Ports.Driven;
 

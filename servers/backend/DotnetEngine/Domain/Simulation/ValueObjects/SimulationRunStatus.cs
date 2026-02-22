@@ -1,4 +1,4 @@
-namespace DotnetEngine.Application.Simulation;
+namespace DotnetEngine.Domain.Simulation.ValueObjects;
 
 /// <summary>
 /// 시뮬레이션 런 생명주기 상태.

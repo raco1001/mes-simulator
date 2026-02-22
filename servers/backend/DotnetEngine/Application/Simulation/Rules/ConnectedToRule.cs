@@ -1,4 +1,5 @@
 using DotnetEngine.Application.Simulation.Dto;
+using DotnetEngine.Domain.Simulation.Constants;
 
 namespace DotnetEngine.Application.Simulation.Rules;
 
@@ -7,8 +8,6 @@ namespace DotnetEngine.Application.Simulation.Rules;
 /// </summary>
 public sealed class ConnectedToRule : IPropagationRule
 {
-    private const string EventType = "simulation.state.updated";
-
     public bool CanApply(PropagationContext ctx) =>
         string.Equals(ctx.Relationship.RelationshipType, "ConnectedTo", StringComparison.OrdinalIgnoreCase);
 
@@ -27,7 +26,7 @@ public sealed class ConnectedToRule : IPropagationRule
         var evt = new EventDto
         {
             AssetId = ctx.ToAssetId,
-            EventType = EventType,
+            EventType = EventTypes.SimulationStateUpdated,
             OccurredAt = occurredAt,
             SimulationRunId = ctx.SimulationRunId,
             RelationshipId = ctx.Relationship.Id,

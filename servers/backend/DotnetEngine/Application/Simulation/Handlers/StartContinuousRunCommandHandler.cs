@@ -1,7 +1,7 @@
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
-using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Domain.Simulation.ValueObjects;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
