@@ -10,6 +10,7 @@ using DotnetEngine.Application.Simulation.Handlers;
 using DotnetEngine.Application.Simulation.Workers;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Rules;
 using DotnetEngine.Infrastructure.Kafka;
 using DotnetEngine.Infrastructure.Mongo;
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IEventRepository, MongoEventRepository>();
 
 builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection(KafkaOptions.SectionName));
 builder.Services.AddScoped<IEventPublisher, KafkaEventPublisher>();
+builder.Services.AddScoped<IEngineStateApplier, EngineStateApplier>();
 
 builder.Services.AddScoped<IPropagationRule, SuppliesRule>();
 builder.Services.AddScoped<IPropagationRule, ContainsRule>();

@@ -5,7 +5,7 @@ import pytest
 
 from domains.asset import AssetConstants, AssetState, AssetStatus
 from pipelines.asset_dto import AssetHealthUpdatedEventDto, AssetStateDto
-from pipelines.asset_pipeline import asset_state_to_dto, calculate_state
+from pipelines.asset_pipeline import asset_state_to_dto, build_alert_event, calculate_state
 
 
 class TestCalculateState:
@@ -181,3 +181,56 @@ class TestAssetStateToDto:
         dto = asset_state_to_dto(state)
         assert dto.current_temp is None
         assert dto.current_power is None
+
+
+class TestBuildAlertEvent:
+    """Alert event payload for Kafka (WARNING/ERROR only)."""
+
+    def test_warning_status_maps_to_severity_warning(self) -> None:
+        ts = datetime.now(timezone.utc)
+        out = build_alert_event(
+            asset_id="freezer-1",
+            timestamp=ts,
+            status=AssetConstants.Status.WARNING,
+            current_temp=-5.0,
+            current_power=None,
+        )
+        assert out["eventType"] == AssetConstants.EventType.ALERT_GENERATED
+        assert out["assetId"] == "freezer-1"
+        assert out["timestamp"] == ts.isoformat()
+        assert out["payload"]["severity"] == "warning"
+        assert out["payload"]["message"] == "Asset state: warning"
+        assert out["payload"]["metric"] == "temperature"
+        assert out["payload"]["current"] == -5.0
+        assert out["payload"]["threshold"] == -10
+        assert out["payload"]["code"] == "TEMP_HIGH"
+
+    def test_error_status_maps_to_severity_error(self) -> None:
+        ts = datetime.now(timezone.utc)
+        out = build_alert_event(
+            asset_id="conveyor-1",
+            timestamp=ts,
+            status=AssetConstants.Status.ERROR,
+            current_temp=None,
+            current_power=260.0,
+        )
+        assert out["eventType"] == AssetConstants.EventType.ALERT_GENERATED
+        assert out["assetId"] == "conveyor-1"
+        assert out["payload"]["severity"] == "error"
+        assert out["payload"]["message"] == "Asset state: error"
+        assert out["payload"]["metric"] == "power"
+        assert out["payload"]["current"] == 260.0
+        assert out["payload"]["threshold"] == 250
+        assert out["payload"]["code"] == "POWER_OVERLOAD"
+
+    def test_run_id_in_metadata_when_provided(self) -> None:
+        ts = datetime.now(timezone.utc)
+        out = build_alert_event(
+            asset_id="freezer-1",
+            timestamp=ts,
+            status=AssetConstants.Status.WARNING,
+            run_id="run-123",
+        )
+        assert out["payload"]["metadata"] == {"runId": "run-123"}
+        assert out["payload"]["severity"] == "warning"
+        assert out["payload"]["message"] == "Asset state: warning"

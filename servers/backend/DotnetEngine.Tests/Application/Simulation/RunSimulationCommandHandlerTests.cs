@@ -2,9 +2,10 @@ using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Relationship.Ports.Driven;
+using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
-using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Handlers;
+using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Application.Simulation.Rules;
@@ -188,6 +189,7 @@ public class RunSimulationCommandHandlerTests
         IAssetRepository? assetRepository = null,
         IRelationshipRepository? relationshipRepository = null,
         ISimulationRunRepository? simulationRunRepository = null,
+        IEngineStateApplier? applier = null,
         IEventRepository? eventRepository = null,
         IEventPublisher? eventPublisher = null)
     {
@@ -209,10 +211,16 @@ public class RunSimulationCommandHandlerTests
         mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        var defaultApplier = new EngineStateApplier(
+            assetRepository ?? mockAssetRepo.Object,
+            eventRepository ?? mockEventRepo.Object,
+            eventPublisher ?? mockPublisher.Object);
+
         return new RunSimulationCommandHandler(
             assetRepository ?? mockAssetRepo.Object,
             relationshipRepository ?? mockRelRepo.Object,
             simulationRunRepository ?? CreateMockRunRepository().Object,
+            applier ?? defaultApplier,
             eventRepository ?? mockEventRepo.Object,
             eventPublisher ?? mockPublisher.Object,
             Array.Empty<IPropagationRule>());

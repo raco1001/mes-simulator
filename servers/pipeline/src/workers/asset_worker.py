@@ -9,12 +9,13 @@ from typing import Any
 from config.settings import Settings
 from domains.asset.constants import AssetConstants
 from messaging.consumer.kafka_consumer import AssetEventConsumer
+from messaging.provider.kafka_producer import AssetEventProducer
 from pipelines.asset_dto import (
     AssetCreatedEventDto,
     AssetHealthUpdatedEventDto,
     SimulationStateUpdatedEventDto,
 )
-from pipelines.asset_pipeline import asset_state_to_dto, calculate_state
+from pipelines.asset_pipeline import asset_state_to_dto, build_alert_event, calculate_state
 from repositories.mongo.asset_repository import AssetRepository
 
 logging.basicConfig(
@@ -30,6 +31,7 @@ class AssetWorker:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
         self.consumer = AssetEventConsumer(self.settings)
+        self.producer = AssetEventProducer(self.settings)
         self.repository = AssetRepository(self.settings)
         self.running = True
 
@@ -72,6 +74,18 @@ class AssetWorker:
             payload=event.payload,
         )
 
+        if state.status in (AssetConstants.Status.WARNING, AssetConstants.Status.ERROR):
+            run_id = event.payload.get("runId")
+            alert_payload = build_alert_event(
+                asset_id=state.asset_id,
+                timestamp=event.timestamp,
+                status=state.status,
+                current_temp=state.current_temp,
+                current_power=state.current_power,
+                run_id=run_id,
+            )
+            self.producer.send(self.settings.kafka_topic_asset_events, value=alert_payload)
+
     def process_simulation_state_updated(self, event: SimulationStateUpdatedEventDto) -> None:
         """Process simulation.state.updated event (backend propagation)."""
         logger.info(f"Processing simulation.state.updated: {event.asset_id}")
@@ -84,6 +98,18 @@ class AssetWorker:
             timestamp=event.timestamp,
             payload=event.payload,
         )
+
+        if state.status in (AssetConstants.Status.WARNING, AssetConstants.Status.ERROR):
+            run_id = event.payload.get("runId")
+            alert_payload = build_alert_event(
+                asset_id=state.asset_id,
+                timestamp=event.timestamp,
+                status=state.status,
+                current_temp=state.current_temp,
+                current_power=state.current_power,
+                run_id=run_id,
+            )
+            self.producer.send(self.settings.kafka_topic_asset_events, value=alert_payload)
 
     def process_event(self, event: dict) -> None:
         """Process event based on event type."""
@@ -129,6 +155,7 @@ class AssetWorker:
         logger.info("Shutting down asset worker...")
         self.running = False
         self.consumer.close()
+        self.producer.close()
         self.repository.close()
 
     def signal_handler(self, signum: int, frame: Any) -> None:

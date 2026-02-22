@@ -9,4 +9,5 @@ C# / ASP.NET Core 백엔드(Factory MES API) 관련 문서 디렉터리입니다
 | [asset-command-and-query.md](./asset-command-and-query.md) | Asset(모델) 생성·수정 API 확장: 기획, 결과, 실무 관점 확장 요소 정리 |
 | [relationship-api.md](./relationship-api.md) | Relationship(에셋 간 관계) CRUD API: Domain, Application, Infrastructure, Presentation (Phase 1) |
 | [simulation-api.md](./simulation-api.md) | Simulation 런 실행 API: POST /api/simulation/runs, RunResult, 전파·이벤트 연동 (Phase 3) |
+| [simulation-engine-architecture.md](./simulation-engine-architecture.md) | Simulation 모듈 구조(Domain/Application/Workers), apply(event) 단일 경로, IEngineStateApplier (Phase 7a) |
 | [states-and-events-api.md](./states-and-events-api.md) | States(에셋 현재 상태) 조회, Events(이벤트 로그) 저장·스키마 요약 |

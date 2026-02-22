@@ -20,6 +20,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
     private readonly IAssetRepository _assetRepository;
     private readonly IRelationshipRepository _relationshipRepository;
     private readonly ISimulationRunRepository _simulationRunRepository;
+    private readonly IEngineStateApplier _applier;
     private readonly IEventRepository _eventRepository;
     private readonly IEventPublisher _eventPublisher;
     private readonly IEnumerable<IPropagationRule> _rules;
@@ -28,6 +29,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         IAssetRepository assetRepository,
         IRelationshipRepository relationshipRepository,
         ISimulationRunRepository simulationRunRepository,
+        IEngineStateApplier applier,
         IEventRepository eventRepository,
         IEventPublisher eventPublisher,
         IEnumerable<IPropagationRule> rules)
@@ -35,6 +37,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         _assetRepository = assetRepository;
         _relationshipRepository = relationshipRepository;
         _simulationRunRepository = simulationRunRepository;
+        _applier = applier;
         _eventRepository = eventRepository;
         _eventPublisher = eventPublisher;
         _rules = rules;
@@ -92,7 +95,6 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
 
             var currentState = await _assetRepository.GetStateByAssetIdAsync(assetId, cancellationToken);
             var mergedState = MergeState(assetId, currentState, patch);
-            await _assetRepository.UpsertStateAsync(mergedState, cancellationToken);
 
             var occurredAt = DateTimeOffset.UtcNow;
             var nodeEvent = new EventDto
@@ -111,8 +113,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                     ["power"] = mergedState.CurrentPower ?? 0d,
                 },
             };
-            await _eventRepository.AppendAsync(nodeEvent, cancellationToken);
-            await _eventPublisher.PublishAsync(nodeEvent, cancellationToken);
+            await _applier.ApplyAsync(nodeEvent, mergedState, cancellationToken);
 
             var outgoing = await _relationshipRepository.GetOutgoingAsync(assetId, cancellationToken);
             foreach (var rel in outgoing)
