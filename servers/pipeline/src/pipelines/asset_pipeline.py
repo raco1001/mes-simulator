@@ -104,9 +104,13 @@ def build_alert_event(
         payload["metadata"] = {"runId": run_id}
 
     ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
-    return {
+    out: dict[str, Any] = {
         "eventType": AssetConstants.EventType.ALERT_GENERATED,
         "assetId": asset_id,
         "timestamp": ts_str,
+        "schemaVersion": "v1",
         "payload": payload,
     }
+    if run_id is not None:
+        out["runId"] = run_id
+    return out

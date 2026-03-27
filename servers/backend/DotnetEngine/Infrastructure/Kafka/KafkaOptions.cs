@@ -9,6 +9,7 @@ public sealed class KafkaOptions
 
     public string BootstrapServers { get; set; } = "localhost:9092";
     public string TopicAssetEvents { get; set; } = "factory.asset.events";
-    /// <summary>Consumer group for alert consumer (subscribes to TopicAssetEvents).</summary>
+    public string TopicAlertEvents { get; set; } = "factory.asset.alert";
+    /// <summary>Consumer group for alert consumer (subscribes to TopicAlertEvents).</summary>
     public string ConsumerGroupId { get; set; } = "backend-alert-consumer";
 }

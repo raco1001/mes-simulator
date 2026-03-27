@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Event Envelope",
+  "description": "모든 Kafka 이벤트가 공유하는 최상위 엔벨로프 구조.",
+  "type": "object",
+  "required": ["eventType", "assetId", "timestamp", "schemaVersion", "payload"],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "description": "이벤트 타입 식별자"
+    },
+    "assetId": {
+      "type": "string",
+      "description": "Asset의 고유 식별자"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "이벤트 발생 시각 (ISO 8601 형식)"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^v\\d+$",
+      "description": "엔벨로프 계약 버전. 소비자는 이 값으로 페이로드 스키마를 라우팅한다."
+    },
+    "runId": {
+      "type": "string",
+      "description": "시뮬레이션 컨텍스트에서의 run 식별자 (선택)"
+    },
+    "context": {
+      "type": "object",
+      "description": "운영 메타데이터 (traceId, correlationId, sourceService 등). 공식 페이로드 계약과 분리.",
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": "object",
+      "description": "이벤트 타입별 페이로드"
+    }
+  },
+  "additionalProperties": false
+}

@@ -198,6 +198,8 @@ class TestBuildAlertEvent:
         assert out["eventType"] == AssetConstants.EventType.ALERT_GENERATED
         assert out["assetId"] == "freezer-1"
         assert out["timestamp"] == ts.isoformat()
+        assert out["schemaVersion"] == "v1"
+        assert "runId" not in out
         assert out["payload"]["severity"] == "warning"
         assert out["payload"]["message"] == "Asset state: warning"
         assert out["payload"]["metric"] == "temperature"
@@ -216,6 +218,8 @@ class TestBuildAlertEvent:
         )
         assert out["eventType"] == AssetConstants.EventType.ALERT_GENERATED
         assert out["assetId"] == "conveyor-1"
+        assert out["schemaVersion"] == "v1"
+        assert "runId" not in out
         assert out["payload"]["severity"] == "error"
         assert out["payload"]["message"] == "Asset state: error"
         assert out["payload"]["metric"] == "power"
@@ -231,6 +235,8 @@ class TestBuildAlertEvent:
             status=AssetConstants.Status.WARNING,
             run_id="run-123",
         )
+        assert out["schemaVersion"] == "v1"
+        assert out["runId"] == "run-123"
         assert out["payload"]["metadata"] == {"runId": "run-123"}
         assert out["payload"]["severity"] == "warning"
         assert out["payload"]["message"] == "Asset state: warning"

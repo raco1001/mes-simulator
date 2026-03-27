@@ -27,10 +27,12 @@ class TestAssetWorkerAlertPublish:
 
         worker.producer.send.assert_called_once()
         call_args = worker.producer.send.call_args
-        assert call_args[0][0] == worker.settings.kafka_topic_asset_events
+        assert call_args[0][0] == worker.settings.kafka_topic_alert_events
         value = call_args[1]["value"]
         assert value["eventType"] == AssetConstants.EventType.ALERT_GENERATED
         assert value["assetId"] == "freezer-1"
+        assert value["schemaVersion"] == "v1"
+        assert "runId" not in value
         assert value["payload"]["severity"] == "warning"
         assert value["payload"]["message"] == "Asset state: warning"
 
@@ -63,7 +65,11 @@ class TestAssetWorkerAlertPublish:
         worker.process_simulation_state_updated(event)
 
         worker.producer.send.assert_called_once()
-        value = worker.producer.send.call_args[1]["value"]
+        call_args = worker.producer.send.call_args
+        assert call_args[0][0] == worker.settings.kafka_topic_alert_events
+        value = call_args[1]["value"]
         assert value["eventType"] == AssetConstants.EventType.ALERT_GENERATED
+        assert value["schemaVersion"] == "v1"
+        assert value["runId"] == "run-456"
         assert value["payload"]["severity"] == "error"
         assert value["payload"]["metadata"] == {"runId": "run-456"}

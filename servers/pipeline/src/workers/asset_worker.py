@@ -84,7 +84,7 @@ class AssetWorker:
                 current_power=state.current_power,
                 run_id=run_id,
             )
-            self.producer.send(self.settings.kafka_topic_asset_events, value=alert_payload)
+            self.producer.send(self.settings.kafka_topic_alert_events, value=alert_payload)
 
     def process_simulation_state_updated(self, event: SimulationStateUpdatedEventDto) -> None:
         """Process simulation.state.updated event (backend propagation)."""
@@ -109,7 +109,7 @@ class AssetWorker:
                 current_power=state.current_power,
                 run_id=run_id,
             )
-            self.producer.send(self.settings.kafka_topic_asset_events, value=alert_payload)
+            self.producer.send(self.settings.kafka_topic_alert_events, value=alert_payload)
 
     def process_event(self, event: dict) -> None:
         """Process event based on event type."""
@@ -134,7 +134,8 @@ class AssetWorker:
         """Run the worker (consume and process events)."""
         logger.info("Starting asset worker...")
         logger.info(f"Kafka: {self.settings.kafka_bootstrap_servers}")
-        logger.info(f"Topic: {self.settings.kafka_topic_asset_events}")
+        logger.info(f"Asset topic: {self.settings.kafka_topic_asset_events}")
+        logger.info(f"Alert topic: {self.settings.kafka_topic_alert_events}")
         logger.info(f"MongoDB: {self.settings.mongodb_database}")
 
         try:

@@ -1,5 +1,7 @@
+using System.Text.Json;
 using DotnetEngine.Application.Alert.Dto;
 using DotnetEngine.Application.Alert.Ports.Driving;
+using DotnetEngine.Application.Alert.Ports.Driven;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotnetEngine.Presentation.Controllers;
@@ -12,10 +14,12 @@ namespace DotnetEngine.Presentation.Controllers;
 public sealed class AlertController : ControllerBase
 {
     private readonly IGetAlertsQuery _getAlertsQuery;
+    private readonly IAlertNotifier _alertNotifier;
 
-    public AlertController(IGetAlertsQuery getAlertsQuery)
+    public AlertController(IGetAlertsQuery getAlertsQuery, IAlertNotifier alertNotifier)
     {
         _getAlertsQuery = getAlertsQuery;
+        _alertNotifier = alertNotifier;
     }
 
     /// <summary>
@@ -27,5 +31,23 @@ public sealed class AlertController : ControllerBase
     {
         var dtos = await _getAlertsQuery.GetLatestAsync(limit, cancellationToken);
         return Ok(dtos);
+    }
+
+    /// <summary>
+    /// GET /api/alerts/stream — 신규 알람 SSE 스트림.
+    /// </summary>
+    [HttpGet("stream")]
+    public async Task StreamAlerts(CancellationToken cancellationToken)
+    {
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        await foreach (var alert in _alertNotifier.SubscribeAsync(HttpContext.RequestAborted))
+        {
+            var payload = JsonSerializer.Serialize(alert);
+            await Response.WriteAsync($"data: {payload}\n\n", cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
+        }
     }
 }

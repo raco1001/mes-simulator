@@ -66,7 +66,8 @@ builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection(KafkaO
 builder.Services.AddScoped<IEventPublisher, KafkaEventPublisher>();
 builder.Services.AddScoped<IEngineStateApplier, EngineStateApplier>();
 
-builder.Services.AddSingleton<IAlertStore, InMemoryAlertStore>();
+builder.Services.AddScoped<IAlertStore, MongoAlertStore>();
+builder.Services.AddSingleton<IAlertNotifier, SseAlertChannel>();
 builder.Services.AddScoped<IGetAlertsQuery, GetAlertsQueryHandler>();
 builder.Services.AddHostedService<KafkaAlertConsumerService>();
 

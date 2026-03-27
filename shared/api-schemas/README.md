@@ -6,10 +6,18 @@ Factory MES 시스템의 REST API 스키마 정의입니다.
 
 ```
 api-schemas/
-├── assets.json         # Asset 관련 API 스키마
-├── relationships.json  # Relationship(에셋 간 관계) API 스키마
+├── openapi.json         # OpenAPI 3.0.3 기준 계약 (권장)
+├── assets.json          # 레거시 스키마 (유지)
+├── state.json           # 레거시 스키마 (유지)
+├── relationships.json   # 레거시 스키마 (유지)
 └── README.md
 ```
+
+## 기준 계약
+
+- 현재 REST API 기준 문서는 `openapi.json` 입니다.
+- `assets.json`, `state.json`, `relationships.json`은 레거시 호환 목적의 참고 자료로 유지합니다.
+- 신규 변경은 `openapi.json`을 우선 수정하고, 필요 시 레거시 파일을 보조 업데이트합니다.
 
 ## API 엔드포인트
 
@@ -85,3 +93,4 @@ api-schemas/
 
 - [MongoDB 모델](../../infrastructure/mongo/MODEL.md) - 데이터 모델 정의
 - [Event schemas](../../shared/event-schemas/) - 이벤트 스키마 정의
+- [FIELD-MAPPING.md](../FIELD-MAPPING.md) - Kafka 이벤트 필드와 REST API 필드명 매핑

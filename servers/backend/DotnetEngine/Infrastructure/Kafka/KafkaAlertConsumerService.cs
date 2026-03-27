@@ -9,27 +9,23 @@ using Microsoft.Extensions.Options;
 namespace DotnetEngine.Infrastructure.Kafka;
 
 /// <summary>
-/// Consumes alert.generated events from factory.asset.events and adds them to IAlertStore.
+/// Consumes alert events from factory.asset.alert and adds them to IAlertStore.
 /// </summary>
 public sealed class KafkaAlertConsumerService : BackgroundService
 {
-    private const string AlertGeneratedEventType = "alert.generated";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly IAlertStore _alertStore;
+    private readonly IAlertNotifier _alertNotifier;
     private readonly KafkaOptions _options;
     private readonly ILogger<KafkaAlertConsumerService> _logger;
 
     public KafkaAlertConsumerService(
         IAlertStore alertStore,
+        IAlertNotifier alertNotifier,
         IOptions<KafkaOptions> options,
         ILogger<KafkaAlertConsumerService> logger)
     {
         _alertStore = alertStore;
+        _alertNotifier = alertNotifier;
         _options = options?.Value ?? new KafkaOptions();
         _logger = logger;
     }
@@ -44,7 +40,7 @@ public sealed class KafkaAlertConsumerService : BackgroundService
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-        consumer.Subscribe(_options.TopicAssetEvents);
+        consumer.Subscribe(_options.TopicAlertEvents);
 
         try
         {
@@ -57,19 +53,7 @@ public sealed class KafkaAlertConsumerService : BackgroundService
                         continue;
 
                     var json = result.Message.Value;
-                    using var doc = JsonDocument.Parse(json);
-                    var root = doc.RootElement;
-
-                    if (!root.TryGetProperty("eventType", out var eventTypeProp) ||
-                        eventTypeProp.GetString() != AlertGeneratedEventType)
-                        continue;
-
-                    var alert = MapToAlertDto(root);
-                    if (alert != null)
-                    {
-                        _alertStore.Add(alert);
-                        _logger.LogDebug("Consumed alert for asset {AssetId}, severity {Severity}", alert.AssetId, alert.Severity);
-                    }
+                    await ProcessMessageAsync(json, stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -95,6 +79,20 @@ public sealed class KafkaAlertConsumerService : BackgroundService
         }
 
         await Task.CompletedTask;
+    }
+
+    public async Task ProcessMessageAsync(string json, CancellationToken ct)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        var alert = MapToAlertDto(root);
+        if (alert == null)
+            return;
+
+        _alertStore.Add(alert);
+        await _alertNotifier.NotifyAsync(alert, ct);
+        _logger.LogDebug("Consumed alert for asset {AssetId}, severity {Severity}", alert.AssetId, alert.Severity);
     }
 
     private static AlertDto? MapToAlertDto(JsonElement root)

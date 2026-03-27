@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Kafka settings
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic_asset_events: str = "factory.asset.events"
+    kafka_topic_alert_events: str = "factory.asset.alert"
     kafka_consumer_group_id: str = "pipeline-asset-consumer"
 
     # MongoDB settings

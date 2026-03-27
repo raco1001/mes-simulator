@@ -9,7 +9,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "description", "events"],
+        "required": ["name", "description", "status", "events"],
         "properties": {
           "name": {
             "type": "string",
@@ -18,6 +18,11 @@
           "description": {
             "type": "string",
             "description": "토픽 설명"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "planned", "deprecated"],
+            "description": "토픽 운영 상태"
           },
           "events": {
             "type": "array",
@@ -45,27 +50,20 @@
   "topics": [
     {
       "name": "factory.asset.events",
-      "description": "모든 asset 관련 이벤트를 수집하는 통합 토픽",
+      "description": "실사용 단일 통합 토픽 (asset 이벤트 전체). backend/pipeline 모두 이 토픽만 사용.",
+      "status": "active",
       "events": [
         "asset.created",
         "asset.health.updated",
-        "alert.generated"
-      ],
-      "partitions": 3,
-      "replicationFactor": 1
-    },
-    {
-      "name": "factory.asset.health",
-      "description": "Asset health 상태 업데이트 전용 토픽",
-      "events": [
-        "asset.health.updated"
+        "simulation.state.updated"
       ],
       "partitions": 3,
       "replicationFactor": 1
     },
     {
       "name": "factory.asset.alert",
-      "description": "Asset 알림 전용 토픽",
+      "description": "Alert 전용 토픽. backend alert consumer가 직접 구독한다.",
+      "status": "active",
       "events": [
         "alert.generated"
       ],
