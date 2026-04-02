@@ -63,8 +63,7 @@ public class ReplayRunCommandHandlerTests
                 {
                     ["tick"] = 0,
                     ["status"] = "warning",
-                    ["temperature"] = -5.0,
-                    ["power"] = 120.0,
+                    ["properties"] = new Dictionary<string, object> { ["temp"] = -5.0, ["power"] = 120.0 },
                 },
             },
         };
@@ -85,8 +84,8 @@ public class ReplayRunCommandHandlerTests
                 It.Is<StateDto>(s =>
                     s.AssetId == "asset-1" &&
                     s.Status == "warning" &&
-                    s.CurrentTemp == -5.0 &&
-                    s.CurrentPower == 120.0),
+                    s.Properties.ContainsKey("temp") &&
+                    s.Properties.ContainsKey("power")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

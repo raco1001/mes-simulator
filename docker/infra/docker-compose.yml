@@ -101,7 +101,7 @@ services:
     volumes:
       - mongodb-data:/data/db
       - mongodb-config:/data/configdb
-      - ../infrastructure/mongo/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ../../infrastructure/mongo/init-scripts:/docker-entrypoint-initdb.d:ro
     networks:
       - factory-network
     healthcheck:

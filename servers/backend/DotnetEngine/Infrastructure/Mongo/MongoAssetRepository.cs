@@ -56,6 +56,20 @@ public sealed class MongoAssetRepository : IAssetRepository
         return result.ModifiedCount > 0 ? ToAssetDto(document) : null;
     }
 
+    public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var assetFilter = Builders<MongoAssetDocument>.Filter.Eq(d => d.Id, id);
+        var assetResult = await _assetsCollection.DeleteOneAsync(assetFilter, cancellationToken);
+        if (assetResult.DeletedCount == 0)
+        {
+            return false;
+        }
+
+        var stateFilter = Builders<MongoAssetStateDocument>.Filter.Eq(d => d.AssetId, id);
+        await _statesCollection.DeleteManyAsync(stateFilter, cancellationToken);
+        return true;
+    }
+
     public async Task<IReadOnlyList<StateDto>> GetAllStatesAsync(CancellationToken cancellationToken = default)
     {
         var cursor = await _statesCollection.FindAsync(FilterDefinition<MongoAssetStateDocument>.Empty, cancellationToken: cancellationToken);
@@ -132,8 +146,7 @@ public sealed class MongoAssetRepository : IAssetRepository
         {
             Id = dto.AssetId,
             AssetId = dto.AssetId,
-            CurrentTemp = dto.CurrentTemp,
-            CurrentPower = dto.CurrentPower,
+            Properties = MetadataBsonConverter.ToBsonDocument(dto.Properties),
             Status = dto.Status,
             LastEventType = dto.LastEventType,
             UpdatedAt = dto.UpdatedAt.UtcDateTime,
@@ -146,8 +159,8 @@ public sealed class MongoAssetRepository : IAssetRepository
         return new StateDto
         {
             AssetId = doc.AssetId,
-            CurrentTemp = doc.CurrentTemp,
-            CurrentPower = doc.CurrentPower,
+            Properties = MetadataBsonConverter.ToDictionary(doc.Properties)
+                .ToDictionary(kv => kv.Key, kv => (object?)kv.Value),
             Status = doc.Status,
             LastEventType = doc.LastEventType,
             UpdatedAt = ToDateTimeOffset(doc.UpdatedAt),

@@ -4,6 +4,7 @@ using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Domain.Simulation.Constants;
+using System.Linq;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
@@ -59,13 +60,11 @@ public sealed class ReplayRunCommandHandler : IReplayRunCommand
     {
         var p = evt.Payload;
         var status = GetString(p, "status") ?? "normal";
-        double? temp = GetDouble(p, "temperature");
-        double? power = GetDouble(p, "power");
+        var properties = GetProperties(p);
         return new StateDto
         {
             AssetId = evt.AssetId,
-            CurrentTemp = temp,
-            CurrentPower = power,
+            Properties = properties,
             Status = status,
             LastEventType = evt.EventType,
             UpdatedAt = evt.OccurredAt,
@@ -80,16 +79,18 @@ public sealed class ReplayRunCommandHandler : IReplayRunCommand
         return v?.ToString();
     }
 
-    private static double? GetDouble(IReadOnlyDictionary<string, object> dict, string key)
+    private static IReadOnlyDictionary<string, object?> GetProperties(IReadOnlyDictionary<string, object> dict)
     {
-        if (!dict.TryGetValue(key, out var v))
-            return null;
-        return v switch
-        {
-            double d => d,
-            int i => i,
-            long l => l,
-            _ => null,
-        };
+        if (!dict.TryGetValue("properties", out var v) || v is null)
+            return new Dictionary<string, object?>();
+
+        if (v is IReadOnlyDictionary<string, object?> roNullable)
+            return new Dictionary<string, object?>(roNullable);
+        if (v is IReadOnlyDictionary<string, object> ro)
+            return ro.ToDictionary(kv => kv.Key, kv => (object?)kv.Value);
+        if (v is Dictionary<string, object> d)
+            return d.ToDictionary(kv => kv.Key, kv => (object?)kv.Value);
+
+        return new Dictionary<string, object?>();
     }
 }

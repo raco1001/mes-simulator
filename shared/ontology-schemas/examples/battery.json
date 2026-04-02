@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "v1",
+  "objectType": "battery",
+  "displayName": "Battery",
+  "traits": {
+    "persistence": "Durable",
+    "dynamism": "Reactive",
+    "cardinality": "Enumerable"
+  },
+  "classifications": [
+    { "taxonomy": "industry", "value": "energy.storage" },
+    { "taxonomy": "functional", "value": "buffer" }
+  ],
+  "properties": [
+    {
+      "key": "storedEnergy",
+      "dataType": "Number",
+      "unit": "Wh",
+      "simulationBehavior": "Accumulator",
+      "mutability": "Mutable",
+      "baseValue": 5000,
+      "constraints": { "min": 0, "max": 10000 },
+      "required": true
+    },
+    {
+      "key": "stateOfCharge",
+      "dataType": "Number",
+      "unit": "%",
+      "simulationBehavior": "Derived",
+      "mutability": "Mutable",
+      "baseValue": 50,
+      "constraints": { "min": 0, "max": 100 },
+      "required": true
+    },
+    {
+      "key": "maxCapacity",
+      "dataType": "Number",
+      "unit": "Wh",
+      "simulationBehavior": "Constant",
+      "mutability": "Immutable",
+      "baseValue": 10000,
+      "constraints": { "min": 1 },
+      "required": true
+    }
+  ],
+  "allowedLinks": [
+    {
+      "linkType": "Supplies",
+      "direction": "outbound",
+      "targetTraits": { "dynamism": "Dynamic" }
+    },
+    {
+      "linkType": "Charges",
+      "direction": "inbound",
+      "targetTraits": { "dynamism": "Dynamic" }
+    }
+  ]
+}

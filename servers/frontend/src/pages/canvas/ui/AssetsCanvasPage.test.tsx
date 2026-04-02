@@ -3,17 +3,20 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AssetsCanvasPage, RelationshipEditPanel } from './AssetsCanvasPage'
 import { getAssets } from '@/entities/asset'
+import { getObjectTypeSchemas } from '@/entities/object-type-schema'
 import {
   getRelationships,
   updateRelationship,
   deleteRelationship,
 } from '@/entities/relationship'
+import { getLinkTypeSchemas } from '@/entities/link-type-schema'
 
 vi.mock('@/entities/asset', () => ({
   getAssets: vi.fn(),
   createAsset: vi.fn(),
   getAssetById: vi.fn(),
   updateAsset: vi.fn(),
+  deleteAsset: vi.fn(),
 }))
 
 vi.mock('@/entities/relationship', () => ({
@@ -22,8 +25,52 @@ vi.mock('@/entities/relationship', () => ({
   getRelationshipById: vi.fn(),
   updateRelationship: vi.fn(),
   deleteRelationship: vi.fn(),
-  RELATIONSHIP_TYPE_OPTIONS: ['feeds_into', 'contains', 'located_in'],
 }))
+
+vi.mock('@/entities/object-type-schema', () => ({
+  getObjectTypeSchemas: vi.fn(),
+  createObjectTypeSchema: vi.fn(),
+  updateObjectTypeSchema: vi.fn(),
+  deleteObjectTypeSchema: vi.fn(),
+}))
+
+vi.mock('@/entities/link-type-schema', () => ({
+  getLinkTypeSchemas: vi.fn(),
+}))
+
+vi.mock('@/entities/simulation', () => ({
+  runSimulation: vi.fn(),
+  startContinuousRun: vi.fn(),
+  stopRun: vi.fn(),
+  getRunEvents: vi.fn(),
+  subscribeSimulationEvents: vi.fn(() => () => {}),
+}))
+
+const LINK_TYPE_SCHEMAS = [
+  {
+    schemaVersion: 'v1',
+    linkType: 'Supplies',
+    displayName: '공급',
+    direction: 'Directed',
+    temporality: 'Durable',
+    fromConstraint: null,
+    toConstraint: null,
+    properties: [
+      { key: 'transfers', dataType: 'Array', simulationBehavior: 'Settable', mutability: 'Mutable', baseValue: [], constraints: {}, required: false },
+      { key: 'ratio', dataType: 'Number', simulationBehavior: 'Settable', mutability: 'Mutable', baseValue: 1, constraints: { min: 0, max: 1 }, required: false },
+    ],
+  },
+  {
+    schemaVersion: 'v1',
+    linkType: 'ConnectedTo',
+    displayName: '연결',
+    direction: 'Bidirectional',
+    temporality: 'Durable',
+    fromConstraint: null,
+    toConstraint: null,
+    properties: [],
+  },
+]
 
 describe('AssetsCanvasPage', () => {
   beforeEach(() => {
@@ -43,12 +90,24 @@ describe('AssetsCanvasPage', () => {
         id: 'rel-1',
         fromAssetId: 'asset-1',
         toAssetId: 'asset-2',
-        relationshipType: 'feeds_into',
+        relationshipType: 'Supplies',
         properties: {},
         createdAt: '2026-02-18T10:00:00Z',
         updatedAt: '2026-02-18T10:00:00Z',
       },
     ])
+    vi.mocked(getObjectTypeSchemas).mockResolvedValue([
+      {
+        schemaVersion: 'v1',
+        objectType: 'freezer',
+        displayName: 'Freezer',
+        traits: { persistence: 'Durable', dynamism: 'Dynamic', cardinality: 'Singular' },
+        classifications: [],
+        ownProperties: [],
+        allowedLinks: [],
+      },
+    ])
+    vi.mocked(getLinkTypeSchemas).mockResolvedValue(LINK_TYPE_SCHEMAS as never)
   })
 
   it('renders canvas and loads assets and relationships', async () => {
@@ -59,6 +118,7 @@ describe('AssetsCanvasPage', () => {
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(1)
       expect(getRelationships).toHaveBeenCalledTimes(1)
+      expect(getLinkTypeSchemas).toHaveBeenCalledTimes(1)
     })
 
     await waitFor(() => {
@@ -73,12 +133,30 @@ describe('AssetsCanvasPage', () => {
 
     render(<AssetsCanvasPage />)
 
-    expect(screen.getByText('로딩 중...')).toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.queryByText('로딩 중...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
       expect(screen.getByText('freezer')).toBeInTheDocument()
     })
+  })
+
+  it('enters rel mode when clicking 관계 만들기', async () => {
+    vi.mocked(getAssets).mockResolvedValue([
+      { id: 'a1', type: 'pump', connections: [], metadata: {}, createdAt: '', updatedAt: '' },
+      { id: 'a2', type: 'tank', connections: [], metadata: {}, createdAt: '', updatedAt: '' },
+    ])
+    vi.mocked(getRelationships).mockResolvedValue([])
+
+    render(<AssetsCanvasPage />)
+
+    await waitFor(() => expect(screen.getByText('pump')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByText('관계 만들기'))
+
+    expect(screen.getByText('관계 만들기 취소')).toBeInTheDocument()
+    expect(screen.getByText(/관계 편집 모드/)).toBeInTheDocument()
+    expect(screen.getByText('관계 만들기', { selector: 'h3' })).toBeInTheDocument()
   })
 
   it('renders relationship edit panel with from/to and relationship type', () => {
@@ -86,7 +164,7 @@ describe('AssetsCanvasPage', () => {
       id: 'rel-1',
       fromAssetId: 'asset-1',
       toAssetId: 'asset-2',
-      relationshipType: 'feeds_into',
+      relationshipType: 'Supplies',
       properties: {},
       createdAt: '2026-02-18T10:00:00Z',
       updatedAt: '2026-02-18T10:00:00Z',
@@ -94,14 +172,15 @@ describe('AssetsCanvasPage', () => {
     render(
       <RelationshipEditPanel
         relationship={rel}
+        linkTypeSchemas={LINK_TYPE_SCHEMAS as never}
         onClose={vi.fn()}
         onSaved={vi.fn()}
         onDeleted={vi.fn()}
-      />
+      />,
     )
     expect(screen.getByText('관계 편집')).toBeInTheDocument()
     expect(screen.getByText(/From: asset-1 → To: asset-2/)).toBeInTheDocument()
-    expect(screen.getByDisplayValue('feeds_into')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Supplies')).toBeInTheDocument()
   })
 
   it('calls updateRelationship when saving from relationship edit panel', async () => {
@@ -109,7 +188,7 @@ describe('AssetsCanvasPage', () => {
       id: 'rel-1',
       fromAssetId: 'asset-1',
       toAssetId: 'asset-2',
-      relationshipType: 'contains',
+      relationshipType: 'ConnectedTo',
       properties: { capacity: 100 },
       createdAt: '2026-02-18T10:00:00Z',
       updatedAt: '2026-02-18T10:00:00Z',
@@ -118,7 +197,7 @@ describe('AssetsCanvasPage', () => {
       id: 'rel-1',
       fromAssetId: 'asset-1',
       toAssetId: 'asset-2',
-      relationshipType: 'feeds_into',
+      relationshipType: 'Supplies',
       properties: { capacity: 100 },
       createdAt: '2026-02-18T10:00:00Z',
       updatedAt: '2026-02-18T10:00:00Z',
@@ -126,14 +205,15 @@ describe('AssetsCanvasPage', () => {
     render(
       <RelationshipEditPanel
         relationship={rel}
+        linkTypeSchemas={LINK_TYPE_SCHEMAS as never}
         onClose={vi.fn()}
         onSaved={vi.fn()}
         onDeleted={vi.fn()}
-      />
+      />,
     )
 
     const typeSelect = screen.getByRole('combobox', { name: /관계 타입/ })
-    await userEvent.selectOptions(typeSelect, 'contains')
+    await userEvent.selectOptions(typeSelect, 'ConnectedTo')
 
     const saveBtn = screen.getByRole('button', { name: /^저장$/ })
     await userEvent.click(saveBtn)
@@ -142,9 +222,9 @@ describe('AssetsCanvasPage', () => {
       expect(updateRelationship).toHaveBeenCalledWith(
         'rel-1',
         expect.objectContaining({
-          relationshipType: 'contains',
+          relationshipType: 'ConnectedTo',
           properties: { capacity: 100 },
-        })
+        }),
       )
     })
   })
@@ -155,7 +235,7 @@ describe('AssetsCanvasPage', () => {
       id: 'rel-1',
       fromAssetId: 'asset-1',
       toAssetId: 'asset-2',
-      relationshipType: 'feeds_into',
+      relationshipType: 'Supplies',
       properties: {},
       createdAt: '2026-02-18T10:00:00Z',
       updatedAt: '2026-02-18T10:00:00Z',
@@ -163,10 +243,11 @@ describe('AssetsCanvasPage', () => {
     render(
       <RelationshipEditPanel
         relationship={rel}
+        linkTypeSchemas={LINK_TYPE_SCHEMAS as never}
         onClose={vi.fn()}
         onSaved={vi.fn()}
         onDeleted={vi.fn()}
-      />
+      />,
     )
 
     const deleteBtn = screen.getByRole('button', { name: /^삭제$/ })

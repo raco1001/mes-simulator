@@ -99,3 +99,5 @@ temp.uiux.integration.phases.md
 .cursor/
 example_frontend_project/
 documentation/tasks/
+.claude/
+CLAUDE.md

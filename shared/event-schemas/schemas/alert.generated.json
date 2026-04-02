@@ -25,23 +25,37 @@
               "type": "string",
               "description": "알림 메시지"
             },
-            "threshold": {
-              "type": "number",
-              "description": "임계값 (threshold가 초과되었을 때 알림 발생)"
-            },
-            "current": {
-              "type": "number",
-              "description": "현재 값"
-            },
-            "metric": {
-              "type": "string",
-              "description": "메트릭 이름 (예: temperature, power)",
-              "examples": ["temperature", "power", "humidity"]
-            },
-            "code": {
-              "type": "string",
-              "description": "알림 코드 (시스템 내부 식별용)",
-              "examples": ["TEMP_HIGH", "POWER_OVERLOAD", "CONNECTION_LOST"]
+            "metrics": {
+              "type": "array",
+              "description": "복수 메트릭 임계치 정보",
+              "items": {
+                "type": "object",
+                "required": ["metric", "current", "threshold", "code", "severity"],
+                "properties": {
+                  "metric": {
+                    "type": "string",
+                    "description": "메트릭 이름",
+                    "examples": ["temperature", "power", "humidity"]
+                  },
+                  "current": {
+                    "type": "number",
+                    "description": "현재 값"
+                  },
+                  "threshold": {
+                    "type": "number",
+                    "description": "임계값"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "알림 코드"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["warning", "error"],
+                    "description": "메트릭 단위 심각도"
+                  }
+                }
+              }
             },
             "metadata": {
               "type": "object",
@@ -62,10 +76,15 @@
       "payload": {
         "severity": "warning",
         "message": "Temperature above threshold",
-        "threshold": -10,
-        "current": -5,
-        "metric": "temperature",
-        "code": "TEMP_HIGH"
+        "metrics": [
+          {
+            "metric": "temperature",
+            "current": -5,
+            "threshold": -10,
+            "code": "TEMP_HIGH",
+            "severity": "warning"
+          }
+        ]
       }
     },
     {
@@ -77,10 +96,15 @@
       "payload": {
         "severity": "error",
         "message": "Power consumption exceeded safe limit",
-        "threshold": 200,
-        "current": 250,
-        "metric": "power",
-        "code": "POWER_OVERLOAD",
+        "metrics": [
+          {
+            "metric": "power",
+            "current": 250,
+            "threshold": 200,
+            "code": "POWER_OVERLOAD",
+            "severity": "error"
+          }
+        ],
         "metadata": {
           "duration": 300,
           "recommendedAction": "Reduce load or check equipment"

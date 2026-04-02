@@ -25,3 +25,9 @@ export async function updateAsset(
     body: JSON.stringify(body),
   })
 }
+
+export async function deleteAsset(id: string): Promise<void> {
+  await httpClient.requestVoid(`/api/assets/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+}

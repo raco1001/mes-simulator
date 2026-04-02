@@ -24,6 +24,7 @@ class AssetEventConsumer:
         if self._consumer is None:
             self._consumer = KafkaConsumer(
                 self.settings.kafka_topic_asset_events,
+                self.settings.kafka_topic_recommendation_applied_events,
                 bootstrap_servers=self.settings.kafka_bootstrap_servers.split(","),
                 group_id=self.settings.kafka_consumer_group_id,
                 value_deserializer=lambda m: json.loads(m.decode("utf-8")),

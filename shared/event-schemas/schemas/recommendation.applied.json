@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Recommendation Applied Event",
+  "description": "추천이 실제 실행으로 적용되었을 때 발생하는 이벤트",
+  "allOf": [
+    { "$ref": "event-envelope.json" },
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "recommendation.applied"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "recommendationId",
+            "status",
+            "triggerAssetId",
+            "patch",
+            "appliedAt"
+          ],
+          "properties": {
+            "recommendationId": { "type": "string" },
+            "status": {
+              "type": "string",
+              "enum": ["approved", "applied"]
+            },
+            "triggerAssetId": { "type": "string" },
+            "patch": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "runId": { "type": "string" },
+            "appliedAt": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

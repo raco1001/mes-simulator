@@ -1,0 +1,21 @@
+{
+  "objectType": "bad-battery",
+  "displayName": "Bad Battery",
+  "traits": {
+    "persistence": "Durable",
+    "dynamism": "volatile",
+    "cardinality": "Enumerable"
+  },
+  "classifications": [
+    { "taxonomy": "industry", "value": "energy.storage" }
+  ],
+  "properties": [
+    {
+      "key": "storedEnergy",
+      "dataType": "Number",
+      "simulationBehavior": "Accumulator",
+      "mutability": "Mutable",
+      "required": true
+    }
+  ]
+}

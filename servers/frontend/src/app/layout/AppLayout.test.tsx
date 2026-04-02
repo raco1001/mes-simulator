@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { renderAppAtRoute } from '@/test/utils'
 import { getAssets } from '@/entities/asset'
 import { getStates } from '@/entities/state'
-import type { AssetDto } from '@/entities/asset'
-import type { StateDto } from '@/entities/state'
+import { getAlerts } from '@/entities/alert'
+import { getRelationships } from '@/entities/relationship'
 
 vi.mock('@/entities/asset', () => ({
   getAssets: vi.fn(),
@@ -16,50 +16,63 @@ vi.mock('@/entities/state', () => ({
   getStates: vi.fn(),
   getStateByAssetId: vi.fn(),
 }))
+vi.mock('@/entities/alert', () => ({
+  getAlerts: vi.fn(),
+  subscribeAlerts: vi.fn(() => () => {}),
+}))
+vi.mock('@/entities/relationship', () => ({
+  getRelationships: vi.fn(),
+  createRelationship: vi.fn(),
+  getRelationshipById: vi.fn(),
+  updateRelationship: vi.fn(),
+  deleteRelationship: vi.fn(),
+}))
+vi.mock('@/entities/link-type-schema', () => ({
+  getLinkTypeSchemas: vi.fn().mockResolvedValue([]),
+}))
+vi.mock('@/entities/simulation', () => ({
+  runSimulation: vi.fn(),
+  startContinuousRun: vi.fn(),
+  stopRun: vi.fn(),
+  getRunEvents: vi.fn(),
+  subscribeSimulationEvents: vi.fn(() => () => {}),
+}))
 
 describe('AppLayout and routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getAssets).mockResolvedValue([])
     vi.mocked(getStates).mockResolvedValue([])
+    vi.mocked(getAlerts).mockResolvedValue([])
+    vi.mocked(getRelationships).mockResolvedValue([])
   })
 
-  it('shows nav links 메인 and 에셋 설정', async () => {
+  it('shows nav links 홈, 모니터링, 추천', async () => {
     renderAppAtRoute('/')
-    expect(screen.getByRole('link', { name: '메인' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '에셋 설정' })).toBeInTheDocument()
-    // Wait for AssetList to finish loading (avoids act warning)
-    await screen.findByText('No assets found')
+    expect(screen.getByRole('link', { name: '홈' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '모니터링' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '추천' })).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalled()
+    })
   })
 
-  it('shows main page content at /', async () => {
-    const mockAssets: AssetDto[] = [
-      {
-        id: 'freezer-1',
-        type: 'freezer',
-        connections: [],
-        metadata: {},
-        createdAt: '2026-02-18T10:00:00Z',
-        updatedAt: '2026-02-18T10:00:00Z',
-      },
-    ]
-    const mockStates: StateDto[] = []
-    vi.mocked(getAssets).mockResolvedValue(mockAssets)
-    vi.mocked(getStates).mockResolvedValue(mockStates)
-
-    renderAppAtRoute('/')
-
-    const heading = await screen.findByRole('heading', { name: /Factory MES - Asset List/i })
-    expect(heading).toBeInTheDocument()
-  })
-
-  it('shows assets settings page at /assets', async () => {
+  it('renders canvas page at / (home)', async () => {
     vi.mocked(getAssets).mockResolvedValue([])
+    vi.mocked(getRelationships).mockResolvedValue([])
 
-    renderAppAtRoute('/assets')
+    renderAppAtRoute('/')
 
-    const heading = await screen.findByRole('heading', { name: '에셋 설정' })
+    await waitFor(() => {
+      expect(screen.getByText('에셋 추가')).toBeInTheDocument()
+    })
+  })
+
+  it('renders monitoring page at /monitoring', async () => {
+    renderAppAtRoute('/monitoring')
+
+    const heading = await screen.findByRole('heading', { name: /모니터링/i })
     expect(heading).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '시뮬레이션 실행' })).toBeInTheDocument()
   })
 })

@@ -8,8 +8,7 @@ export interface RunSimulationRequestDto {
 }
 
 export interface StatePatchDto {
-  currentTemp?: number
-  currentPower?: number
+  properties?: Record<string, unknown | null>
   status?: string
   lastEventType?: string
 }
@@ -51,4 +50,29 @@ export interface EventDto {
   simulationRunId?: string
   relationshipId?: string
   payload?: Record<string, unknown>
+}
+
+export interface WhatIfPropertyChangeDto {
+  key: string
+  before?: unknown
+  after?: unknown
+  delta?: unknown
+}
+
+export interface WhatIfObjectDeltaDto {
+  objectId: string
+  changes: WhatIfPropertyChangeDto[]
+}
+
+export interface WhatIfStateSnapshotDto {
+  properties: Record<string, unknown>
+}
+
+export interface WhatIfResultDto {
+  runId: string
+  before: Record<string, WhatIfStateSnapshotDto>
+  after: Record<string, WhatIfStateSnapshotDto>
+  deltas: WhatIfObjectDeltaDto[]
+  affectedObjects: string[]
+  propagationDepth: number
 }

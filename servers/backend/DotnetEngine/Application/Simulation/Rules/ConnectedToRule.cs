@@ -13,6 +13,16 @@ public sealed class ConnectedToRule : IPropagationRule
 
     public PropagationResult Apply(PropagationContext ctx)
     {
+        var fromState = ctx.FromState;
+        var incoming = ctx.IncomingPatch;
+        var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+        var outgoingPatch = new StatePatchDto
+        {
+            Properties = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState),
+            Status = incoming.Status ?? fromState?.Status,
+            LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
+        };
+
         var occurredAt = DateTimeOffset.UtcNow;
         var payload = new Dictionary<string, object>
         {
@@ -35,7 +45,7 @@ public sealed class ConnectedToRule : IPropagationRule
         };
         return new PropagationResult
         {
-            OutgoingPatch = ctx.IncomingPatch,
+            OutgoingPatch = outgoingPatch,
             Events = [evt],
         };
     }

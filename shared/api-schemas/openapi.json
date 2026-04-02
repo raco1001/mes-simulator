@@ -153,6 +153,30 @@
             "description": "Not Found"
           }
         }
+      },
+      "delete": {
+        "summary": "Asset 삭제",
+        "tags": [
+          "Assets"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/api/states": {
@@ -204,6 +228,155 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/object-type-schemas": {
+      "get": {
+        "summary": "ObjectTypeSchema 목록 조회",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "ObjectTypeSchema 생성",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateObjectTypeSchemaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/object-type-schemas/{objectType}": {
+      "get": {
+        "summary": "특정 ObjectTypeSchema 조회",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "summary": "ObjectTypeSchema 수정",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateObjectTypeSchemaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "ObjectTypeSchema 삭제",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "404": {
             "description": "Not Found"
@@ -1064,6 +1237,142 @@
           }
         }
       },
+      "ObjectTypeSchemaDto": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "objectType",
+          "displayName",
+          "traits",
+          "properties"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "objectType": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "allowedLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateObjectTypeSchemaRequest": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "objectType",
+          "displayName",
+          "traits",
+          "properties"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "objectType": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "allowedLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "UpdateObjectTypeSchemaRequest": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "allowedLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
       "ErrorResponse": {
         "type": "object",
         "required": [
@@ -1092,6 +1401,9 @@
     },
     {
       "name": "Simulation"
+    },
+    {
+      "name": "ObjectTypeSchemas"
     }
   ]
 }

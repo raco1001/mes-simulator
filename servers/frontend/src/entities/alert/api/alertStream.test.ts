@@ -6,8 +6,10 @@ class MockEventSource {
   public static instances: MockEventSource[] = []
   public onmessage: ((event: MessageEvent<string>) => void) | null = null
   public closed = false
+  public readonly url: string
 
-  constructor(public readonly url: string) {
+  constructor(url: string) {
+    this.url = url
     MockEventSource.instances.push(this)
   }
 

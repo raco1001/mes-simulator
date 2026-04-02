@@ -1,0 +1,21 @@
+{
+  "objectType": "broken-freezer",
+  "displayName": "Broken Freezer",
+  "traits": {
+    "persistence": "Durable",
+    "dynamism": "Dynamic",
+    "cardinality": "Enumerable"
+  },
+  "classifications": [
+    { "taxonomy": "industry", "value": "manufacturing.equipment" }
+  ],
+  "properties": [
+    {
+      "key": "currentTemp",
+      "dataType": "Number",
+      "simulationBehavior": "Rate",
+      "mutability": "Mutable",
+      "baseValue": -5
+    }
+  ]
+}

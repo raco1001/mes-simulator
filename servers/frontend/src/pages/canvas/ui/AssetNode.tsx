@@ -3,6 +3,8 @@ import type { AssetDto } from '@/entities/asset'
 
 export type AssetNodeData = {
   asset: AssetDto
+  liveStatus?: string
+  liveProperties?: Record<string, unknown>
 }
 
 function metadataSummary(meta: Record<string, unknown> | undefined): string {
@@ -13,17 +15,32 @@ function metadataSummary(meta: Record<string, unknown> | undefined): string {
     .join(', ')
 }
 
+function statusClass(status?: string): string {
+  if (!status) return ''
+  const s = status.toLowerCase()
+  if (s === 'warning') return 'asset-node--warning'
+  if (s === 'error' || s === 'critical') return 'asset-node--error'
+  return ''
+}
+
 export function AssetNode(props: NodeProps<Node<AssetNodeData, 'asset'>>) {
   const { data } = props
   const asset = data?.asset
   if (!asset) return null
 
+  const liveClass = statusClass(data.liveStatus)
+
   return (
     <>
       <Handle type="target" position={Position.Left} />
-      <div className="asset-node">
+      <div className={`asset-node ${liveClass}`}>
         <div className="asset-node__type">{asset.type}</div>
-        <div className="asset-node__meta">{metadataSummary(asset.metadata)}</div>
+        <div className="asset-node__meta">{metadataSummary(data.liveProperties ?? asset.metadata)}</div>
+        {data.liveStatus && (
+          <div className={`asset-node__status asset-node__status--${data.liveStatus.toLowerCase()}`}>
+            {data.liveStatus}
+          </div>
+        )}
       </div>
       <Handle type="source" position={Position.Right} />
     </>

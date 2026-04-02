@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shadow-boxing.local/schemas/unit-definitions.json",
+  "title": "Unit Definitions",
+  "description": "Base and derived units for physical property measurements",
+  "$defs": {
+    "BaseUnit": {
+      "type": "string",
+      "description": "SI base units and common base measurement units",
+      "enum": ["m", "kg", "s", "A", "K", "W", "Wh", "L", "item"]
+    },
+    "DerivedUnit": {
+      "type": "string",
+      "description": "Derived units composed from base units or domain-specific conventions",
+      "enum": ["%", "mps", "kW", "kWh", "itemsPerHour", "degC", "degF"]
+    },
+    "Unit": {
+      "description": "Any valid unit of measure (base or derived)",
+      "oneOf": [
+        { "$ref": "#/$defs/BaseUnit" },
+        { "$ref": "#/$defs/DerivedUnit" }
+      ]
+    }
+  }
+}

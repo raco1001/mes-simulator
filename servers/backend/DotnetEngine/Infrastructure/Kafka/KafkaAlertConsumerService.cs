@@ -2,6 +2,7 @@ using System.Text.Json;
 using Confluent.Kafka;
 using DotnetEngine.Application.Alert.Dto;
 using DotnetEngine.Application.Alert.Ports.Driven;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,21 +11,23 @@ namespace DotnetEngine.Infrastructure.Kafka;
 
 /// <summary>
 /// Consumes alert events from factory.asset.alert and adds them to IAlertStore.
+/// IAlertStore is scoped (MongoAlertStore depends on scoped IMongoDatabase),
+/// so we resolve it per-message via IServiceScopeFactory.
 /// </summary>
 public sealed class KafkaAlertConsumerService : BackgroundService
 {
-    private readonly IAlertStore _alertStore;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IAlertNotifier _alertNotifier;
     private readonly KafkaOptions _options;
     private readonly ILogger<KafkaAlertConsumerService> _logger;
 
     public KafkaAlertConsumerService(
-        IAlertStore alertStore,
+        IServiceScopeFactory scopeFactory,
         IAlertNotifier alertNotifier,
         IOptions<KafkaOptions> options,
         ILogger<KafkaAlertConsumerService> logger)
     {
-        _alertStore = alertStore;
+        _scopeFactory = scopeFactory;
         _alertNotifier = alertNotifier;
         _options = options?.Value ?? new KafkaOptions();
         _logger = logger;
@@ -90,7 +93,9 @@ public sealed class KafkaAlertConsumerService : BackgroundService
         if (alert == null)
             return;
 
-        _alertStore.Add(alert);
+        using var scope = _scopeFactory.CreateScope();
+        var alertStore = scope.ServiceProvider.GetRequiredService<IAlertStore>();
+        alertStore.Add(alert);
         await _alertNotifier.NotifyAsync(alert, ct);
         _logger.LogDebug("Consumed alert for asset {AssetId}, severity {Severity}", alert.AssetId, alert.Severity);
     }
@@ -132,6 +137,46 @@ public sealed class KafkaAlertConsumerService : BackgroundService
         if (payloadProp.TryGetProperty("code", out var codeProp))
             code = codeProp.GetString();
 
+        var metrics = new List<AlertMetricDto>();
+        if (payloadProp.TryGetProperty("metrics", out var metricsProp) && metricsProp.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in metricsProp.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                    continue;
+                if (!item.TryGetProperty("metric", out var mName) || mName.ValueKind != JsonValueKind.String)
+                    continue;
+                if (!item.TryGetProperty("current", out var mCurrent) || mCurrent.ValueKind != JsonValueKind.Number)
+                    continue;
+                if (!item.TryGetProperty("threshold", out var mThreshold) || mThreshold.ValueKind != JsonValueKind.Number)
+                    continue;
+                if (!item.TryGetProperty("code", out var mCode) || mCode.ValueKind != JsonValueKind.String)
+                    continue;
+                var mSeverity = item.TryGetProperty("severity", out var mSev) && mSev.ValueKind == JsonValueKind.String
+                    ? mSev.GetString() ?? "warning"
+                    : "warning";
+
+                metrics.Add(new AlertMetricDto
+                {
+                    Metric = mName.GetString() ?? "",
+                    Current = mCurrent.GetDouble(),
+                    Threshold = mThreshold.GetDouble(),
+                    Code = mCode.GetString() ?? "",
+                    Severity = mSeverity
+                });
+            }
+        }
+
+        if (metrics.Count > 0)
+        {
+            // Keep legacy fields populated for backward compatibility.
+            var first = metrics[0];
+            metric = first.Metric;
+            current = first.Current;
+            threshold = first.Threshold;
+            code = first.Code;
+        }
+
         var metadata = new Dictionary<string, object>();
         if (payloadProp.TryGetProperty("metadata", out var metadataProp) && metadataProp.ValueKind == JsonValueKind.Object)
         {
@@ -155,6 +200,7 @@ public sealed class KafkaAlertConsumerService : BackgroundService
             Current = current,
             Threshold = threshold,
             Code = code,
+            Metrics = metrics,
             Metadata = metadata,
         };
     }

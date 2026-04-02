@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "v1",
+  "objectType": "conveyor",
+  "displayName": "Conveyor",
+  "traits": {
+    "persistence": "Durable",
+    "dynamism": "Dynamic",
+    "cardinality": "Enumerable"
+  },
+  "classifications": [
+    { "taxonomy": "industry", "value": "manufacturing.transport" },
+    { "taxonomy": "functional", "value": "transporter" }
+  ],
+  "properties": [
+    {
+      "key": "setSpeed",
+      "dataType": "Number",
+      "unit": "mps",
+      "simulationBehavior": "Settable",
+      "mutability": "Mutable",
+      "baseValue": 1.2,
+      "constraints": { "min": 0, "max": 5 },
+      "required": true
+    },
+    {
+      "key": "actualSpeed",
+      "dataType": "Number",
+      "unit": "mps",
+      "simulationBehavior": "Rate",
+      "mutability": "Mutable",
+      "baseValue": 1.0,
+      "constraints": { "min": 0, "max": 5 },
+      "required": true
+    },
+    {
+      "key": "throughputPerHour",
+      "dataType": "Number",
+      "unit": "itemsPerHour",
+      "simulationBehavior": "Derived",
+      "mutability": "Mutable",
+      "baseValue": 400,
+      "constraints": { "min": 0 },
+      "required": false
+    }
+  ],
+  "allowedLinks": [
+    {
+      "linkType": "FeedsInto",
+      "direction": "outbound",
+      "targetTraits": { "dynamism": "Dynamic" }
+    },
+    {
+      "linkType": "ReceivesFrom",
+      "direction": "inbound",
+      "targetTraits": { "dynamism": "Dynamic" }
+    }
+  ]
+}

@@ -4,9 +4,8 @@
 
 | 파일 | 용도 |
 |------|------|
-| `docker-compose.infra.yml` | 인프라만 (Kafka, MongoDB, Redis, UI) |
-| `docker-compose.app.yml` | 앱만 (Backend, Frontend) — **기동 중인 인프라 네트워크 사용** |
-| `docker-compose.full.yml` | 인프라 + 앱 전체 (앱 서비스는 별도 정의 시 사용) |
+| `docker-compose.infra.yml` | 인프라 (Kafka, MongoDB, UI 도구) |
+| `docker-compose.app.yml` | 앱 (Backend, Frontend, Pipeline) — **기동 중인 인프라 네트워크 사용** |
 
 ## 통합 테스트 (인프라 이미 기동 중일 때)
 
@@ -33,6 +32,7 @@
    curl -s http://localhost:5000/api/health
    curl -s http://localhost:5000/api/assets
    curl -s http://localhost:5000/api/states
+   curl -s http://localhost:5000/api/alerts
    ```
 
 3. **브라우저 확인**
@@ -49,3 +49,4 @@
 - `docker-compose.app.yml`은 **외부 네트워크** `factory-network`를 사용합니다.  
   인프라를 먼저 `docker-compose.infra.yml`로 띄워 두어야 합니다.
 - MongoDB 연결 문자열은 컨테이너 내부에서 호스트명 `mongodb`로 접속합니다.
+- Kafka 연결은 컨테이너 내부에서 `kafka:9093` (PLAINTEXT_INTERNAL 리스너)을 사용합니다.

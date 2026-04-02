@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driving;
 using DotnetEngine.Application.Asset.Ports.Driven;
+using DotnetEngine.Application.ObjectType.Ports.Driven;
+using DotnetEngine.Application.ObjectType.Dto;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +30,8 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 services.RemoveAll<IGetStatesQuery>();
                 services.RemoveAll<ICreateAssetCommand>();
                 services.RemoveAll<IUpdateAssetCommand>();
+                services.RemoveAll<IDeleteAssetCommand>();
+                services.RemoveAll<IObjectTypeSchemaRepository>();
 
                 // Mock repositories
                 var mockAssetRepository = new Mock<IAssetRepository>();
@@ -66,14 +70,17 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                     .ReturnsAsync(updatedAsset);
                 mockAssetRepository.Setup(r => r.UpdateAsync("not-found", It.IsAny<AssetDto>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync((AssetDto?)null);
+                mockAssetRepository.Setup(r => r.DeleteAsync("freezer-1", It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(true);
+                mockAssetRepository.Setup(r => r.DeleteAsync("not-found", It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(false);
 
                 var states = new List<StateDto>
                 {
                     new()
                     {
                         AssetId = "freezer-1",
-                        CurrentTemp = -5.0,
-                        CurrentPower = 120.0,
+                        Properties = new Dictionary<string, object?> { ["temp"] = -5.0, ["power"] = 120.0 },
                         Status = "normal",
                         LastEventType = "asset.health.updated",
                         UpdatedAt = now,
@@ -87,11 +94,17 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 mockAssetRepository.Setup(r => r.GetStateByAssetIdAsync("not-found", It.IsAny<CancellationToken>()))
                     .ReturnsAsync((StateDto?)null);
 
+                var mockObjectTypeRepository = new Mock<IObjectTypeSchemaRepository>();
+                mockObjectTypeRepository.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((ObjectTypeSchemaDto?)null);
+
                 services.AddSingleton(mockAssetRepository.Object);
+                services.AddSingleton(mockObjectTypeRepository.Object);
                 services.AddScoped<IGetAssetsQuery, DotnetEngine.Application.Asset.Handlers.GetAssetsQueryHandler>();
                 services.AddScoped<IGetStatesQuery, DotnetEngine.Application.Asset.Handlers.GetStatesQueryHandler>();
                 services.AddScoped<ICreateAssetCommand, DotnetEngine.Application.Asset.Handlers.CreateAssetCommandHandler>();
                 services.AddScoped<IUpdateAssetCommand, DotnetEngine.Application.Asset.Handlers.UpdateAssetCommandHandler>();
+                services.AddScoped<IDeleteAssetCommand, DotnetEngine.Application.Asset.Handlers.DeleteAssetCommandHandler>();
             });
         }).CreateClient();
     }
@@ -196,6 +209,22 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
     {
         var request = new UpdateAssetRequest { Type = "conveyor" };
         var response = await _client.PutAsJsonAsync("/api/assets/not-found", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteAsset_Returns204_WhenExists()
+    {
+        var response = await _client.DeleteAsync("/api/assets/freezer-1");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteAsset_Returns404_WhenNotFound()
+    {
+        var response = await _client.DeleteAsync("/api/assets/not-found");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

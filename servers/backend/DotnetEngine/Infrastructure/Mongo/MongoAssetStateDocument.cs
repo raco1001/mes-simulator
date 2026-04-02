@@ -9,10 +9,8 @@ public sealed class MongoAssetStateDocument
     public string Id { get; set; } = string.Empty;
     [BsonElement("assetId")]
     public string AssetId { get; set; } = string.Empty;
-    [BsonElement("currentTemp")]
-    public double? CurrentTemp { get; set; }
-    [BsonElement("currentPower")]
-    public double? CurrentPower { get; set; }
+    [BsonElement("properties")]
+    public BsonDocument Properties { get; set; } = new BsonDocument();
     [BsonElement("status")]
     public string Status { get; set; } = string.Empty;
     [BsonElement("lastEventType")]

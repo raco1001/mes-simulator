@@ -2,6 +2,7 @@ using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Domain.Simulation.ValueObjects;
+using System.Linq;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
@@ -59,11 +60,9 @@ public sealed class StartContinuousRunCommandHandler : IStartContinuousRunComman
         if (patch == null)
             return new Dictionary<string, object>();
 
-        var d = new Dictionary<string, object>();
-        if (patch.CurrentTemp.HasValue)
-            d["currentTemp"] = patch.CurrentTemp.Value;
-        if (patch.CurrentPower.HasValue)
-            d["currentPower"] = patch.CurrentPower.Value;
+        var d = new Dictionary<string, object>(patch.Properties
+            .Where(kv => kv.Value is not null)
+            .ToDictionary(kv => kv.Key, kv => kv.Value!));
         if (patch.Status != null)
             d["status"] = patch.Status;
         if (patch.LastEventType != null)

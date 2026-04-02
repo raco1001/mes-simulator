@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Disable NuGet audit in this environment to avoid NU1900 cache permission warnings -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

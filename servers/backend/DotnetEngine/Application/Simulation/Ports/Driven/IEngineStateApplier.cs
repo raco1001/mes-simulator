@@ -12,5 +12,5 @@ public interface IEngineStateApplier
     /// <summary>
     /// 병합된 상태를 저장하고, 이벤트를 append·발행한다. (UpsertState → Append → Publish 순서.)
     /// </summary>
-    Task ApplyAsync(EventDto evt, StateDto mergedState, CancellationToken cancellationToken = default);
+    Task ApplyAsync(EventDto evt, StateDto mergedState, bool dryRun = false, CancellationToken cancellationToken = default);
 }

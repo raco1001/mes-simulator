@@ -8,4 +8,11 @@ export interface AlertDto {
   current?: number | null
   threshold?: number | null
   code?: string | null
+  metrics?: Array<{
+    metric: string
+    current: number
+    threshold: number
+    code: string
+    severity: string
+  }>
 }

@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shadow-boxing.local/schemas/object-type-schema.json",
+  "title": "ObjectTypeSchema",
+  "description": "Ontology object type definition for Layer 1 metamodel. Supports interface inheritance via 'extends'.",
+  "type": "object",
+  "required": ["schemaVersion", "objectType", "displayName", "traits"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^v\\d+$",
+      "description": "Schema version for compatibility tracking (e.g. v1)"
+    },
+    "objectType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "abstractSchema": {
+      "type": "boolean",
+      "description": "If true, this schema acts as an interface. Abstract schemas cannot be directly instantiated as Assets.",
+      "default": false
+    },
+    "extends": {
+      "type": "string",
+      "minLength": 1,
+      "description": "objectType ID of the parent interface schema. ownProperties are merged with parent's ownProperties at runtime."
+    },
+    "traits": {
+      "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/Traits"
+    },
+    "classifications": {
+      "type": "array",
+      "items": {
+        "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/Classification"
+      },
+      "default": []
+    },
+    "ownProperties": {
+      "type": "array",
+      "description": "Properties defined directly on this schema (excluding inherited). Runtime resolvedProperties = parent.ownProperties + this.ownProperties.",
+      "items": {
+        "$ref": "https://shadow-boxing.local/schemas/property-definition.json"
+      },
+      "default": []
+    },
+    "allowedLinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["linkType", "direction"],
+        "properties": {
+          "linkType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["inbound", "outbound", "bidirectional"]
+          },
+          "targetTraits": {
+            "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/PartialTraits"
+          }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    }
+  },
+  "additionalProperties": false
+}

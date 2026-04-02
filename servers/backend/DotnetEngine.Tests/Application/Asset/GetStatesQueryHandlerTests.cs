@@ -20,8 +20,7 @@ public class GetStatesQueryHandlerTests
             new()
             {
                 AssetId = "freezer-1",
-                CurrentTemp = -5.0,
-                CurrentPower = 120.0,
+                Properties = new Dictionary<string, object?> { ["temp"] = -5.0, ["power"] = 120.0 },
                 Status = "normal",
                 LastEventType = "asset.health.updated",
                 UpdatedAt = now,
@@ -40,8 +39,8 @@ public class GetStatesQueryHandlerTests
         Assert.NotNull(result);
         Assert.Single(result);
         Assert.Equal("freezer-1", result[0].AssetId);
-        Assert.Equal(-5.0, result[0].CurrentTemp);
-        Assert.Equal(120.0, result[0].CurrentPower);
+        Assert.Equal(-5.0, result[0].Properties["temp"]);
+        Assert.Equal(120.0, result[0].Properties["power"]);
         Assert.Equal("normal", result[0].Status);
     }
 
@@ -72,8 +71,7 @@ public class GetStatesQueryHandlerTests
         var state = new StateDto
         {
             AssetId = "freezer-1",
-            CurrentTemp = -5.0,
-            CurrentPower = 120.0,
+            Properties = new Dictionary<string, object?> { ["temp"] = -5.0, ["power"] = 120.0 },
             Status = "normal",
             LastEventType = "asset.health.updated",
             UpdatedAt = now,
@@ -90,7 +88,7 @@ public class GetStatesQueryHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("freezer-1", result.AssetId);
-        Assert.Equal(-5.0, result.CurrentTemp);
+        Assert.Equal(-5.0, result.Properties["temp"]);
         Assert.Equal("normal", result.Status);
     }
 

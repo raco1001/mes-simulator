@@ -13,15 +13,18 @@ public sealed class AssetController : ControllerBase
     private readonly IGetAssetsQuery _getAssetsQuery;
     private readonly ICreateAssetCommand _createAssetCommand;
     private readonly IUpdateAssetCommand _updateAssetCommand;
+    private readonly IDeleteAssetCommand _deleteAssetCommand;
 
     public AssetController(
         IGetAssetsQuery getAssetsQuery,
         ICreateAssetCommand createAssetCommand,
-        IUpdateAssetCommand updateAssetCommand)
+        IUpdateAssetCommand updateAssetCommand,
+        IDeleteAssetCommand deleteAssetCommand)
     {
         _getAssetsQuery = getAssetsQuery;
         _createAssetCommand = createAssetCommand;
         _updateAssetCommand = updateAssetCommand;
+        _deleteAssetCommand = deleteAssetCommand;
     }
 
     /// <summary>
@@ -86,5 +89,17 @@ public sealed class AssetController : ControllerBase
             return NotFound();
         }
         return Ok(dto);
+    }
+
+    /// <summary>
+    /// DELETE /api/assets/{id} — Asset 삭제.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
+    {
+        var deleted = await _deleteAssetCommand.DeleteAsync(id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
 }

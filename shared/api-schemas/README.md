@@ -13,6 +13,11 @@ api-schemas/
 └── README.md
 ```
 
+> **온톨로지 메타모델 스키마는 이 디렉토리에 없습니다.**
+> `ObjectTypeSchema`, `LinkTypeSchema`, `PropertyDefinition` 등 Layer 1 메타계층 계약은
+> [`shared/ontology-schemas/`](../ontology-schemas/README.md)에 위치합니다.
+> Phase 11에서 `/api/object-type-schemas` 엔드포인트 추가 시 `openapi.json`이 해당 스키마를 소스로 동기화합니다.
+
 ## 기준 계약
 
 - 현재 REST API 기준 문서는 `openapi.json` 입니다.

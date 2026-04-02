@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import './AppLayout.css'
 import { useCallback, useEffect, useState } from 'react'
 import { AlertToast } from '@/entities/alert/ui/AlertToast'
@@ -14,6 +14,7 @@ const MAX_RECENT_ALERTS = 20
 export function AppLayout() {
   const [toastQueue, setToastQueue] = useState<AlertToastItem[]>([])
   const [recentAlerts, setRecentAlerts] = useState<AlertDto[]>([])
+  const location = useLocation()
 
   const dismissToast = useCallback((id: string) => {
     setToastQueue((current) => current.filter((item) => item.id !== id))
@@ -31,29 +32,26 @@ export function AppLayout() {
     }
   }, [])
 
+  const isCanvasHome = location.pathname === '/'
+
   return (
     <div className="app-layout">
       <nav className="app-nav">
-        <NavLink to="/" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          메인
+        <NavLink to="/" end className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
+          홈
         </NavLink>
-        <NavLink to="/assets" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          에셋 설정
+        <NavLink to="/monitoring" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
+          모니터링
         </NavLink>
-        <NavLink to="/relationships" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          관계
-        </NavLink>
-        <NavLink to="/canvas" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          캔버스
+        <NavLink to="/recommendations" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
+          추천
         </NavLink>
       </nav>
-      <main className="app-main">
+      <main className={`app-main ${isCanvasHome ? '' : 'app-main--padded'}`}>
         <Outlet />
-        <section className="alert-recent-panel" aria-label="최근 알림">
-          <h3>최근 알림</h3>
-          {recentAlerts.length === 0 ? (
-            <p>최근 알림이 없습니다.</p>
-          ) : (
+        {!isCanvasHome && recentAlerts.length > 0 && (
+          <section className="alert-recent-panel" aria-label="최근 알림">
+            <h3>최근 알림</h3>
             <ul>
               {recentAlerts.slice(0, 5).map((alert, index) => (
                 <li key={`${alert.assetId}-${alert.timestamp}-${index}`}>
@@ -61,8 +59,8 @@ export function AppLayout() {
                 </li>
               ))}
             </ul>
-          )}
-        </section>
+          </section>
+        )}
       </main>
       <div className="alert-toast-stack" aria-live="polite">
         {toastQueue.map((item) => (

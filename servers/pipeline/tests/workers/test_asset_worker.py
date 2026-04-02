@@ -16,12 +16,13 @@ class TestAssetWorkerAlertPublish:
         worker = AssetWorker()
         worker.producer = MagicMock()
         worker.repository = MagicMock()
+        worker.repository.get_recent_property_series.return_value = {}
 
         event = AssetHealthUpdatedEventDto(
             eventType="asset.health.updated",
             assetId="freezer-1",
             timestamp=datetime.now(timezone.utc),
-            payload={"temperature": -8, "power": 100},
+            payload={"properties": {"temperature": -8, "power": 100}},
         )
         worker.process_health_updated(event)
 
@@ -35,17 +36,19 @@ class TestAssetWorkerAlertPublish:
         assert "runId" not in value
         assert value["payload"]["severity"] == "warning"
         assert value["payload"]["message"] == "Asset state: warning"
+        assert isinstance(value["payload"]["metrics"], list)
 
     def test_process_health_updated_does_not_publish_when_normal(self) -> None:
         worker = AssetWorker()
         worker.producer = MagicMock()
         worker.repository = MagicMock()
+        worker.repository.get_recent_property_series.return_value = {}
 
         event = AssetHealthUpdatedEventDto(
             eventType="asset.health.updated",
             assetId="freezer-1",
             timestamp=datetime.now(timezone.utc),
-            payload={"temperature": -15, "power": 100},
+            payload={"properties": {"temperature": -15, "power": 100}},
         )
         worker.process_health_updated(event)
 
@@ -55,12 +58,13 @@ class TestAssetWorkerAlertPublish:
         worker = AssetWorker()
         worker.producer = MagicMock()
         worker.repository = MagicMock()
+        worker.repository.get_recent_property_series.return_value = {}
 
         event = SimulationStateUpdatedEventDto(
             eventType="simulation.state.updated",
             assetId="conveyor-1",
             timestamp=datetime.now(timezone.utc),
-            payload={"temperature": 5, "power": 100, "runId": "run-456"},
+            payload={"properties": {"temperature": 5, "power": 100}, "runId": "run-456"},
         )
         worker.process_simulation_state_updated(event)
 
@@ -73,3 +77,4 @@ class TestAssetWorkerAlertPublish:
         assert value["runId"] == "run-456"
         assert value["payload"]["severity"] == "error"
         assert value["payload"]["metadata"] == {"runId": "run-456"}
+        assert value["payload"]["metrics"][0]["metric"] == "temperature"

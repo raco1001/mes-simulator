@@ -14,7 +14,7 @@ public static class MetadataBsonConverter
     /// Converts metadata dictionary to BsonDocument. Handles JsonElement and other .NET types.
     /// Keys are normalized to camelCase for MongoDB.
     /// </summary>
-    public static BsonDocument ToBsonDocument(IReadOnlyDictionary<string, object>? metadata)
+    public static BsonDocument ToBsonDocument<TValue>(IReadOnlyDictionary<string, TValue>? metadata)
     {
         if (metadata == null || metadata.Count == 0)
             return new BsonDocument();
@@ -84,6 +84,18 @@ public static class MetadataBsonConverter
             return new BsonDouble(d);
         if (value is bool b)
             return new BsonBoolean(b);
+
+        if (value is IReadOnlyDictionary<string, object?> nullableDict)
+        {
+            var sub = new BsonDocument();
+            foreach (var kv in nullableDict)
+            {
+                var v = ToBsonValue(kv.Value);
+                if (v != null)
+                    sub[ToCamelCaseKey(kv.Key)] = v;
+            }
+            return sub;
+        }
 
         if (value is IReadOnlyDictionary<string, object> dict)
         {

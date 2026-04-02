@@ -29,15 +29,14 @@ class TestAssetState:
     def test_optional_fields(self) -> None:
         state = AssetState(
             asset_id="freezer-1",
-            current_temp=-5.0,
-            current_power=120.0,
+            properties={"temperature": -5.0, "power": 120.0},
             status=AssetConstants.Status.WARNING,
             last_event_type="asset.health.updated",
             updated_at=datetime.now(timezone.utc),
             metadata={"humidity": 45},
         )
-        assert state.current_temp == -5.0
-        assert state.current_power == 120.0
+        assert state.properties["temperature"] == -5.0
+        assert state.properties["power"] == 120.0
         assert state.status == AssetConstants.Status.WARNING
         assert state.last_event_type == "asset.health.updated"
         assert state.metadata["humidity"] == 45
@@ -60,10 +59,8 @@ class TestAssetState:
         state = AssetState(
             asset_id="freezer-1",
             updated_at=datetime.now(timezone.utc),
-            current_temp=None,
-            current_power=None,
+            properties={},
             last_event_type=None,
         )
-        assert state.current_temp is None
-        assert state.current_power is None
+        assert state.properties == {}
         assert state.last_event_type is None

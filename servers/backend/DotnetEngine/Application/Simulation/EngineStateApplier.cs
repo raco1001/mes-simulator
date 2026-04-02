@@ -24,8 +24,15 @@ public sealed class EngineStateApplier : IEngineStateApplier
         _eventPublisher = eventPublisher;
     }
 
-    public async Task ApplyAsync(EventDto evt, StateDto mergedState, CancellationToken cancellationToken = default)
+    public async Task ApplyAsync(
+        EventDto evt,
+        StateDto mergedState,
+        bool dryRun = false,
+        CancellationToken cancellationToken = default)
     {
+        if (dryRun)
+            return;
+
         await _assetRepository.UpsertStateAsync(mergedState, cancellationToken);
         await _eventRepository.AppendAsync(evt, cancellationToken);
         await _eventPublisher.PublishAsync(evt, cancellationToken);

@@ -69,6 +69,26 @@
       ],
       "partitions": 3,
       "replicationFactor": 1
+    },
+    {
+      "name": "factory.recommendation.generated",
+      "description": "Recommendation 생성 이벤트 토픽.",
+      "status": "active",
+      "events": [
+        "recommendation.generated"
+      ],
+      "partitions": 3,
+      "replicationFactor": 1
+    },
+    {
+      "name": "factory.recommendation.applied",
+      "description": "Recommendation 적용 이벤트 토픽.",
+      "status": "active",
+      "events": [
+        "recommendation.applied"
+      ],
+      "partitions": 3,
+      "replicationFactor": 1
     }
   ]
 }
