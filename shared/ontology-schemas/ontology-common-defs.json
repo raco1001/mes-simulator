@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shadow-boxing.local/schemas/ontology-common-defs.json",
+  "title": "Ontology Common Definitions",
+  "description": "Phase 10 ontology closed enums and shared value objects",
+  "$defs": {
+    "DataType": {
+      "type": "string",
+      "enum": ["Number", "String", "Boolean", "DateTime", "Array", "Object"]
+    },
+    "SimulationBehavior": {
+      "type": "string",
+      "enum": ["Constant", "Settable", "Rate", "Accumulator", "Derived"]
+    },
+    "Mutability": {
+      "type": "string",
+      "enum": ["Immutable", "Mutable"]
+    },
+    "TraitPersistence": {
+      "type": "string",
+      "enum": ["Permanent", "Durable", "Transient"]
+    },
+    "TraitDynamism": {
+      "type": "string",
+      "enum": ["Static", "Dynamic", "Reactive"]
+    },
+    "TraitCardinality": {
+      "type": "string",
+      "enum": ["Singular", "Enumerable", "Streaming"]
+    },
+    "Traits": {
+      "type": "object",
+      "required": ["persistence", "dynamism", "cardinality"],
+      "properties": {
+        "persistence": { "$ref": "#/$defs/TraitPersistence" },
+        "dynamism": { "$ref": "#/$defs/TraitDynamism" },
+        "cardinality": { "$ref": "#/$defs/TraitCardinality" }
+      },
+      "additionalProperties": false
+    },
+    "PartialTraits": {
+      "type": "object",
+      "properties": {
+        "persistence": { "$ref": "#/$defs/TraitPersistence" },
+        "dynamism": { "$ref": "#/$defs/TraitDynamism" },
+        "cardinality": { "$ref": "#/$defs/TraitCardinality" }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "Classification": {
+      "type": "object",
+      "required": ["taxonomy", "value"],
+      "properties": {
+        "taxonomy": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "LinkDirection": {
+      "type": "string",
+      "enum": ["Directed", "Bidirectional", "Hierarchical"]
+    },
+    "LinkTemporality": {
+      "type": "string",
+      "enum": ["Permanent", "Durable", "EventDriven"]
+    }
+  }
+}

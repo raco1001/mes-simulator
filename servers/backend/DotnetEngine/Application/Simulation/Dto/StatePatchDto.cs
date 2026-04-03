@@ -5,8 +5,7 @@ namespace DotnetEngine.Application.Simulation.Dto;
 /// </summary>
 public sealed record StatePatchDto
 {
-    public double? CurrentTemp { get; init; }
-    public double? CurrentPower { get; init; }
+    public IReadOnlyDictionary<string, object?> Properties { get; init; } = new Dictionary<string, object?>();
     public string? Status { get; init; }
     public string? LastEventType { get; init; }
 }

@@ -16,6 +16,21 @@ Live 전환 시 "명령부만 교체"가 가능하도록 이벤트를 **입력(C
 
 ---
 
+## Contract Scope (Public / Internal)
+
+EventKind(Command/Observation)와 별도로, 계약 공개 범위(public/internal)를 분리해 관리한다.
+
+| Scope | 의미 |
+|------|------|
+| **public** | 서비스 경계를 넘어 공유되는 공식 데이터 계약. `shared/event-schemas`에서 버전 관리. |
+| **internal** | 단일 서비스 내부 구현 상세 이벤트. shared 스키마로 배포하지 않음. |
+
+- 분류 기준과 현재 매핑은 `shared/event-schemas/CONTRACT.md`를 기준으로 한다.
+- 현재 `shared/event-schemas/schemas`에 있는 이벤트는 모두 `public`이다.
+- 이 분류는 문서 계약 관리 목적이며, Phase 8.3 범위에서 런타임 코드 변경은 필요하지 않다.
+
+---
+
 ## Observation 이벤트 타입
 
 시뮬레이터 또는 Live Adapter가 **생성·주입**하는 이벤트. 현재 시뮬레이터에서 사용하는 것만 나열하고, 확장용을 함께 적는다.
@@ -57,3 +72,4 @@ Live 전환 시 "명령부만 교체"가 가능하도록 이벤트를 **입력(C
 
 - [event-replay-contract.md](event-replay-contract.md) — runId, tick, 재생 순서 계약.
 - [api-schemas.md](api-schemas.md) — REST API·Kafka 메시지 형식.
+- [../../shared/event-schemas/CONTRACT.md](../../shared/event-schemas/CONTRACT.md) — public/internal 분류 기준과 이벤트별 계약 범위.

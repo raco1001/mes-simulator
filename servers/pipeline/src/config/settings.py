@@ -16,8 +16,17 @@ class Settings(BaseSettings):
     # Kafka settings
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic_asset_events: str = "factory.asset.events"
+    kafka_topic_alert_events: str = "factory.asset.alert"
+    kafka_topic_recommendation_events: str = "factory.recommendation.generated"
+    kafka_topic_recommendation_applied_events: str = "factory.recommendation.applied"
     kafka_consumer_group_id: str = "pipeline-asset-consumer"
 
     # MongoDB settings
     mongodb_url: str = "mongodb://admin:admin123@localhost:27017/factory_mes?authSource=admin"
     mongodb_database: str = "factory_mes"
+
+    # Analytics settings
+    analytics_window_size: int = 5
+    analytics_prediction_horizon_seconds: int = 7200
+    analytics_overheat_seconds_threshold: int = 1800
+    analytics_depletion_seconds_threshold: int = 7200

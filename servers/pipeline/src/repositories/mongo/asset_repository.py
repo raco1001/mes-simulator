@@ -120,3 +120,104 @@ class AssetRepository:
             self._client.close()
             self._client = None
             self._db = None
+
+    def save_recommendation(self, recommendation: dict[str, Any]) -> None:
+        """Insert recommendation document."""
+        db = self._get_database()
+        recommendations: Collection = db["recommendations"]
+        recommendations.update_one(
+            {"recommendationId": recommendation["recommendationId"]},
+            {"$set": recommendation, "$setOnInsert": {"_id": recommendation["recommendationId"]}},
+            upsert=True,
+        )
+
+    def list_recommendations(
+        self,
+        status: str | None = None,
+        severity: str | None = None,
+    ) -> list[dict[str, Any]]:
+        db = self._get_database()
+        recommendations: Collection = db["recommendations"]
+        query: dict[str, Any] = {}
+        if status:
+            query["status"] = status
+        if severity:
+            query["severity"] = severity
+        cursor = recommendations.find(query).sort("updatedAt", -1)
+        docs = []
+        for doc in cursor:
+            doc.pop("_id", None)
+            docs.append(doc)
+        return docs
+
+    def get_recommendation(self, recommendation_id: str) -> dict[str, Any] | None:
+        db = self._get_database()
+        recommendations: Collection = db["recommendations"]
+        doc = recommendations.find_one({"recommendationId": recommendation_id})
+        if doc is None:
+            return None
+        doc.pop("_id", None)
+        return doc
+
+    def update_recommendation_status(self, recommendation_id: str, status: str) -> dict[str, Any] | None:
+        db = self._get_database()
+        recommendations: Collection = db["recommendations"]
+        recommendations.update_one(
+            {"recommendationId": recommendation_id},
+            {"$set": {"status": status, "updatedAt": datetime.now()}},
+        )
+        return self.get_recommendation(recommendation_id)
+
+    def mark_recommendation_applied(
+        self,
+        recommendation_id: str,
+        run_id: str,
+        expected_change: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        db = self._get_database()
+        recommendations: Collection = db["recommendations"]
+        now = datetime.now()
+        recommendations.update_one(
+            {"recommendationId": recommendation_id},
+            {
+                "$set": {
+                    "status": "applied",
+                    "updatedAt": now,
+                    "outcome": {
+                        "appliedAt": now,
+                        "appliedRunId": run_id,
+                        "expectedChange": expected_change or {},
+                        "actualChange": None,
+                        "accuracy": None,
+                        "evaluatedAt": None,
+                    },
+                }
+            },
+        )
+        return self.get_recommendation(recommendation_id)
+
+    def get_recent_property_series(
+        self,
+        asset_id: str,
+        keys: list[str],
+        limit: int = 20,
+    ) -> dict[str, list[tuple[float, float]]]:
+        db = self._get_database()
+        events: Collection = db["events"]
+        cursor = events.find({"assetId": asset_id, "payload.properties": {"$exists": True}}).sort("timestamp", -1).limit(limit)
+        rows = list(cursor)
+        rows.reverse()
+
+        series = {k: [] for k in keys}
+        for row in rows:
+            payload = row.get("payload", {})
+            props = payload.get("properties", {})
+            timestamp = row.get("timestamp")
+            if not isinstance(props, dict) or timestamp is None:
+                continue
+            t = timestamp.timestamp() if hasattr(timestamp, "timestamp") else 0.0
+            for key in keys:
+                value = props.get(key)
+                if isinstance(value, (int, float)):
+                    series[key].append((t, float(value)))
+        return series

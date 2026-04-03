@@ -15,10 +15,10 @@ public sealed class ContainsRule : IPropagationRule
     {
         var incoming = ctx.IncomingPatch;
         var fromState = ctx.FromState;
+        var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
         var outgoingPatch = new StatePatchDto
         {
-            CurrentTemp = incoming.CurrentTemp,
-            CurrentPower = incoming.CurrentPower,
+            Properties = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState),
             Status = incoming.Status ?? fromState?.Status ?? "normal",
             LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
         };

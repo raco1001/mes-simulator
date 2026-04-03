@@ -15,14 +15,29 @@ using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Rules;
+using DotnetEngine.Application.Simulation.Simulators;
+using DotnetEngine.Application.ObjectType.Handlers;
+using DotnetEngine.Application.ObjectType.Ports.Driving;
+using DotnetEngine.Application.ObjectType.Ports.Driven;
+using DotnetEngine.Application.LinkType.Handlers;
+using DotnetEngine.Application.LinkType.Ports.Driving;
+using DotnetEngine.Application.LinkType.Ports.Driven;
+using DotnetEngine.Application.Recommendation.Ports.Driven;
 using DotnetEngine.Infrastructure.Alert;
 using DotnetEngine.Infrastructure.Kafka;
 using DotnetEngine.Infrastructure.Mongo;
+using DotnetEngine.Infrastructure.Recommendation;
+using DotnetEngine.Infrastructure.Simulation;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 builder.Services.AddScoped<IGetHealthQuery, GetHealthQueryHandler>();
 
 builder.Services.AddCors(options =>
@@ -48,6 +63,16 @@ builder.Services.AddCors(options =>
 var mongoConnectionString = builder.Configuration.GetConnectionString("MongoDB")
     ?? "mongodb://admin:admin123@localhost:27017/factory_mes?authSource=admin";
 
+ConventionRegistry.Register(
+    "BsonConventions",
+    new ConventionPack
+    {
+        new CamelCaseElementNameConvention(),
+        new EnumRepresentationConvention(BsonType.String),
+    },
+    _ => true
+);
+
 builder.Services.AddSingleton<IMongoClient>(
     new MongoClient(mongoConnectionString));
 
@@ -58,33 +83,59 @@ builder.Services.AddScoped(sp =>
 });
 
 builder.Services.AddScoped<IAssetRepository, MongoAssetRepository>();
+builder.Services.AddScoped<IObjectTypeSchemaRepository, MongoObjectTypeSchemaRepository>();
+builder.Services.AddScoped<ILinkTypeSchemaRepository, MongoLinkTypeSchemaRepository>();
 builder.Services.AddScoped<IRelationshipRepository, MongoRelationshipRepository>();
 builder.Services.AddScoped<ISimulationRunRepository, MongoSimulationRunRepository>();
 builder.Services.AddScoped<IEventRepository, MongoEventRepository>();
 
 builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection(KafkaOptions.SectionName));
 builder.Services.AddScoped<IEventPublisher, KafkaEventPublisher>();
+builder.Services.AddScoped<IRecommendationAppliedPublisher, KafkaRecommendationAppliedPublisher>();
 builder.Services.AddScoped<IEngineStateApplier, EngineStateApplier>();
+builder.Services.AddHttpClient<IPipelineRecommendationClient, PipelineRecommendationClient>(client =>
+{
+    var baseUrl = builder.Configuration["Pipeline:BaseUrl"] ?? "http://localhost:8000";
+    client.BaseAddress = new Uri(baseUrl);
+});
 
-builder.Services.AddSingleton<IAlertStore, InMemoryAlertStore>();
+builder.Services.AddScoped<IAlertStore, MongoAlertStore>();
+builder.Services.AddSingleton<IAlertNotifier, SseAlertChannel>();
 builder.Services.AddScoped<IGetAlertsQuery, GetAlertsQueryHandler>();
 builder.Services.AddHostedService<KafkaAlertConsumerService>();
 
 builder.Services.AddScoped<IPropagationRule, SuppliesRule>();
 builder.Services.AddScoped<IPropagationRule, ContainsRule>();
 builder.Services.AddScoped<IPropagationRule, ConnectedToRule>();
+builder.Services.AddSingleton<IPropertySimulator, ConstantSimulator>();
+builder.Services.AddSingleton<IPropertySimulator, SettableSimulator>();
+builder.Services.AddSingleton<IPropertySimulator, RateSimulator>();
+builder.Services.AddSingleton<IPropertySimulator, AccumulatorSimulator>();
+builder.Services.AddSingleton<IPropertySimulator, DerivedSimulator>();
 
 builder.Services.AddScoped<IGetAssetsQuery, GetAssetsQueryHandler>();
 builder.Services.AddScoped<IGetStatesQuery, GetStatesQueryHandler>();
 builder.Services.AddScoped<ICreateAssetCommand, CreateAssetCommandHandler>();
 builder.Services.AddScoped<IUpdateAssetCommand, UpdateAssetCommandHandler>();
+builder.Services.AddScoped<IDeleteAssetCommand, DeleteAssetCommandHandler>();
+builder.Services.AddScoped<IGetObjectTypeSchemasQuery, GetObjectTypeSchemasQueryHandler>();
+builder.Services.AddScoped<IGetObjectTypeSchemaQuery, GetObjectTypeSchemaQueryHandler>();
+builder.Services.AddScoped<ICreateObjectTypeSchemaCommand, CreateObjectTypeSchemaCommandHandler>();
+builder.Services.AddScoped<IUpdateObjectTypeSchemaCommand, UpdateObjectTypeSchemaCommandHandler>();
+builder.Services.AddScoped<IDeleteObjectTypeSchemaCommand, DeleteObjectTypeSchemaCommandHandler>();
+builder.Services.AddScoped<IGetLinkTypeSchemasQuery, GetLinkTypeSchemasQueryHandler>();
+builder.Services.AddScoped<IGetLinkTypeSchemaQuery, GetLinkTypeSchemaQueryHandler>();
+builder.Services.AddScoped<ICreateLinkTypeSchemaCommand, CreateLinkTypeSchemaCommandHandler>();
+builder.Services.AddScoped<IUpdateLinkTypeSchemaCommand, UpdateLinkTypeSchemaCommandHandler>();
 
 builder.Services.AddScoped<IGetRelationshipsQuery, GetRelationshipsQueryHandler>();
 builder.Services.AddScoped<ICreateRelationshipCommand, CreateRelationshipCommandHandler>();
 builder.Services.AddScoped<IUpdateRelationshipCommand, UpdateRelationshipCommandHandler>();
 builder.Services.AddScoped<IDeleteRelationshipCommand, DeleteRelationshipCommandHandler>();
 
+builder.Services.AddSingleton<ISimulationNotifier, SseSimulationChannel>();
 builder.Services.AddScoped<IRunSimulationCommand, RunSimulationCommandHandler>();
+builder.Services.AddScoped<IWhatIfSimulationQuery, WhatIfSimulationQueryHandler>();
 builder.Services.AddScoped<IStartContinuousRunCommand, StartContinuousRunCommandHandler>();
 builder.Services.AddScoped<IStopSimulationRunCommand, StopSimulationRunCommandHandler>();
 builder.Services.AddScoped<IReplayRunCommand, ReplayRunCommandHandler>();

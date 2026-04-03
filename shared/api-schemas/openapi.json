@@ -1,0 +1,1409 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Factory MES API",
+    "version": "v1",
+    "description": "Factory MES 시스템 REST API 계약 (OpenAPI 3.0.3)",
+    "contact": {
+      "name": "Factory MES Team",
+      "email": "mes-team@example.com"
+    }
+  },
+  "paths": {
+    "/api/assets": {
+      "get": {
+        "summary": "모든 asset 목록 조회",
+        "tags": [
+          "Assets"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Asset 생성",
+        "tags": [
+          "Assets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}": {
+      "get": {
+        "summary": "특정 asset 조회",
+        "tags": [
+          "Assets"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "summary": "특정 asset 수정",
+        "tags": [
+          "Assets"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Asset 삭제",
+        "tags": [
+          "Assets"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/states": {
+      "get": {
+        "summary": "모든 asset 상태 조회",
+        "tags": [
+          "States"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StateDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/states/{assetId}": {
+      "get": {
+        "summary": "특정 asset 상태 조회",
+        "tags": [
+          "States"
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/object-type-schemas": {
+      "get": {
+        "summary": "ObjectTypeSchema 목록 조회",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "ObjectTypeSchema 생성",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateObjectTypeSchemaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/object-type-schemas/{objectType}": {
+      "get": {
+        "summary": "특정 ObjectTypeSchema 조회",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "summary": "ObjectTypeSchema 수정",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateObjectTypeSchemaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectTypeSchemaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "ObjectTypeSchema 삭제",
+        "tags": [
+          "ObjectTypeSchemas"
+        ],
+        "parameters": [
+          {
+            "name": "objectType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/relationships": {
+      "get": {
+        "summary": "모든 relationship 목록 조회",
+        "tags": [
+          "Relationships"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RelationshipDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Relationship 생성",
+        "tags": [
+          "Relationships"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRelationshipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relationships/{id}": {
+      "get": {
+        "summary": "특정 relationship 조회",
+        "tags": [
+          "Relationships"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "summary": "특정 relationship 수정",
+        "tags": [
+          "Relationships"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRelationshipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "특정 relationship 삭제",
+        "tags": [
+          "Relationships"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "summary": "최신 알림 목록 조회",
+        "tags": [
+          "Alerts"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlertDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulation/runs": {
+      "post": {
+        "summary": "시뮬레이션 런 1회 실행",
+        "tags": [
+          "Simulation"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulation/runs/start": {
+      "post": {
+        "summary": "지속 시뮬레이션 시작",
+        "tags": [
+          "Simulation"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartContinuousRunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartContinuousRunResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulation/runs/{runId}/stop": {
+      "post": {
+        "summary": "지속 시뮬레이션 중단",
+        "tags": [
+          "Simulation"
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopSimulationRunResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopSimulationRunResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulation/runs/{runId}/events": {
+      "get": {
+        "summary": "run 이벤트 조회",
+        "tags": [
+          "Simulation"
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tickMax",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/simulation/runs/{runId}/replay": {
+      "post": {
+        "summary": "run 이벤트 재적용(replay)",
+        "tags": [
+          "Simulation"
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tickMax",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayRunResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayRunResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AssetDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "connections",
+          "metadata",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StateDto": {
+        "type": "object",
+        "required": [
+          "assetId",
+          "status",
+          "updatedAt",
+          "metadata"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "currentTemp": {
+            "type": "number",
+            "nullable": true
+          },
+          "currentPower": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "warning",
+              "error"
+            ]
+          },
+          "lastEventType": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "RelationshipDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "fromAssetId",
+          "toAssetId",
+          "relationshipType",
+          "properties",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fromAssetId": {
+            "type": "string"
+          },
+          "toAssetId": {
+            "type": "string"
+          },
+          "relationshipType": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateAssetRequest": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "UpdateAssetRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        }
+      },
+      "CreateRelationshipRequest": {
+        "type": "object",
+        "required": [
+          "fromAssetId",
+          "toAssetId",
+          "relationshipType"
+        ],
+        "properties": {
+          "fromAssetId": {
+            "type": "string"
+          },
+          "toAssetId": {
+            "type": "string"
+          },
+          "relationshipType": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "UpdateRelationshipRequest": {
+        "type": "object",
+        "properties": {
+          "fromAssetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "toAssetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "relationshipType": {
+            "type": "string",
+            "nullable": true
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        }
+      },
+      "AlertDto": {
+        "type": "object",
+        "required": [
+          "assetId",
+          "timestamp",
+          "severity",
+          "message",
+          "metadata"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string",
+            "nullable": true
+          },
+          "metric": {
+            "type": "string",
+            "nullable": true
+          },
+          "current": {
+            "type": "number",
+            "nullable": true
+          },
+          "threshold": {
+            "type": "number",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "RunSimulationRequest": {
+        "type": "object",
+        "required": [
+          "triggerAssetId",
+          "maxDepth",
+          "runTick"
+        ],
+        "properties": {
+          "triggerAssetId": {
+            "type": "string"
+          },
+          "patch": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatePatchDto"
+              }
+            ],
+            "nullable": true
+          },
+          "maxDepth": {
+            "type": "integer",
+            "default": 3
+          },
+          "runTick": {
+            "type": "integer"
+          }
+        }
+      },
+      "StatePatchDto": {
+        "type": "object",
+        "properties": {
+          "currentTemp": {
+            "type": "number",
+            "nullable": true
+          },
+          "currentPower": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastEventType": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "RunResult": {
+        "type": "object",
+        "required": [
+          "success",
+          "runId",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "StartContinuousRunResult": {
+        "type": "object",
+        "required": [
+          "success",
+          "runId"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "StopSimulationRunResult": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ReplayRunResult": {
+        "type": "object",
+        "required": [
+          "success",
+          "runId",
+          "eventsApplied"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "tickMax": {
+            "type": "integer",
+            "nullable": true
+          },
+          "eventsApplied": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "EventDto": {
+        "type": "object",
+        "required": [
+          "assetId",
+          "eventType",
+          "occurredAt",
+          "payload"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "simulationRunId": {
+            "type": "string",
+            "nullable": true
+          },
+          "runTick": {
+            "type": "integer",
+            "nullable": true
+          },
+          "relationshipId": {
+            "type": "string",
+            "nullable": true
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ObjectTypeSchemaDto": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "objectType",
+          "displayName",
+          "traits",
+          "properties"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "objectType": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "allowedLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateObjectTypeSchemaRequest": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "objectType",
+          "displayName",
+          "traits",
+          "properties"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "objectType": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "allowedLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "UpdateObjectTypeSchemaRequest": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "traits": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "allowedLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Assets"
+    },
+    {
+      "name": "States"
+    },
+    {
+      "name": "Relationships"
+    },
+    {
+      "name": "Alerts"
+    },
+    {
+      "name": "Simulation"
+    },
+    {
+      "name": "ObjectTypeSchemas"
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Simulation State Updated Event",
+  "description": "시뮬레이션 전파 과정에서 Asset 상태가 갱신되었음을 나타내는 이벤트",
+  "allOf": [
+    { "$ref": "event-envelope.json" },
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "simulation.state.updated",
+          "description": "이벤트 타입 식별자"
+        },
+        "payload": {
+          "oneOf": [
+            { "$ref": "#/definitions/NodeUpdatePayload" },
+            { "$ref": "#/definitions/PropagationPayload" }
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "NodeUpdatePayload": {
+      "type": "object",
+      "required": ["tick", "depth", "status", "temperature", "power"],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "description": "런 내 이벤트 순서 인덱스"
+        },
+        "depth": {
+          "type": "integer",
+          "description": "BFS 전파 깊이"
+        },
+        "status": {
+          "type": "string",
+          "description": "현재 상태(normal/warning/error)"
+        },
+        "temperature": {
+          "type": "number",
+          "description": "현재 온도 값"
+        },
+        "power": {
+          "type": "number",
+          "description": "현재 전력 값"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropagationPayload": {
+      "type": "object",
+      "required": ["tick", "depth", "relationshipType", "fromAssetId"],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "description": "런 내 이벤트 순서 인덱스"
+        },
+        "depth": {
+          "type": "integer",
+          "description": "BFS 전파 깊이"
+        },
+        "relationshipType": {
+          "type": "string",
+          "enum": ["Supplies", "Contains", "ConnectedTo"],
+          "description": "전파를 유발한 관계 타입"
+        },
+        "fromAssetId": {
+          "type": "string",
+          "description": "전파를 시작한 원본 Asset ID"
+        },
+        "relationshipId": {
+          "type": "string",
+          "description": "관계 식별자 (있는 경우)"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "eventType": "simulation.state.updated",
+      "assetId": "freezer-1",
+      "timestamp": "2026-02-18T10:00:00Z",
+      "schemaVersion": "v1",
+      "runId": "run-123",
+      "payload": {
+        "tick": 1,
+        "depth": 0,
+        "status": "warning",
+        "temperature": -5,
+        "power": 180
+      }
+    },
+    {
+      "eventType": "simulation.state.updated",
+      "assetId": "conveyor-1",
+      "timestamp": "2026-02-18T10:00:02Z",
+      "schemaVersion": "v1",
+      "runId": "run-123",
+      "payload": {
+        "tick": 1,
+        "depth": 1,
+        "relationshipType": "ConnectedTo",
+        "fromAssetId": "freezer-1",
+        "relationshipId": "rel-1"
+      }
+    }
+  ]
+}

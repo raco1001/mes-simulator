@@ -76,8 +76,7 @@ class TestAssetRepository:
 
         state_dto = AssetStateDto(
             asset_id="freezer-1",
-            current_temp=-5.0,
-            current_power=120.0,
+            properties={"temperature": -5.0, "power": 120.0},
             status="normal",
             last_event_type="asset.health.updated",
             updated_at=datetime.now(timezone.utc),

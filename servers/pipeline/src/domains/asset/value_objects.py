@@ -18,8 +18,7 @@ class AssetState:
 
     __slots__ = (
         "_asset_id",
-        "_current_temp",
-        "_current_power",
+        "_properties",
         "_status",
         "_last_event_type",
         "_updated_at",
@@ -30,15 +29,13 @@ class AssetState:
         self,
         asset_id: str,
         updated_at: datetime,
-        current_temp: float | None = None,
-        current_power: float | None = None,
+        properties: dict[str, Any] | None = None,
         status: str = AssetConstants.Status.NORMAL,
         last_event_type: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         self._asset_id = asset_id
-        self._current_temp = current_temp
-        self._current_power = current_power
+        self._properties = properties or {}
         self._status = status or AssetConstants.Status.NORMAL
         self._last_event_type = last_event_type
         self._updated_at = updated_at
@@ -49,12 +46,8 @@ class AssetState:
         return self._asset_id
 
     @property
-    def current_temp(self) -> float | None:
-        return self._current_temp
-
-    @property
-    def current_power(self) -> float | None:
-        return self._current_power
+    def properties(self) -> dict[str, Any]:
+        return self._properties
 
     @property
     def status(self) -> str:

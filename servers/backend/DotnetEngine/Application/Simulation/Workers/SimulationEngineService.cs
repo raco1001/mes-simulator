@@ -18,10 +18,12 @@ public sealed class SimulationEngineService : BackgroundService
     private const string MetadataTickIntervalMs = "tickIntervalMs";
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ISimulationNotifier _simulationNotifier;
 
-    public SimulationEngineService(IServiceScopeFactory scopeFactory)
+    public SimulationEngineService(IServiceScopeFactory scopeFactory, ISimulationNotifier simulationNotifier)
     {
         _scopeFactory = scopeFactory;
+        _simulationNotifier = simulationNotifier;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,7 +43,7 @@ public sealed class SimulationEngineService : BackgroundService
                 {
                     try
                     {
-                        await ProcessRunAsync(run, runRepo, command, assetRepo, relRepo, stoppingToken);
+                        await ProcessRunAsync(run, runRepo, command, assetRepo, relRepo, _simulationNotifier, stoppingToken);
                     }
                     catch
                     {
@@ -68,6 +70,7 @@ public sealed class SimulationEngineService : BackgroundService
         IRunSimulationCommand command,
         IAssetRepository assetRepo,
         IRelationshipRepository relRepo,
+        ISimulationNotifier notifier,
         CancellationToken cancellationToken)
     {
         var participating = await GetParticipatingAssetIdsAsync(run.TriggerAssetId, relRepo, cancellationToken);
@@ -82,7 +85,6 @@ public sealed class SimulationEngineService : BackgroundService
 
         if (due.Count == participating.Count)
         {
-            // 전역 tick: due = 참여 전체 → RunOnePropagationAsync 1회
             var request = new RunSimulationRequest
             {
                 TriggerAssetId = run.TriggerAssetId,
@@ -90,11 +92,10 @@ public sealed class SimulationEngineService : BackgroundService
                 Patch = null,
                 RunTick = nextTick,
             };
-            await command.RunOnePropagationAsync(run.Id, request, cancellationToken);
+            await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
         }
         else
         {
-            // due만 처리: due 에셋마다 RunOnePropagationAsync (MaxDepth 0)
             foreach (var assetId in due)
             {
                 var request = new RunSimulationRequest
@@ -104,8 +105,39 @@ public sealed class SimulationEngineService : BackgroundService
                     Patch = null,
                     RunTick = nextTick,
                 };
-                await command.RunOnePropagationAsync(run.Id, request, cancellationToken);
+                await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
             }
+        }
+
+        await EmitTickEventsAsync(run.Id, nextTick, participating, assetRepo, notifier, cancellationToken);
+    }
+
+    private static async Task EmitTickEventsAsync(
+        string runId,
+        int tick,
+        HashSet<string> participatingAssetIds,
+        IAssetRepository assetRepo,
+        ISimulationNotifier notifier,
+        CancellationToken cancellationToken)
+    {
+        foreach (var assetId in participatingAssetIds)
+        {
+            var state = await assetRepo.GetStateByAssetIdAsync(assetId, cancellationToken);
+            if (state == null) continue;
+
+            var properties = state.Properties
+                .Where(kvp => kvp.Value != null)
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
+
+            var tickEvent = new SimulationTickEvent(
+                RunId: runId,
+                Tick: tick,
+                AssetId: assetId,
+                Properties: properties,
+                Status: state.Status ?? "normal",
+                Timestamp: DateTimeOffset.UtcNow);
+
+            await notifier.NotifyAsync(tickEvent, cancellationToken);
         }
     }
 

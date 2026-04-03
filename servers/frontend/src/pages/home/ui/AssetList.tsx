@@ -7,6 +7,13 @@ interface AssetWithState extends AssetDto {
   state?: StateDto
 }
 
+function summarizeProperties(properties: Record<string, unknown> | undefined): string {
+  if (!properties || Object.keys(properties).length === 0) return 'N/A'
+  return Object.entries(properties)
+    .map(([k, v]) => `${k}: ${String(v)}`)
+    .join(', ')
+}
+
 export function AssetList() {
   const [assets, setAssets] = useState<AssetWithState[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,8 +93,7 @@ export function AssetList() {
                 <th>ID</th>
                 <th>Type</th>
                 <th>Status</th>
-                <th>Temperature</th>
-                <th>Power</th>
+                <th>Properties</th>
                 <th>Updated At</th>
               </tr>
             </thead>
@@ -101,16 +107,7 @@ export function AssetList() {
                       {getStatusEmoji(asset.state?.status)} {asset.state?.status || 'N/A'}
                     </span>
                   </td>
-                  <td>
-                    {asset.state?.currentTemp !== null && asset.state?.currentTemp !== undefined
-                      ? `${asset.state.currentTemp}°C`
-                      : 'N/A'}
-                  </td>
-                  <td>
-                    {asset.state?.currentPower !== null && asset.state?.currentPower !== undefined
-                      ? `${asset.state.currentPower}W`
-                      : 'N/A'}
-                  </td>
+                  <td>{summarizeProperties(asset.state?.properties)}</td>
                   <td>
                     {asset.state?.updatedAt
                       ? new Date(asset.state.updatedAt).toLocaleString()

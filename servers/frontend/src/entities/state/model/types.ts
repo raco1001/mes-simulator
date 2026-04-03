@@ -1,7 +1,6 @@
 export interface StateDto {
   assetId: string
-  currentTemp: number | null
-  currentPower: number | null
+  properties: Record<string, unknown>
   status: 'normal' | 'warning' | 'error'
   lastEventType: string | null
   updatedAt: string

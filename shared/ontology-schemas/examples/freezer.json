@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "v1",
+  "objectType": "freezer",
+  "displayName": "Freezer",
+  "traits": {
+    "persistence": "Durable",
+    "dynamism": "Dynamic",
+    "cardinality": "Enumerable"
+  },
+  "classifications": [
+    { "taxonomy": "industry", "value": "manufacturing.equipment" },
+    { "taxonomy": "functional", "value": "consumer" }
+  ],
+  "properties": [
+    {
+      "key": "targetTemp",
+      "dataType": "Number",
+      "unit": "degC",
+      "simulationBehavior": "Settable",
+      "mutability": "Mutable",
+      "baseValue": -18,
+      "constraints": { "min": -40, "max": 5 },
+      "required": true
+    },
+    {
+      "key": "currentTemp",
+      "dataType": "Number",
+      "unit": "degC",
+      "simulationBehavior": "Rate",
+      "mutability": "Mutable",
+      "baseValue": -15,
+      "constraints": { "min": -50, "max": 20 },
+      "required": true
+    },
+    {
+      "key": "capacity",
+      "dataType": "Number",
+      "unit": "L",
+      "simulationBehavior": "Constant",
+      "mutability": "Immutable",
+      "baseValue": 1000,
+      "constraints": { "min": 1 },
+      "required": true
+    }
+  ],
+  "allowedLinks": [
+    {
+      "linkType": "Supplies",
+      "direction": "outbound",
+      "targetTraits": { "dynamism": "Dynamic" }
+    }
+  ]
+}

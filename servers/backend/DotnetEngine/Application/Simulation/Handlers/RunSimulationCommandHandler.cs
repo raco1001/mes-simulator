@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Dto;
@@ -9,6 +10,10 @@ using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Application.Simulation.Rules;
+using DotnetEngine.Application.ObjectType.Ports.Driven;
+using DotnetEngine.Application.ObjectType.Dto;
+using DotnetEngine.Application.Simulation.Simulators;
+using Microsoft.Extensions.Logging;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
@@ -23,7 +28,11 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
     private readonly IEngineStateApplier _applier;
     private readonly IEventRepository _eventRepository;
     private readonly IEventPublisher _eventPublisher;
+    private readonly IObjectTypeSchemaRepository _objectTypeSchemaRepository;
     private readonly IEnumerable<IPropagationRule> _rules;
+    private readonly IReadOnlyDictionary<SimulationBehavior, IPropertySimulator> _simulators;
+    private readonly IPropertySimulator _defaultSimulator;
+    private readonly ILogger<RunSimulationCommandHandler> _logger;
 
     public RunSimulationCommandHandler(
         IAssetRepository assetRepository,
@@ -32,7 +41,10 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         IEngineStateApplier applier,
         IEventRepository eventRepository,
         IEventPublisher eventPublisher,
-        IEnumerable<IPropagationRule> rules)
+        IObjectTypeSchemaRepository objectTypeSchemaRepository,
+        IEnumerable<IPropagationRule> rules,
+        IEnumerable<IPropertySimulator> simulators,
+        ILogger<RunSimulationCommandHandler> logger)
     {
         _assetRepository = assetRepository;
         _relationshipRepository = relationshipRepository;
@@ -40,7 +52,12 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         _applier = applier;
         _eventRepository = eventRepository;
         _eventPublisher = eventPublisher;
+        _objectTypeSchemaRepository = objectTypeSchemaRepository;
         _rules = rules;
+        _simulators = simulators.ToDictionary(s => s.Behavior);
+        _defaultSimulator = simulators.FirstOrDefault(s => s.Behavior == SimulationBehavior.Settable)
+            ?? new SettableSimulator();
+        _logger = logger;
     }
 
     public async Task<RunResult> RunAsync(RunSimulationRequest request, CancellationToken cancellationToken = default)
@@ -64,7 +81,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         await _simulationRunRepository.CreateAsync(runDto, cancellationToken);
         await _simulationRunRepository.UpdateStatusAsync(runId, SimulationRunStatus.Running, null, cancellationToken);
 
-        await RunOnePropagationAsync(runId, request, cancellationToken);
+        await RunOnePropagationAsync(runId, request, dryRun: false, cancellationToken);
 
         await _simulationRunRepository.EndAsync(runId, DateTimeOffset.UtcNow, cancellationToken);
 
@@ -76,11 +93,17 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         };
     }
 
-    public async Task RunOnePropagationAsync(string runId, RunSimulationRequest request, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<string, StateDto>> RunOnePropagationAsync(
+        string runId,
+        RunSimulationRequest request,
+        bool dryRun = false,
+        CancellationToken cancellationToken = default)
     {
         var runTick = request.RunTick;
         var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
         var visited = new HashSet<string>(StringComparer.Ordinal);
+        var cycleAccumulatedPatches = new Dictionary<string, StatePatchDto>(StringComparer.Ordinal);
+        var mergedStates = new Dictionary<string, StateDto>(StringComparer.Ordinal);
         var queue = new Queue<(string AssetId, StatePatchDto Patch, int Depth)>();
         queue.Enqueue((request.TriggerAssetId, request.Patch ?? new StatePatchDto(), 0));
 
@@ -94,7 +117,11 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             visited.Add(assetId);
 
             var currentState = await _assetRepository.GetStateByAssetIdAsync(assetId, cancellationToken);
-            var mergedState = MergeState(assetId, currentState, patch);
+            var asset = await _assetRepository.GetByIdAsync(assetId, cancellationToken);
+            var objectTypeSchema = asset is null
+                ? null
+                : await _objectTypeSchemaRepository.GetByObjectTypeAsync(asset.Type, cancellationToken);
+            var mergedState = ComputeState(assetId, currentState, patch, objectTypeSchema);
 
             var occurredAt = DateTimeOffset.UtcNow;
             var nodeEvent = new EventDto
@@ -110,18 +137,15 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                     ["tick"] = runTick,
                     ["depth"] = depth,
                     ["status"] = mergedState.Status,
-                    ["temperature"] = mergedState.CurrentTemp ?? 0d,
-                    ["power"] = mergedState.CurrentPower ?? 0d,
+                    ["properties"] = mergedState.Properties,
                 },
             };
-            await _applier.ApplyAsync(nodeEvent, mergedState, cancellationToken);
+            mergedStates[assetId] = mergedState;
+            await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: dryRun, cancellationToken: cancellationToken);
 
             var outgoing = await _relationshipRepository.GetOutgoingAsync(assetId, cancellationToken);
             foreach (var rel in outgoing)
             {
-                if (visited.Contains(rel.ToAssetId))
-                    continue;
-
                 var ctx = new PropagationContext
                 {
                     FromAssetId = assetId,
@@ -159,25 +183,137 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                     ruleEvents = [];
                 }
 
-                queue.Enqueue((rel.ToAssetId, nextPatch, depth + 1));
+                if (visited.Contains(rel.ToAssetId))
+                {
+                    _logger.LogWarning("Cycle detected during propagation: {FromAssetId} -> {ToAssetId} (run {RunId}, tick {Tick})", assetId, rel.ToAssetId, runId, runTick);
+                    AccumulateCyclePatch(cycleAccumulatedPatches, rel.ToAssetId, nextPatch);
+                }
+                else
+                {
+                    queue.Enqueue((rel.ToAssetId, nextPatch, depth + 1));
+                }
 
                 foreach (var evt in ruleEvents)
                 {
+                    if (dryRun)
+                        continue;
                     await _eventRepository.AppendAsync(evt, cancellationToken);
                     await _eventPublisher.PublishAsync(evt, cancellationToken);
                 }
             }
         }
+
+        foreach (var (assetId, patch) in cycleAccumulatedPatches)
+        {
+            if (IsConverged(patch))
+                continue;
+
+            var currentState = await _assetRepository.GetStateByAssetIdAsync(assetId, cancellationToken);
+            var asset = await _assetRepository.GetByIdAsync(assetId, cancellationToken);
+            var objectTypeSchema = asset is null
+                ? null
+                : await _objectTypeSchemaRepository.GetByObjectTypeAsync(asset.Type, cancellationToken);
+            var effectivePatch = BuildEffectiveCyclePatch(currentState, patch);
+            var mergedState = ComputeState(assetId, currentState, effectivePatch, objectTypeSchema);
+
+            var nodeEvent = new EventDto
+            {
+                AssetId = assetId,
+                EventType = EventTypes.SimulationStateUpdated,
+                OccurredAt = DateTimeOffset.UtcNow,
+                SimulationRunId = runId,
+                RunTick = runTick,
+                RelationshipId = null,
+                Payload = new Dictionary<string, object>
+                {
+                    ["tick"] = runTick,
+                    ["depth"] = maxDepth,
+                    ["status"] = mergedState.Status,
+                    ["properties"] = mergedState.Properties,
+                    ["cycleAccumulated"] = true,
+                },
+            };
+            mergedStates[assetId] = mergedState;
+            await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: dryRun, cancellationToken: cancellationToken);
+        }
+
+        return mergedStates;
     }
 
-    private static StateDto MergeState(string assetId, StateDto? current, StatePatchDto patch)
+    private StateDto ComputeState(
+        string assetId,
+        StateDto? current,
+        StatePatchDto patch,
+        ObjectTypeSchemaDto? objectTypeSchema)
     {
+        if (objectTypeSchema is null)
+            return MergeStateFallback(assetId, current, patch);
+
         var now = DateTimeOffset.UtcNow;
+        var currentProperties = new Dictionary<string, object?>(current?.Properties ?? new Dictionary<string, object?>());
+        var mergedProperties = new Dictionary<string, object?>(currentProperties);
+
+        var schemaProperties = objectTypeSchema.ResolvedProperties ?? objectTypeSchema.OwnProperties;
+        foreach (var definition in schemaProperties)
+        {
+            currentProperties.TryGetValue(definition.Key, out var currentValue);
+            patch.Properties.TryGetValue(definition.Key, out var patchValue);
+            if (definition.Mutability == Mutability.Immutable)
+                patchValue = null;
+
+            if (!_simulators.TryGetValue(definition.SimulationBehavior, out var simulator))
+            {
+                _logger.LogWarning("No simulator registered for behavior {Behavior}; fallback to settable", definition.SimulationBehavior);
+                simulator = _defaultSimulator;
+            }
+
+            var computed = simulator.Compute(new PropertySimulationContext
+            {
+                Definition = definition,
+                CurrentValue = currentValue,
+                PatchValue = patchValue,
+                DeltaTime = TimeSpan.FromSeconds(1),
+                AllProperties = mergedProperties
+            });
+            if (computed is null)
+                mergedProperties.Remove(definition.Key);
+            else
+                mergedProperties[definition.Key] = computed;
+        }
+
+        foreach (var kv in patch.Properties.Where(kv => schemaProperties.All(p => p.Key != kv.Key)))
+        {
+            if (kv.Value is null) mergedProperties.Remove(kv.Key);
+            else mergedProperties[kv.Key] = kv.Value;
+        }
+
         return new StateDto
         {
             AssetId = assetId,
-            CurrentTemp = patch.CurrentTemp ?? current?.CurrentTemp,
-            CurrentPower = patch.CurrentPower ?? current?.CurrentPower,
+            Properties = mergedProperties,
+            Status = patch.Status ?? current?.Status ?? "normal",
+            LastEventType = patch.LastEventType ?? current?.LastEventType ?? EventTypes.SimulationStateUpdated,
+            UpdatedAt = now,
+            Metadata = current?.Metadata ?? new Dictionary<string, object>(),
+        };
+    }
+
+    private static StateDto MergeStateFallback(string assetId, StateDto? current, StatePatchDto patch)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var mergedProperties = new Dictionary<string, object?>(current?.Properties ?? new Dictionary<string, object?>());
+        foreach (var kv in patch.Properties)
+        {
+            if (kv.Value is null)
+                mergedProperties.Remove(kv.Key);
+            else
+                mergedProperties[kv.Key] = kv.Value;
+        }
+
+        return new StateDto
+        {
+            AssetId = assetId,
+            Properties = mergedProperties,
             Status = patch.Status ?? current?.Status ?? "normal",
             LastEventType = patch.LastEventType ?? current?.LastEventType ?? EventTypes.SimulationStateUpdated,
             UpdatedAt = now,
@@ -190,15 +326,114 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         if (patch == null)
             return new Dictionary<string, object>();
 
-        var d = new Dictionary<string, object>();
-        if (patch.CurrentTemp.HasValue)
-            d["currentTemp"] = patch.CurrentTemp.Value;
-        if (patch.CurrentPower.HasValue)
-            d["currentPower"] = patch.CurrentPower.Value;
+        var d = new Dictionary<string, object>(patch.Properties
+            .Where(kv => kv.Value is not null)
+            .ToDictionary(kv => kv.Key, kv => kv.Value!));
         if (patch.Status != null)
             d["status"] = patch.Status;
         if (patch.LastEventType != null)
             d["lastEventType"] = patch.LastEventType;
         return d;
+    }
+
+    private static void AccumulateCyclePatch(
+        IDictionary<string, StatePatchDto> bucket,
+        string assetId,
+        StatePatchDto patch)
+    {
+        if (!bucket.TryGetValue(assetId, out var existing))
+        {
+            bucket[assetId] = new StatePatchDto
+            {
+                Properties = new Dictionary<string, object?>(patch.Properties),
+                Status = patch.Status,
+                LastEventType = patch.LastEventType
+            };
+            return;
+        }
+
+        var merged = new Dictionary<string, object?>(existing.Properties);
+        foreach (var kv in patch.Properties)
+        {
+            if (kv.Value is null)
+            {
+                merged.Remove(kv.Key);
+                continue;
+            }
+
+            if (merged.TryGetValue(kv.Key, out var current)
+                && TryToDouble(current, out var c)
+                && TryToDouble(kv.Value, out var n))
+            {
+                merged[kv.Key] = c + n;
+            }
+            else
+            {
+                merged[kv.Key] = kv.Value;
+            }
+        }
+
+        bucket[assetId] = new StatePatchDto
+        {
+            Properties = merged,
+            Status = patch.Status ?? existing.Status,
+            LastEventType = patch.LastEventType ?? existing.LastEventType
+        };
+    }
+
+    private static bool IsConverged(StatePatchDto patch)
+    {
+        foreach (var value in patch.Properties.Values)
+        {
+            if (TryToDouble(value, out var d) && Math.Abs(d) >= 0.000001d)
+                return false;
+            if (value is not null && !TryToDouble(value, out _))
+                return false;
+        }
+        return true;
+    }
+
+    private static bool TryToDouble(object? value, out double number)
+    {
+        if (value is null)
+        {
+            number = 0;
+            return false;
+        }
+        try
+        {
+            number = Convert.ToDouble(value);
+            return true;
+        }
+        catch
+        {
+            number = 0;
+            return false;
+        }
+    }
+
+    private static StatePatchDto BuildEffectiveCyclePatch(StateDto? currentState, StatePatchDto accumulatedPatch)
+    {
+        if (currentState is null)
+            return accumulatedPatch;
+
+        var properties = new Dictionary<string, object?>(accumulatedPatch.Properties);
+        foreach (var kv in accumulatedPatch.Properties)
+        {
+            if (!TryToDouble(kv.Value, out var patchValue))
+                continue;
+            if (!currentState.Properties.TryGetValue(kv.Key, out var currentObj))
+                continue;
+            if (!TryToDouble(currentObj, out var currentValue))
+                continue;
+            properties[kv.Key] = currentValue + patchValue;
+        }
+
+        return new StatePatchDto
+        {
+            Properties = properties,
+            Status = accumulatedPatch.Status,
+            LastEventType = accumulatedPatch.LastEventType
+        };
     }
 }

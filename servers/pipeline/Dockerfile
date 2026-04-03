@@ -20,6 +20,6 @@ ENV PIPELINE_APPLICATION_NAME=pipeline
 ENV PIPELINE_KAFKA_TOPIC_ASSET_EVENTS=factory.asset.events
 ENV PIPELINE_KAFKA_CONSUMER_GROUP_ID=pipeline-asset-consumer
 ENV PIPELINE_MONGODB_DATABASE=factory_mes
+ENV PIPELINE_KAFKA_TOPIC_RECOMMENDATION_EVENTS=factory.recommendation.generated
 
-# pyproject.toml [project.scripts] → pipeline-asset-worker
-ENTRYPOINT ["pipeline-asset-worker"]
+ENTRYPOINT ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "src"]

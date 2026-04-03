@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Confluent.Kafka;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace DotnetEngine.Infrastructure.Kafka;
 
 /// <summary>
-/// EventDto를 Kafka factory.asset.events 토픽으로 발행. Pipeline 기대 형식: eventType, assetId, timestamp, payload.
+/// EventDto를 Kafka factory.asset.events 토픽으로 발행. 계약: eventType, assetId, timestamp, schemaVersion, payload, 선택 runId.
 /// </summary>
 public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
 {
@@ -16,6 +17,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
     private readonly IProducer<Null, string> _producer;
@@ -45,6 +47,7 @@ public sealed class KafkaEventPublisher : IEventPublisher, IDisposable
             eventType = dto.EventType,
             assetId = dto.AssetId,
             timestamp = dto.OccurredAt.UtcDateTime,
+            schemaVersion = "v1",
             runId = dto.SimulationRunId,
             payload = dto.Payload,
         };

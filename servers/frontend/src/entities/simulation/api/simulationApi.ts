@@ -5,6 +5,7 @@ import type {
   RunSimulationRequestDto,
   StartContinuousRunResultDto,
   StopSimulationRunResultDto,
+  WhatIfResultDto,
 } from '../model/types'
 
 export async function runSimulation(
@@ -45,4 +46,14 @@ export async function stopRun(runId: string): Promise<StopSimulationRunResultDto
 
 export async function getRunEvents(runId: string): Promise<EventDto[]> {
   return httpClient.request<EventDto[]>(`/api/simulation/runs/${encodeURIComponent(runId)}/events`)
+}
+
+export async function runWhatIf(
+  request: RunSimulationRequestDto,
+): Promise<WhatIfResultDto> {
+  return httpClient.request<WhatIfResultDto>('/api/simulation/what-if', {
+    method: 'POST',
+    body: JSON.stringify(request),
+    headers: { 'Content-Type': 'application/json' },
+  })
 }

@@ -51,6 +51,20 @@ tick/전파 경로에서 **에셋 상태가 바뀌는 곳은 모두 apply 경로
 
 ---
 
+## SSE 확장 경로 (Future): Redis Pub/Sub
+
+현재 프로젝트는 단일 인스턴스 포트폴리오 규모이므로 `SseAlertChannel`(in-memory fan-out)만으로 충분합니다. 이 단계에서는 Redis를 제거해 인프라 복잡도를 줄이는 것이 우선입니다.
+
+다중 인스턴스 확장이 필요해지면 `IAlertNotifier` 포트는 유지하고 구현체만 `RedisBackedSseChannel`로 교체합니다.
+
+- 각 backend 인스턴스는 Redis Pub/Sub 채널을 구독
+- Alert 수신 시 인스턴스 로컬 SSE 클라이언트로 fan-out
+- API 계약과 도메인 로직 변경 없이 수평 확장 가능
+
+즉, 현재는 단순한 메모리 기반 구현을 사용하고, 확장 시점에 어댑터만 교체하는 전략을 채택합니다.
+
+---
+
 ## 참고
 
 - [simulation-api.md](simulation-api.md) — Simulation API 엔드포인트, RunResult.

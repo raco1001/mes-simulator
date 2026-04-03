@@ -16,6 +16,11 @@ from pipelines.asset_dto import (
     SimulationStateUpdatedEventDto,
 )
 from pipelines.asset_pipeline import asset_state_to_dto, build_alert_event, calculate_state
+from pipelines.recommendation_pipeline import (
+    build_trend_results,
+    generate_recommendations,
+    recommendation_to_event_payload,
+)
 from repositories.mongo.asset_repository import AssetRepository
 
 logging.basicConfig(
@@ -80,11 +85,12 @@ class AssetWorker:
                 asset_id=state.asset_id,
                 timestamp=event.timestamp,
                 status=state.status,
-                current_temp=state.current_temp,
-                current_power=state.current_power,
+                properties=state.properties,
                 run_id=run_id,
             )
-            self.producer.send(self.settings.kafka_topic_asset_events, value=alert_payload)
+            self.producer.send(self.settings.kafka_topic_alert_events, value=alert_payload)
+
+        self._generate_recommendations(state.asset_id, event.payload.get("type", "asset"))
 
     def process_simulation_state_updated(self, event: SimulationStateUpdatedEventDto) -> None:
         """Process simulation.state.updated event (backend propagation)."""
@@ -105,11 +111,12 @@ class AssetWorker:
                 asset_id=state.asset_id,
                 timestamp=event.timestamp,
                 status=state.status,
-                current_temp=state.current_temp,
-                current_power=state.current_power,
+                properties=state.properties,
                 run_id=run_id,
             )
-            self.producer.send(self.settings.kafka_topic_asset_events, value=alert_payload)
+            self.producer.send(self.settings.kafka_topic_alert_events, value=alert_payload)
+
+        self._generate_recommendations(state.asset_id, event.payload.get("type", "asset"))
 
     def process_event(self, event: dict) -> None:
         """Process event based on event type."""
@@ -125,6 +132,8 @@ class AssetWorker:
             elif event_type == AssetConstants.EventType.SIMULATION_STATE_UPDATED:
                 event_dto = SimulationStateUpdatedEventDto(**event)
                 self.process_simulation_state_updated(event_dto)
+            elif event_type == AssetConstants.EventType.RECOMMENDATION_APPLIED:
+                self.process_recommendation_applied(event)
             else:
                 logger.warning(f"Unknown event type: {event_type}")
         except Exception as e:
@@ -134,7 +143,8 @@ class AssetWorker:
         """Run the worker (consume and process events)."""
         logger.info("Starting asset worker...")
         logger.info(f"Kafka: {self.settings.kafka_bootstrap_servers}")
-        logger.info(f"Topic: {self.settings.kafka_topic_asset_events}")
+        logger.info(f"Asset topic: {self.settings.kafka_topic_asset_events}")
+        logger.info(f"Alert topic: {self.settings.kafka_topic_alert_events}")
         logger.info(f"MongoDB: {self.settings.mongodb_database}")
 
         try:
@@ -162,6 +172,54 @@ class AssetWorker:
         """Handle shutdown signals."""
         logger.info(f"Received signal {signum}, shutting down...")
         self.running = False
+
+    def _generate_recommendations(self, asset_id: str, object_type: str) -> None:
+        keys = ["temperature", "power", "efficiency", "charge", "throughput"]
+        series = self.repository.get_recent_property_series(asset_id=asset_id, keys=keys)
+        thresholds = {
+            "temperature": 0.0,
+            "power": 250.0,
+            "efficiency": 80.0,
+            "charge": 10.0,
+            "throughput": 50.0,
+        }
+        trends = build_trend_results(asset_id, object_type, series, thresholds)
+        recommendations = generate_recommendations(trends)
+        for rec in recommendations:
+            doc = {
+                "recommendationId": rec.id,
+                "objectId": rec.object_id,
+                "objectType": rec.object_type,
+                "severity": rec.severity,
+                "category": rec.category,
+                "title": rec.title,
+                "description": rec.description,
+                "suggestedAction": rec.suggested_action,
+                "analysisBasis": rec.analysis_basis,
+                "status": rec.status,
+                "createdAt": rec.created_at,
+                "updatedAt": rec.updated_at,
+            }
+            self.repository.save_recommendation(doc)
+            payload = recommendation_to_event_payload(rec)
+            self.producer.send(self.settings.kafka_topic_recommendation_events, value=payload)
+
+    def process_recommendation_applied(self, event: dict[str, Any]) -> None:
+        payload = event.get("payload", {})
+        if not isinstance(payload, dict):
+            return
+        recommendation_id = payload.get("recommendationId")
+        run_id = payload.get("runId") or event.get("runId")
+        if not recommendation_id or not run_id:
+            return
+        expected_change = payload.get("patch")
+        if not isinstance(expected_change, dict):
+            expected_change = {}
+        self.repository.mark_recommendation_applied(
+            recommendation_id=recommendation_id,
+            run_id=str(run_id),
+            expected_change=expected_change,
+        )
 
 
 def main() -> None:

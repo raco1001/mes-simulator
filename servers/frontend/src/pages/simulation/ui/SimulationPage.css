@@ -1,0 +1,112 @@
+.simulation-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.simulation-page h1 {
+  font-size: 1.5rem;
+  margin: 0 0 1.5rem;
+}
+
+.simulation-section {
+  margin-bottom: 2rem;
+}
+
+.simulation-section h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.simulation-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.simulation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.simulation-field label {
+  font-size: 0.8rem;
+  color: var(--app-muted, #888);
+}
+
+.simulation-field select,
+.simulation-field input {
+  padding: 0.4em 0.6em;
+  font-size: 0.9rem;
+  min-width: 180px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border, #555);
+  background: var(--app-bg-secondary, #2a2a2a);
+  color: inherit;
+}
+
+.simulation-field input[type="number"] {
+  min-width: 80px;
+  width: 80px;
+}
+
+.simulation-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.simulation-status {
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.simulation-error {
+  color: var(--app-error, #f44336);
+}
+
+.simulation-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.simulation-table th,
+.simulation-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--app-border, #333);
+}
+
+.simulation-table th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--app-muted, #888);
+}
+
+.simulation-payload {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--app-muted, #888);
+}
+
+.simulation-empty {
+  color: var(--app-muted, #888);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.simulation-empty a {
+  margin-left: 0.5rem;
+}
+
+.simulation-loading {
+  color: var(--app-muted, #888);
+  padding: 2rem;
+}

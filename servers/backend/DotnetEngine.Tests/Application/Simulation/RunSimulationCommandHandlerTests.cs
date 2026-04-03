@@ -9,6 +9,10 @@ using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Application.Simulation.Rules;
+using DotnetEngine.Application.Simulation.Simulators;
+using DotnetEngine.Application.ObjectType.Ports.Driven;
+using DotnetEngine.Application.ObjectType.Dto;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -109,7 +113,7 @@ public class RunSimulationCommandHandlerTests
         var runId = "existing-run-id";
         var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3 };
 
-        await handler.RunOnePropagationAsync(runId, request, CancellationToken.None);
+        await handler.RunOnePropagationAsync(runId, request, cancellationToken: CancellationToken.None);
 
         mockRunRepo.Verify(r => r.CreateAsync(It.IsAny<SimulationRunDto>(), It.IsAny<CancellationToken>()), Times.Never);
         mockRunRepo.Verify(r => r.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<SimulationRunStatus>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -123,6 +127,14 @@ public class RunSimulationCommandHandlerTests
         var mockAssetRepo = new Mock<IAssetRepository>();
         mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((StateDto?)null);
+        mockAssetRepo.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetDto
+            {
+                Id = "asset-1",
+                Type = "freezer",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
         mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var mockRelRepo = new Mock<IRelationshipRepository>();
@@ -133,16 +145,20 @@ public class RunSimulationCommandHandlerTests
         var mockPublisher = new Mock<IEventPublisher>();
         mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        var mockObjectTypeRepo = new Mock<IObjectTypeSchemaRepository>();
+        mockObjectTypeRepo.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ObjectTypeSchemaDto?)null);
 
         var handler = CreateHandler(
             assetRepository: mockAssetRepo.Object,
             relationshipRepository: mockRelRepo.Object,
             eventRepository: mockEventRepo.Object,
-            eventPublisher: mockPublisher.Object);
+            eventPublisher: mockPublisher.Object,
+            objectTypeSchemaRepository: mockObjectTypeRepo.Object);
         var runId = "run-1";
         var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3 };
 
-        await handler.RunOnePropagationAsync(runId, request, CancellationToken.None);
+        await handler.RunOnePropagationAsync(runId, request, cancellationToken: CancellationToken.None);
 
         mockAssetRepo.Verify(r => r.GetStateByAssetIdAsync("asset-1", It.IsAny<CancellationToken>()), Times.Once);
         mockAssetRepo.Verify(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -161,6 +177,14 @@ public class RunSimulationCommandHandlerTests
         var mockAssetRepo = new Mock<IAssetRepository>();
         mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((StateDto?)null);
+        mockAssetRepo.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetDto
+            {
+                Id = "asset-1",
+                Type = "freezer",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
         mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var mockRelRepo = new Mock<IRelationshipRepository>();
@@ -169,20 +193,216 @@ public class RunSimulationCommandHandlerTests
         var mockPublisher = new Mock<IEventPublisher>();
         mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        var mockObjectTypeRepo = new Mock<IObjectTypeSchemaRepository>();
+        mockObjectTypeRepo.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ObjectTypeSchemaDto?)null);
 
         var handler = CreateHandler(
             assetRepository: mockAssetRepo.Object,
             relationshipRepository: mockRelRepo.Object,
             eventRepository: mockEventRepo.Object,
-            eventPublisher: mockPublisher.Object);
+            eventPublisher: mockPublisher.Object,
+            objectTypeSchemaRepository: mockObjectTypeRepo.Object);
         var runId = "run-1";
         var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3, RunTick = 5 };
 
-        await handler.RunOnePropagationAsync(runId, request, CancellationToken.None);
+        await handler.RunOnePropagationAsync(runId, request, cancellationToken: CancellationToken.None);
 
         Assert.NotNull(capturedEvent);
         Assert.True(capturedEvent.Payload.ContainsKey("tick"));
         Assert.Equal(5, capturedEvent.Payload["tick"]);
+    }
+
+    [Fact]
+    public async Task RunOnePropagationAsync_MergesPropertiesAndRemovesNullEntries()
+    {
+        StateDto? capturedState = null;
+        var mockAssetRepo = new Mock<IAssetRepository>();
+        mockAssetRepo.Setup(r => r.GetByIdAsync("asset-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetDto
+            {
+                Id = "asset-1",
+                Type = "freezer",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+        mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync("asset-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StateDto
+            {
+                AssetId = "asset-1",
+                Properties = new Dictionary<string, object?> { ["temp"] = 10, ["removeMe"] = 1 },
+                Status = "normal",
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+        mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
+            .Callback<StateDto, CancellationToken>((s, _) => capturedState = s)
+            .Returns(Task.CompletedTask);
+        var mockRelRepo = new Mock<IRelationshipRepository>();
+        mockRelRepo.Setup(r => r.GetOutgoingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<RelationshipDto>());
+        var mockEventRepo = new Mock<IEventRepository>();
+        mockEventRepo.Setup(r => r.AppendAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var mockPublisher = new Mock<IEventPublisher>();
+        mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var mockObjectTypeRepo = new Mock<IObjectTypeSchemaRepository>();
+        mockObjectTypeRepo.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ObjectTypeSchemaDto?)null);
+
+        var handler = CreateHandler(
+            assetRepository: mockAssetRepo.Object,
+            relationshipRepository: mockRelRepo.Object,
+            eventRepository: mockEventRepo.Object,
+            eventPublisher: mockPublisher.Object,
+            objectTypeSchemaRepository: mockObjectTypeRepo.Object);
+
+        await handler.RunOnePropagationAsync("run-1", new RunSimulationRequest
+        {
+            TriggerAssetId = "asset-1",
+            Patch = new StatePatchDto
+            {
+                Properties = new Dictionary<string, object?> { ["temp"] = 20, ["removeMe"] = null }
+            }
+        }, cancellationToken: CancellationToken.None);
+
+        Assert.NotNull(capturedState);
+        Assert.Equal(20, capturedState!.Properties["temp"]);
+        Assert.False(capturedState.Properties.ContainsKey("removeMe"));
+    }
+
+    [Fact]
+    public async Task RunOnePropagationAsync_WithSchema_UsesBehaviorSimulator()
+    {
+        StateDto? capturedState = null;
+        var mockAssetRepo = new Mock<IAssetRepository>();
+        mockAssetRepo.Setup(r => r.GetByIdAsync("asset-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetDto { Id = "asset-1", Type = "freezer", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow });
+        mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync("asset-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StateDto
+            {
+                AssetId = "asset-1",
+                Properties = new Dictionary<string, object?> { ["temp"] = 10d },
+                Status = "normal",
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+        mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
+            .Callback<StateDto, CancellationToken>((s, _) => capturedState = s)
+            .Returns(Task.CompletedTask);
+
+        var mockObjectTypeRepo = new Mock<IObjectTypeSchemaRepository>();
+        mockObjectTypeRepo.Setup(r => r.GetByObjectTypeAsync("freezer", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ObjectTypeSchemaDto
+            {
+                SchemaVersion = "v1",
+                ObjectType = "freezer",
+                DisplayName = "Freezer",
+                Traits = new ObjectTraits { Persistence = Persistence.Durable, Dynamism = Dynamism.Dynamic, Cardinality = Cardinality.Singular },
+                OwnProperties =
+                [
+                    new PropertyDefinition
+                    {
+                        Key = "temp",
+                        DataType = DataType.Number,
+                        SimulationBehavior = SimulationBehavior.Rate,
+                        Mutability = Mutability.Mutable,
+                        BaseValue = 0d,
+                        Required = true
+                    }
+                ]
+            });
+
+        var handler = CreateHandler(
+            assetRepository: mockAssetRepo.Object,
+            objectTypeSchemaRepository: mockObjectTypeRepo.Object);
+
+        await handler.RunOnePropagationAsync("run-1", new RunSimulationRequest
+        {
+            TriggerAssetId = "asset-1",
+            Patch = new StatePatchDto { Properties = new Dictionary<string, object?> { ["temp"] = 2d } }
+        }, cancellationToken: CancellationToken.None);
+
+        Assert.NotNull(capturedState);
+        Assert.Equal(12d, capturedState!.Properties["temp"]);
+    }
+
+    [Fact]
+    public async Task RunOnePropagationAsync_OnCycle_AccumulatesPatchOnce()
+    {
+        var states = new Dictionary<string, StateDto>();
+        var mockAssetRepo = new Mock<IAssetRepository>();
+        mockAssetRepo.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => new AssetDto
+            {
+                Id = id,
+                Type = "freezer",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+        mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => states.TryGetValue(id, out var state) ? state : null);
+        mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
+            .Callback<StateDto, CancellationToken>((s, _) => states[s.AssetId] = s)
+            .Returns(Task.CompletedTask);
+
+        var mockRelRepo = new Mock<IRelationshipRepository>();
+        mockRelRepo.Setup(r => r.GetOutgoingAsync("asset-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new RelationshipDto
+                {
+                    Id = "r1",
+                    FromAssetId = "asset-1",
+                    ToAssetId = "asset-2",
+                    RelationshipType = "Supplies",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }
+            ]);
+        mockRelRepo.Setup(r => r.GetOutgoingAsync("asset-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new RelationshipDto
+                {
+                    Id = "r2",
+                    FromAssetId = "asset-2",
+                    ToAssetId = "asset-1",
+                    RelationshipType = "Supplies",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }
+            ]);
+        mockRelRepo.Setup(r => r.GetOutgoingAsync(It.Is<string>(x => x != "asset-1" && x != "asset-2"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<RelationshipDto>());
+
+        var mockEventRepo = new Mock<IEventRepository>();
+        mockEventRepo.Setup(r => r.AppendAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var mockPublisher = new Mock<IEventPublisher>();
+        mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var mockObjectTypeRepo = new Mock<IObjectTypeSchemaRepository>();
+        mockObjectTypeRepo.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ObjectTypeSchemaDto?)null);
+
+        var handler = CreateHandler(
+            assetRepository: mockAssetRepo.Object,
+            relationshipRepository: mockRelRepo.Object,
+            eventRepository: mockEventRepo.Object,
+            eventPublisher: mockPublisher.Object,
+            objectTypeSchemaRepository: mockObjectTypeRepo.Object);
+
+        await handler.RunOnePropagationAsync("run-1", new RunSimulationRequest
+        {
+            TriggerAssetId = "asset-1",
+            Patch = new StatePatchDto
+            {
+                Properties = new Dictionary<string, object?> { ["flow"] = 1d }
+            }
+        }, cancellationToken: CancellationToken.None);
+
+        Assert.True(states.ContainsKey("asset-1"));
+        Assert.True(states.ContainsKey("asset-2"));
+        Assert.Equal(2d, states["asset-1"].Properties["flow"]);
+        Assert.Equal(1d, states["asset-2"].Properties["flow"]);
     }
 
     private static RunSimulationCommandHandler CreateHandler(
@@ -191,11 +411,20 @@ public class RunSimulationCommandHandlerTests
         ISimulationRunRepository? simulationRunRepository = null,
         IEngineStateApplier? applier = null,
         IEventRepository? eventRepository = null,
-        IEventPublisher? eventPublisher = null)
+        IEventPublisher? eventPublisher = null,
+        IObjectTypeSchemaRepository? objectTypeSchemaRepository = null)
     {
         var mockAssetRepo = new Mock<IAssetRepository>();
         mockAssetRepo.Setup(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((StateDto?)null);
+        mockAssetRepo.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetDto
+            {
+                Id = "asset-1",
+                Type = "freezer",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
         mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -210,6 +439,9 @@ public class RunSimulationCommandHandlerTests
         var mockPublisher = new Mock<IEventPublisher>();
         mockPublisher.Setup(p => p.PublishAsync(It.IsAny<EventDto>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        var mockObjectTypeRepo = new Mock<IObjectTypeSchemaRepository>();
+        mockObjectTypeRepo.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ObjectTypeSchemaDto?)null);
 
         var defaultApplier = new EngineStateApplier(
             assetRepository ?? mockAssetRepo.Object,
@@ -223,7 +455,17 @@ public class RunSimulationCommandHandlerTests
             applier ?? defaultApplier,
             eventRepository ?? mockEventRepo.Object,
             eventPublisher ?? mockPublisher.Object,
-            Array.Empty<IPropagationRule>());
+            objectTypeSchemaRepository ?? mockObjectTypeRepo.Object,
+            Array.Empty<IPropagationRule>(),
+            new IPropertySimulator[]
+            {
+                new ConstantSimulator(),
+                new SettableSimulator(),
+                new RateSimulator(),
+                new AccumulatorSimulator(),
+                new DerivedSimulator()
+            },
+            Mock.Of<ILogger<RunSimulationCommandHandler>>());
     }
 
     private static Mock<ISimulationRunRepository> CreateMockRunRepository()

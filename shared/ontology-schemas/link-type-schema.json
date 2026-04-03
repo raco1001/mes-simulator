@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shadow-boxing.local/schemas/link-type-schema.json",
+  "title": "LinkTypeSchema",
+  "description": "Ontology link type definition with direction and constraints",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "linkType",
+    "displayName",
+    "direction",
+    "temporality",
+    "fromConstraint",
+    "toConstraint"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^v\\d+$",
+      "description": "Schema version for compatibility tracking (e.g. v1)"
+    },
+    "linkType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "direction": {
+      "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/LinkDirection"
+    },
+    "temporality": {
+      "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/LinkTemporality"
+    },
+    "fromConstraint": {
+      "$ref": "#/$defs/Constraint"
+    },
+    "toConstraint": {
+      "$ref": "#/$defs/Constraint"
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "$ref": "https://shadow-boxing.local/schemas/property-definition.json"
+      },
+      "default": []
+    }
+  },
+  "$defs": {
+    "Constraint": {
+      "type": "object",
+      "properties": {
+        "requiredTraits": {
+          "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/PartialTraits"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

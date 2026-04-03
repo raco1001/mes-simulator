@@ -40,8 +40,7 @@ describe('AssetList', () => {
   const mockStates: StateDto[] = [
     {
       assetId: 'freezer-1',
-      currentTemp: -5.0,
-      currentPower: 120.0,
+      properties: { temperature: -5.0, power: 120.0 },
       status: 'normal',
       lastEventType: 'asset.health.updated',
       updatedAt: '2026-02-18T10:00:00Z',
@@ -49,8 +48,7 @@ describe('AssetList', () => {
     },
     {
       assetId: 'conveyor-1',
-      currentTemp: null,
-      currentPower: null,
+      properties: {},
       status: 'warning',
       lastEventType: 'asset.health.updated',
       updatedAt: '2026-02-18T10:00:00Z',
@@ -90,8 +88,7 @@ describe('AssetList', () => {
     // Status는 이모지와 함께 표시되므로 정규식으로 검색
     expect(screen.getByText(/normal/i)).toBeInTheDocument()
     expect(screen.getByText(/warning/i)).toBeInTheDocument()
-    expect(screen.getByText('-5°C')).toBeInTheDocument()
-    expect(screen.getByText('120W')).toBeInTheDocument()
+    expect(screen.getByText('temperature: -5, power: 120')).toBeInTheDocument()
   })
 
   it('renders error message on API failure', async () => {

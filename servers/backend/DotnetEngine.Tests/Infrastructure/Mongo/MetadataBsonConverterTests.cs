@@ -10,7 +10,7 @@ public class MetadataBsonConverterTests
     [Fact]
     public void ToBsonDocument_NullOrEmpty_ReturnsEmptyBsonDocument()
     {
-        var empty = MetadataBsonConverter.ToBsonDocument(null);
+        var empty = MetadataBsonConverter.ToBsonDocument<object>(null);
         Assert.NotNull(empty);
         Assert.Equal(0, empty.ElementCount);
 

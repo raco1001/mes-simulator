@@ -1,11 +1,8 @@
-# 전체 스택 compose 파일
-# Infrastructure + Backend + Pipeline + Frontend를 모두 포함
-# 개별 서비스는 docker-compose.*.yml 파일들 참조
+# Infrastructure 서비스 통합 compose 파일
+# Kafka, MongoDB를 포함한 기본 인프라 스택
+# 개별 서비스는 docker-compose.kafka.yml, docker-compose.mongo.yml 참조
 
 services:
-  # ============================================
-  # Infrastructure Services
-  # ============================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: kafka-zookeeper
@@ -92,7 +89,7 @@ services:
       retries: 5
 
   mongodb:
-    image: mongo:7.0
+    image: mongo:8
     container_name: mongodb
     hostname: mongodb
     ports:
@@ -104,7 +101,7 @@ services:
     volumes:
       - mongodb-data:/data/db
       - mongodb-config:/data/configdb
-      - ../infrastructure/mongo/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ../../infrastructure/mongo/init-scripts:/docker-entrypoint-initdb.d:ro
     networks:
       - factory-network
     healthcheck:
@@ -144,55 +141,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7.2-alpine
-    container_name: redis
-    hostname: redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - factory-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: redis-commander
-    depends_on:
-      redis:
-        condition: service_healthy
-    ports:
-      - "8082:8081"
-    environment:
-      REDIS_HOSTS: local:redis:6379
-    networks:
-      - factory-network
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost:8081",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ============================================
-  # Application Services
-  # ============================================
-  # Backend, Pipeline, Frontend는 각각의 compose 파일에서 정의
-  # 필요시 여기에 추가 가능
-
 volumes:
   zookeeper-data:
     driver: local
@@ -204,9 +152,6 @@ volumes:
     driver: local
   mongodb-config:
     driver: local
-  redis-data:
-    driver: local
-
 networks:
   factory-network:
     driver: bridge

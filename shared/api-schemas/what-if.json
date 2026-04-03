@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "What-if Simulation API Schema",
+  "description": "Dry-run simulation request/response contracts",
+  "type": "object",
+  "definitions": {
+    "RunSimulationRequest": {
+      "type": "object",
+      "required": ["triggerAssetId"],
+      "properties": {
+        "triggerAssetId": { "type": "string" },
+        "patch": {
+          "type": "object",
+          "properties": {
+            "properties": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "status": { "type": "string" },
+            "lastEventType": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "maxDepth": { "type": "integer", "minimum": 1, "default": 3 }
+      },
+      "additionalProperties": false
+    },
+    "StateSnapshot": {
+      "type": "object",
+      "required": ["properties"],
+      "properties": {
+        "properties": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "PropertyChange": {
+      "type": "object",
+      "required": ["key"],
+      "properties": {
+        "key": { "type": "string" },
+        "before": {},
+        "after": {},
+        "delta": {}
+      },
+      "additionalProperties": false
+    },
+    "ObjectDelta": {
+      "type": "object",
+      "required": ["objectId", "changes"],
+      "properties": {
+        "objectId": { "type": "string" },
+        "changes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PropertyChange" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "WhatIfResult": {
+      "type": "object",
+      "required": ["runId", "before", "after", "deltas", "affectedObjects", "propagationDepth"],
+      "properties": {
+        "runId": { "type": "string" },
+        "before": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/StateSnapshot" }
+        },
+        "after": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/StateSnapshot" }
+        },
+        "deltas": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ObjectDelta" }
+        },
+        "affectedObjects": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "propagationDepth": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

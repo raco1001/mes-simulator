@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
@@ -13,26 +14,32 @@ namespace DotnetEngine.Presentation.Controllers;
 public sealed class SimulationController : ControllerBase
 {
     private readonly IRunSimulationCommand _runSimulationCommand;
+    private readonly IWhatIfSimulationQuery _whatIfSimulationQuery;
     private readonly IStartContinuousRunCommand _startContinuousRunCommand;
     private readonly IStopSimulationRunCommand _stopSimulationRunCommand;
     private readonly IReplayRunCommand _replayRunCommand;
     private readonly ISimulationRunRepository _simulationRunRepository;
     private readonly IEventRepository _eventRepository;
+    private readonly ISimulationNotifier _simulationNotifier;
 
     public SimulationController(
         IRunSimulationCommand runSimulationCommand,
+        IWhatIfSimulationQuery whatIfSimulationQuery,
         IStartContinuousRunCommand startContinuousRunCommand,
         IStopSimulationRunCommand stopSimulationRunCommand,
         IReplayRunCommand replayRunCommand,
         ISimulationRunRepository simulationRunRepository,
-        IEventRepository eventRepository)
+        IEventRepository eventRepository,
+        ISimulationNotifier simulationNotifier)
     {
         _runSimulationCommand = runSimulationCommand;
+        _whatIfSimulationQuery = whatIfSimulationQuery;
         _startContinuousRunCommand = startContinuousRunCommand;
         _stopSimulationRunCommand = stopSimulationRunCommand;
         _replayRunCommand = replayRunCommand;
         _simulationRunRepository = simulationRunRepository;
         _eventRepository = eventRepository;
+        _simulationNotifier = simulationNotifier;
     }
 
     /// <summary>
@@ -87,6 +94,18 @@ public sealed class SimulationController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
+    [HttpPost("what-if")]
+    [ProducesResponseType(typeof(WhatIfResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> WhatIf([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
+            return BadRequest(new { error = "triggerAssetId is required" });
+
+        var result = await _whatIfSimulationQuery.RunAsync(request, cancellationToken);
+        return Ok(result);
+    }
+
     /// <summary>
     /// GET /api/simulation/runs/{runId}/events — run 단위 이벤트 조회. Optional tickMax: events with RunTick &lt;= tickMax only (replay 상한).
     /// </summary>
@@ -122,5 +141,25 @@ public sealed class SimulationController : ControllerBase
             return NotFound(result);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// GET /api/simulation/stream — 실시간 시뮬레이션 상태 SSE 스트림.
+    /// </summary>
+    [HttpGet("stream")]
+    public async Task StreamSimulation(CancellationToken cancellationToken)
+    {
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+        await foreach (var tickEvent in _simulationNotifier.SubscribeAsync(HttpContext.RequestAborted))
+        {
+            var payload = JsonSerializer.Serialize(tickEvent, jsonOptions);
+            await Response.WriteAsync($"data: {payload}\n\n", cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
+        }
     }
 }

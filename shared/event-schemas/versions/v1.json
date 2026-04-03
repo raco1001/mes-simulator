@@ -30,8 +30,24 @@
         "alert.generated": {
           "type": "string",
           "description": "alert.generated 스키마 파일 경로"
+        },
+        "recommendation.generated": {
+          "type": "string",
+          "description": "recommendation.generated 스키마 파일 경로"
+        },
+        "recommendation.applied": {
+          "type": "string",
+          "description": "recommendation.applied 스키마 파일 경로"
+        },
+        "simulation.state.updated": {
+          "type": "string",
+          "description": "simulation.state.updated 스키마 파일 경로"
         }
       }
+    },
+    "eventEnvelope": {
+      "type": "string",
+      "description": "공통 이벤트 엔벨로프 스키마 파일 경로"
     },
     "topics": {
       "type": "string",
@@ -47,8 +63,12 @@
   "schemas": {
     "asset.created": "schemas/asset.created.json",
     "asset.health.updated": "schemas/asset.health.updated.json",
-    "alert.generated": "schemas/alert.generated.json"
+    "alert.generated": "schemas/alert.generated.json",
+    "recommendation.generated": "schemas/recommendation.generated.json",
+    "recommendation.applied": "schemas/recommendation.applied.json",
+    "simulation.state.updated": "schemas/simulation.state.updated.json"
   },
+  "eventEnvelope": "schemas/event-envelope.json",
   "topics": "topics/topics.json",
-  "notes": "MVP 초기 버전. 3개 핵심 이벤트 스키마 정의 완료."
+  "notes": "MVP 초기 버전. 공통 event-envelope + 4개 핵심 이벤트 스키마. 엔벨로프는 schemaVersion pattern(^v\\\\d+$), 선택 runId/context 확장 포인트를 포함."
 }

@@ -1,8 +1,31 @@
 // MongoDB 컬렉션 및 인덱스 초기화 스크립트
-// docker-compose up 시 자동 실행됨
+// docker-compose up 시 자동 실행됨 (데이터 볼륨이 비어 있을 때 1회)
+//
+// 온톨로지 컬렉션(object_type_schemas, link_type_schemas)의 payloadJson은
+// JSON 문자열이 아니라 임베디드 BSON 객체(ObjectTypeSchemaDto / LinkTypeSchemaDto 직렬화)이다.
+// 백엔드: MongoObjectTypeSchemaDocument.PayloadJson → BsonDocument
+// 예전 validator가 payloadJson을 string으로 두면 삽입 시 Code 121이 난다.
+// ensureOntologyCollection()은 컬렉션이 이미 있으면 collMod로 검증 규칙만 맞춘다.
 
 // 데이터베이스 선택
 db = db.getSiblingDB('factory_mes');
+
+/**
+ * 온톨로지 메타 컬렉션: 신규면 createCollection, 이미 있으면 validator만 collMod로 갱신
+ */
+function ensureOntologyCollection(collectionName, jsonSchema) {
+  const validator = { $jsonSchema: jsonSchema };
+  if (!db.getCollectionNames().includes(collectionName)) {
+    db.createCollection(collectionName, { validator });
+  } else {
+    db.runCommand({
+      collMod: collectionName,
+      validator: validator,
+      validationLevel: 'strict',
+      validationAction: 'error'
+    });
+  }
+}
 
 // ============================================
 // 1. assets 컬렉션
@@ -113,13 +136,9 @@ db.createCollection('states', {
           bsonType: 'string',
           description: 'Asset ID (required)'
         },
-        currentTemp: {
-          bsonType: ['number', 'null'],
-          description: 'Current temperature'
-        },
-        currentPower: {
-          bsonType: ['number', 'null'],
-          description: 'Current power consumption'
+        properties: {
+          bsonType: 'object',
+          description: 'Dynamic state properties'
         },
         status: {
           bsonType: 'string',
@@ -147,6 +166,114 @@ db.createCollection('states', {
 db.states.createIndex({ assetId: 1 }, { unique: true, name: "assetId_unique" });
 db.states.createIndex({ status: 1 });
 db.states.createIndex({ updatedAt: -1 });
+
+// ============================================
+// 3-1. object_type_schemas 컬렉션 (온톨로지 메타모델)
+// ============================================
+const objectTypeSchemasJsonSchema = {
+  bsonType: 'object',
+  required: ['_id', 'objectType', 'payloadJson'],
+  properties: {
+    _id: { bsonType: 'string', description: '문서 _id (= objectType 문자열)' },
+    objectType: { bsonType: 'string' },
+    payloadJson: {
+      bsonType: 'object',
+      description: 'ObjectTypeSchemaDto를 BSON으로 직렬화한 문서 (문자열 아님)'
+    }
+  }
+};
+ensureOntologyCollection('object_type_schemas', objectTypeSchemasJsonSchema);
+db.object_type_schemas.createIndex({ objectType: 1 }, { unique: true, name: "objectType_unique" });
+
+// ============================================
+// 3-2. link_type_schemas 컬렉션 (관계 스키마 메타모델)
+// ============================================
+const linkTypeSchemasJsonSchema = {
+  bsonType: 'object',
+  required: ['_id', 'linkType', 'payloadJson'],
+  properties: {
+    _id: { bsonType: 'string' },
+    linkType: { bsonType: 'string' },
+    payloadJson: {
+      bsonType: 'object',
+      description: 'LinkTypeSchemaDto를 BSON으로 직렬화한 문서 (문자열 아님)'
+    }
+  }
+};
+ensureOntologyCollection('link_type_schemas', linkTypeSchemasJsonSchema);
+db.link_type_schemas.createIndex({ linkType: 1 }, { unique: true, name: "linkType_unique" });
+
+const linkTypeSeeds = [
+  {
+    _id: 'Supplies',
+    linkType: 'Supplies',
+    payloadJson: {
+      schemaVersion: 'v1',
+      linkType: 'Supplies',
+      displayName: '공급',
+      direction: 'Directed',
+      temporality: 'Durable',
+      fromConstraint: { requiredTraits: { dynamism: 'Dynamic' } },
+      toConstraint: { requiredTraits: { dynamism: 'Dynamic' } },
+      properties: [
+        {
+          key: 'transfers',
+          dataType: 'Array',
+          simulationBehavior: 'Settable',
+          mutability: 'Mutable',
+          baseValue: [],
+          constraints: {},
+          required: false
+        },
+        {
+          key: 'ratio',
+          dataType: 'Number',
+          simulationBehavior: 'Settable',
+          mutability: 'Mutable',
+          baseValue: 1.0,
+          constraints: { min: 0, max: 1 },
+          required: false
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  {
+    _id: 'ConnectedTo',
+    linkType: 'ConnectedTo',
+    payloadJson: {
+      schemaVersion: 'v1',
+      linkType: 'ConnectedTo',
+      displayName: '연결',
+      direction: 'Bidirectional',
+      temporality: 'Durable',
+      fromConstraint: null,
+      toConstraint: null,
+      properties: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  {
+    _id: 'Contains',
+    linkType: 'Contains',
+    payloadJson: {
+      schemaVersion: 'v1',
+      linkType: 'Contains',
+      displayName: '포함',
+      direction: 'Hierarchical',
+      temporality: 'Permanent',
+      fromConstraint: null,
+      toConstraint: null,
+      properties: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  }
+];
+db.link_type_schemas.deleteMany({});
+db.link_type_schemas.insertMany(linkTypeSeeds);
 
 // ============================================
 // 4. relationships 컬렉션 (에셋 간 관계)
@@ -238,5 +365,94 @@ db.createCollection('simulation_runs', {
 db.simulation_runs.createIndex({ startedAt: -1 });
 db.simulation_runs.createIndex({ triggerAssetId: 1 });
 
+// ============================================
+// 6. alerts 컬렉션 (알림 이력)
+// ============================================
+db.createCollection('alerts', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['assetId', 'timestamp', 'severity', 'message'],
+      properties: {
+        assetId: {
+          bsonType: 'string',
+          description: 'Alert 대상 Asset ID (required)'
+        },
+        timestamp: {
+          bsonType: 'date',
+          description: 'Alert 발생 시각 (required)'
+        },
+        severity: {
+          bsonType: 'string',
+          enum: ['info', 'warning', 'error'],
+          description: '심각도 (required)'
+        },
+        message: {
+          bsonType: 'string',
+          description: '표시 메시지 (required)'
+        },
+        runId: {
+          bsonType: ['string', 'null'],
+          description: '시뮬레이션 실행 ID (optional)'
+        },
+        metric: {
+          bsonType: ['string', 'null'],
+          description: '임계치 비교 metric 이름 (optional)'
+        },
+        current: {
+          bsonType: ['number', 'null'],
+          description: '현재값 (optional)'
+        },
+        threshold: {
+          bsonType: ['number', 'null'],
+          description: '임계값 (optional)'
+        },
+        code: {
+          bsonType: ['string', 'null'],
+          description: 'Alert 코드 (optional)'
+        },
+        metadata: {
+          bsonType: 'object',
+          description: '추가 메타데이터'
+        }
+      }
+    }
+  }
+});
+
+// alerts 인덱스
+db.alerts.createIndex({ timestamp: -1 });
+db.alerts.createIndex({ assetId: 1, timestamp: -1 });
+db.alerts.createIndex({ severity: 1, timestamp: -1 });
+
+// ============================================
+// 7. recommendations 컬렉션 (추천 이력)
+// ============================================
+db.createCollection('recommendations', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['recommendationId', 'objectId', 'severity', 'category', 'title', 'status', 'createdAt', 'updatedAt'],
+      properties: {
+        recommendationId: { bsonType: 'string' },
+        objectId: { bsonType: 'string' },
+        objectType: { bsonType: 'string' },
+        severity: { bsonType: 'string', enum: ['info', 'warning', 'critical'] },
+        category: { bsonType: 'string' },
+        title: { bsonType: 'string' },
+        description: { bsonType: 'string' },
+        suggestedAction: { bsonType: 'object' },
+        analysisBasis: { bsonType: 'object' },
+        status: { bsonType: 'string', enum: ['pending', 'approved', 'rejected', 'applied'] },
+        createdAt: { bsonType: 'date' },
+        updatedAt: { bsonType: 'date' }
+      }
+    }
+  }
+});
+db.recommendations.createIndex({ recommendationId: 1 }, { unique: true, name: 'recommendationId_unique' });
+db.recommendations.createIndex({ status: 1, updatedAt: -1 });
+db.recommendations.createIndex({ objectId: 1, updatedAt: -1 });
+
 print('Collections and indexes created successfully!');
-print('Collections: assets, events, states, relationships, simulation_runs');
+print('Collections: assets, events, states, object_type_schemas, link_type_schemas, relationships, simulation_runs, alerts, recommendations');

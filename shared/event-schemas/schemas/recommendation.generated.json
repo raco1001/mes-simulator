@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Recommendation Generated Event",
+  "description": "분석 기반 추천이 생성되었을 때 발생하는 이벤트",
+  "allOf": [
+    { "$ref": "event-envelope.json" },
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "recommendation.generated"
+        },
+        "payload": {
+          "type": "object",
+          "required": [
+            "recommendationId",
+            "objectId",
+            "objectType",
+            "severity",
+            "category",
+            "title",
+            "description",
+            "status",
+            "analysisBasis"
+          ],
+          "properties": {
+            "recommendationId": { "type": "string" },
+            "objectId": { "type": "string" },
+            "objectType": { "type": "string" },
+            "severity": {
+              "type": "string",
+              "enum": ["info", "warning", "critical"]
+            },
+            "category": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "suggestedAction": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "analysisBasis": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "status": {
+              "type": "string",
+              "enum": ["pending", "approved", "rejected", "applied"]
+            },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "updatedAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    }
+  ]
+}

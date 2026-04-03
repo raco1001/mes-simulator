@@ -1,16 +1,17 @@
 # Frontend - build stage
 FROM node:24-alpine AS build
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Build-time API URL (브라우저가 접근할 백엔드 주소)
 ARG VITE_API_BASE_URL=http://localhost:5000
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-COPY package.json ./
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # Frontend - serve stage (nginx)
 FROM nginx:alpine AS runtime

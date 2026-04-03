@@ -1,0 +1,19 @@
+.recommendations-page { display: flex; flex-direction: column; gap: 16px; }
+.recommendations-header { display: flex; justify-content: space-between; align-items: center; }
+.recommendations-filters { display: flex; gap: 8px; }
+.recommendations-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+.recommendations-list { display: flex; flex-direction: column; gap: 8px; }
+.recommendation-card { text-align: left; border: 1px solid #ddd; padding: 10px; border-radius: 8px; background: white; }
+.recommendation-card.active { border-color: #3b82f6; }
+.severity { font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.severity-info { color: #2563eb; }
+.severity-warning { color: #d97706; }
+.severity-critical { color: #dc2626; }
+.recommendations-detail { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+.recommendations-actions { display: flex; gap: 8px; margin-top: 8px; }
+.whatif-panel { margin-top: 12px; overflow-x: auto; }
+.whatif-panel table { width: 100%; border-collapse: collapse; }
+.whatif-panel th, .whatif-panel td { border: 1px solid #e5e7eb; padding: 6px; }
+.recommendations-pagination { display: flex; align-items: center; gap: 8px; }
+.recommendations-error { color: #b91c1c; }
+.recommendations-empty { color: #6b7280; padding: 8px 0; }

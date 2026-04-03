@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://shadow-boxing.local/schemas/property-definition.json",
+  "title": "PropertyDefinition Schema",
+  "description": "Open property contract with closed behavior/type enums",
+  "type": "object",
+  "required": [
+    "key",
+    "dataType",
+    "simulationBehavior",
+    "mutability",
+    "required"
+  ],
+  "properties": {
+    "key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataType": {
+      "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/DataType"
+    },
+    "unit": {
+      "$ref": "https://shadow-boxing.local/schemas/unit-definitions.json#/$defs/Unit",
+      "description": "Unit of measure. Required when dataType is Number and the property has physical meaning."
+    },
+    "simulationBehavior": {
+      "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/SimulationBehavior"
+    },
+    "mutability": {
+      "$ref": "https://shadow-boxing.local/schemas/ontology-common-defs.json#/$defs/Mutability"
+    },
+    "baseValue": {},
+    "constraints": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "required": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

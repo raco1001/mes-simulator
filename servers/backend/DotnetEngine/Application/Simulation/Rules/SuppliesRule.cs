@@ -15,10 +15,10 @@ public sealed class SuppliesRule : IPropagationRule
     {
         var fromState = ctx.FromState;
         var incoming = ctx.IncomingPatch;
+        var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
         var outgoingPatch = new StatePatchDto
         {
-            CurrentTemp = incoming.CurrentTemp ?? fromState?.CurrentTemp,
-            CurrentPower = incoming.CurrentPower ?? fromState?.CurrentPower,
+            Properties = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState),
             Status = incoming.Status ?? fromState?.Status,
             LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
         };

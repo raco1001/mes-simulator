@@ -14,8 +14,10 @@ describe('stateApi', () => {
 
   const mockState: StateDto = {
     assetId: 'freezer-1',
-    currentTemp: -5,
-    currentPower: 120,
+    properties: {
+      temperature: -5,
+      power: 120,
+    },
     status: 'normal',
     lastEventType: null,
     updatedAt: '2026-02-18T10:00:00Z',
