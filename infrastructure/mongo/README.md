@@ -11,9 +11,20 @@ docker-compose -f docker-compose.mongo.yml up -d
 
 ## 컬렉션 및 인덱스 초기화
 
-컬렉션과 인덱스는 컨테이너가 처음 시작될 때 자동으로 생성됩니다.
+컬렉션과 인덱스는 컨테이너가 처음 시작될 때 `init-scripts/init-collections.js`로 자동 생성됩니다.
 
-**수동 실행 (필요시):**
+## 시드 데이터
+
+참조·샘플 데이터는 `seeds/*.js`에 두고, 아래 중 하나로 적용합니다.
+
+- **호스트 (Mongo가 이미 떠 있을 때):** 저장소 루트 기준  
+  `infrastructure/mongo/run-seeds.sh`  
+  기본 URI: `mongodb://admin:admin123@127.0.0.1:27017/factory_mes?authSource=admin`  
+  환경변수 `MONGO_URI`로 덮어쓸 수 있습니다.
+- **Docker 최초 볼륨 초기화:** `init-scripts/zz-run-seeds.sh`가 `seeds`를 순서대로 실행합니다.  
+  `docker/infra/docker-compose.yml`에서 `seeds` → `/mongo-seeds` 마운트가 필요합니다.
+
+**수동 실행 (스키마만 재적용할 때 등):**
 
 ```bash
 # 방법 1: 스크립트 파일 직접 실행

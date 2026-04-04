@@ -203,77 +203,10 @@ const linkTypeSchemasJsonSchema = {
 ensureOntologyCollection('link_type_schemas', linkTypeSchemasJsonSchema);
 db.link_type_schemas.createIndex({ linkType: 1 }, { unique: true, name: "linkType_unique" });
 
-const linkTypeSeeds = [
-  {
-    _id: 'Supplies',
-    linkType: 'Supplies',
-    payloadJson: {
-      schemaVersion: 'v1',
-      linkType: 'Supplies',
-      displayName: '공급',
-      direction: 'Directed',
-      temporality: 'Durable',
-      fromConstraint: { requiredTraits: { dynamism: 'Dynamic' } },
-      toConstraint: { requiredTraits: { dynamism: 'Dynamic' } },
-      properties: [
-        {
-          key: 'transfers',
-          dataType: 'Array',
-          simulationBehavior: 'Settable',
-          mutability: 'Mutable',
-          baseValue: [],
-          constraints: {},
-          required: false
-        },
-        {
-          key: 'ratio',
-          dataType: 'Number',
-          simulationBehavior: 'Settable',
-          mutability: 'Mutable',
-          baseValue: 1.0,
-          constraints: { min: 0, max: 1 },
-          required: false
-        }
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  },
-  {
-    _id: 'ConnectedTo',
-    linkType: 'ConnectedTo',
-    payloadJson: {
-      schemaVersion: 'v1',
-      linkType: 'ConnectedTo',
-      displayName: '연결',
-      direction: 'Bidirectional',
-      temporality: 'Durable',
-      fromConstraint: null,
-      toConstraint: null,
-      properties: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  },
-  {
-    _id: 'Contains',
-    linkType: 'Contains',
-    payloadJson: {
-      schemaVersion: 'v1',
-      linkType: 'Contains',
-      displayName: '포함',
-      direction: 'Hierarchical',
-      temporality: 'Permanent',
-      fromConstraint: null,
-      toConstraint: null,
-      properties: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  }
-];
-db.link_type_schemas.deleteMany({});
-db.link_type_schemas.insertMany(linkTypeSeeds);
+// 시드 데이터는 infrastructure/mongo/seeds/*.js 에 두고,
+// - 호스트: infrastructure/mongo/run-seeds.sh
+// - Docker 최초 기동: init-scripts/zz-run-seeds.sh (compose에서 /mongo-seeds 마운트)
+// 에서 실행한다.
 
 // ============================================
 // 4. relationships 컬렉션 (에셋 간 관계)
@@ -456,3 +389,4 @@ db.recommendations.createIndex({ objectId: 1, updatedAt: -1 });
 
 print('Collections and indexes created successfully!');
 print('Collections: assets, events, states, object_type_schemas, link_type_schemas, relationships, simulation_runs, alerts, recommendations');
+print('Run seed scripts: infrastructure/mongo/run-seeds.sh (or zz-run-seeds.sh on first container init)');

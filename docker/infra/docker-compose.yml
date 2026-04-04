@@ -102,6 +102,7 @@ services:
       - mongodb-data:/data/db
       - mongodb-config:/data/configdb
       - ../../infrastructure/mongo/init-scripts:/docker-entrypoint-initdb.d:ro
+      - ../../infrastructure/mongo/seeds:/mongo-seeds:ro
     networks:
       - factory-network
     healthcheck:
