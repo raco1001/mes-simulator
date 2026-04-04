@@ -3,6 +3,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  background-color: var(--app-bg);
 }
 
 /* ---- Toolbar ---- */
@@ -13,11 +14,27 @@
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--app-border, #333);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.assets-canvas-page__toolbar > button {
+  background: var(--app-toolbar-btn-bg, var(--app-bg-secondary, #2a2a2a));
+  color: var(--app-fg, #fff);
+  border: 1px solid var(--app-border, #555);
+}
+
+.assets-canvas-page__toolbar > button:hover:not(:disabled) {
+  border-color: var(--app-toolbar-btn-hover-border, var(--app-accent, #5b9bd5));
 }
 
 .assets-canvas-page__toolbar button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.assets-canvas-page__toolbar-spacer {
+  flex: 1;
+  min-width: 0.5rem;
 }
 
 .assets-canvas-page__toolbar-cancel {
@@ -93,6 +110,7 @@
 .assets-canvas-page__onboarding h2 {
   margin: 0;
   font-size: 1.5rem;
+  color: var(--app-fg, #fff);
 }
 
 .assets-canvas-page__onboarding p {
@@ -116,7 +134,7 @@
 .assets-canvas-page__modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--app-modal-overlay, rgba(0, 0, 0, 0.5));
   display: flex;
   align-items: center;
   justify-content: center;

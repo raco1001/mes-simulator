@@ -44,30 +44,45 @@ export function EditRelationshipOnPanel({
   onSaved: (updated: RelationshipDto) => void
   onDeleted: (id: string) => void
 }) {
-  const [relationshipType, setRelationshipType] = useState(relationship.relationshipType)
-  const [mappings, setMappings] = useState<MappingRow[]>(() => toRows(relationship.mappings))
+  const [relationshipType, setRelationshipType] = useState(
+    relationship.relationshipType,
+  )
+  const [mappings, setMappings] = useState<MappingRow[]>(() =>
+    toRows(relationship.mappings),
+  )
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const typeOptions = linkTypeSchemas.length > 0
-    ? linkTypeSchemas.map((s) => s.linkType)
-    : [relationship.relationshipType]
+  const typeOptions =
+    linkTypeSchemas.length > 0
+      ? linkTypeSchemas.map((s) => s.linkType)
+      : [relationship.relationshipType]
 
   // ── Schema-derived property lists ──
   const sourceSchema = fromAssetType
-    ? objectTypeSchemas.find((s) => s.objectType === fromAssetType) ?? null
+    ? (objectTypeSchemas.find((s) => s.objectType === fromAssetType) ?? null)
     : null
   const targetSchema = toAssetType
-    ? objectTypeSchemas.find((s) => s.objectType === toAssetType) ?? null
+    ? (objectTypeSchemas.find((s) => s.objectType === toAssetType) ?? null)
     : null
 
   const sourceProps = useMemo(
-    () => (sourceSchema ? (sourceSchema.resolvedProperties ?? sourceSchema.ownProperties).filter(isEligibleProperty) : []),
+    () =>
+      sourceSchema
+        ? (
+            sourceSchema.resolvedProperties ?? sourceSchema.ownProperties
+          ).filter(isEligibleProperty)
+        : [],
     [sourceSchema],
   )
   const targetProps = useMemo(
-    () => (targetSchema ? (targetSchema.resolvedProperties ?? targetSchema.ownProperties).filter(isEligibleProperty) : []),
+    () =>
+      targetSchema
+        ? (
+            targetSchema.resolvedProperties ?? targetSchema.ownProperties
+          ).filter(isEligibleProperty)
+        : [],
     [targetSchema],
   )
 
@@ -76,10 +91,15 @@ export function EditRelationshipOnPanel({
 
   // ── Mapping helpers ──
   const addMapping = () =>
-    setMappings((prev) => [...prev, { fromProperty: '', toProperty: '', transformRule: 'value' }])
+    setMappings((prev) => [
+      ...prev,
+      { fromProperty: '', toProperty: '', transformRule: 'value' },
+    ])
 
   const updateMapping = (idx: number, patch: Partial<MappingRow>) =>
-    setMappings((prev) => prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)))
+    setMappings((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)),
+    )
 
   const removeMapping = (idx: number) =>
     setMappings((prev) => prev.filter((_, i) => i !== idx))
@@ -136,18 +156,32 @@ export function EditRelationshipOnPanel({
         </button>
       </div>
 
-      <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: '0.75rem' }}>
-        {fromAssetType ?? relationship.fromAssetId} → {toAssetType ?? relationship.toAssetId}
+      <p
+        style={{ fontSize: '0.78rem', color: '#888', marginBottom: '0.75rem' }}
+      >
+        {fromAssetType ?? relationship.fromAssetId} →{' '}
+        {toAssetType ?? relationship.toAssetId}
       </p>
 
       <form onSubmit={handleSave}>
         {/* Relationship type */}
-        <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.8rem',
+            marginBottom: '0.75rem',
+          }}
+        >
           관계 타입
           <select
             value={relationshipType}
             onChange={(e) => setRelationshipType(e.target.value)}
-            style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.35rem 0.5rem' }}
+            style={{
+              display: 'block',
+              width: '100%',
+              marginTop: '0.25rem',
+              padding: '0.35rem 0.5rem',
+            }}
           >
             {typeOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -163,7 +197,8 @@ export function EditRelationshipOnPanel({
 
           {sourceProps.length > 0 && targetProps.length > 0 && (
             <p className="create-rel__hint" style={{ marginBottom: '0.5rem' }}>
-              규칙 예시: <code>value</code>, <code>value * 0.2</code>, <code>value / 3</code>
+              규칙 예시: <code>value</code>, <code>value * 0.2</code>,{' '}
+              <code>value / 3</code>
             </p>
           )}
 
@@ -181,13 +216,16 @@ export function EditRelationshipOnPanel({
                   {sourceProps.length > 0 ? (
                     <select
                       value={row.fromProperty}
-                      onChange={(e) => updateMapping(idx, { fromProperty: e.target.value })}
+                      onChange={(e) =>
+                        updateMapping(idx, { fromProperty: e.target.value })
+                      }
                       aria-label="source 속성"
                     >
                       <option value="">source 속성...</option>
                       {sourceProps.map((p) => (
                         <option key={p.key} value={p.key}>
-                          {p.key}{p.unit ? ` (${p.unit})` : ''}
+                          {p.key}
+                          {p.unit ? ` (${p.unit})` : ''}
                         </option>
                       ))}
                     </select>
@@ -195,7 +233,9 @@ export function EditRelationshipOnPanel({
                     <input
                       type="text"
                       value={row.fromProperty}
-                      onChange={(e) => updateMapping(idx, { fromProperty: e.target.value })}
+                      onChange={(e) =>
+                        updateMapping(idx, { fromProperty: e.target.value })
+                      }
                       placeholder="source 속성 키"
                     />
                   )}
@@ -206,13 +246,16 @@ export function EditRelationshipOnPanel({
                   {targetProps.length > 0 ? (
                     <select
                       value={row.toProperty}
-                      onChange={(e) => updateMapping(idx, { toProperty: e.target.value })}
+                      onChange={(e) =>
+                        updateMapping(idx, { toProperty: e.target.value })
+                      }
                       aria-label="target 속성"
                     >
                       <option value="">target 속성...</option>
                       {targetProps.map((p) => (
                         <option key={p.key} value={p.key}>
-                          {p.key}{p.unit ? ` (${p.unit})` : ''}
+                          {p.key}
+                          {p.unit ? ` (${p.unit})` : ''}
                         </option>
                       ))}
                     </select>
@@ -220,13 +263,17 @@ export function EditRelationshipOnPanel({
                     <input
                       type="text"
                       value={row.toProperty}
-                      onChange={(e) => updateMapping(idx, { toProperty: e.target.value })}
+                      onChange={(e) =>
+                        updateMapping(idx, { toProperty: e.target.value })
+                      }
                       placeholder="target 속성 키"
                     />
                   )}
 
                   <div className="create-rel__mapping-row-footer">
-                    {fromUnit && <span className="create-rel__unit-badge">{fromUnit}</span>}
+                    {fromUnit && (
+                      <span className="create-rel__unit-badge">{fromUnit}</span>
+                    )}
                     {unitMismatch && (
                       <span
                         className="create-rel__unit-warn"
@@ -241,7 +288,9 @@ export function EditRelationshipOnPanel({
                     <input
                       type="text"
                       value={row.transformRule}
-                      onChange={(e) => updateMapping(idx, { transformRule: e.target.value })}
+                      onChange={(e) =>
+                        updateMapping(idx, { transformRule: e.target.value })
+                      }
                       placeholder="value * 1.0"
                       aria-label="연산 규칙"
                     />
@@ -269,12 +318,18 @@ export function EditRelationshipOnPanel({
         </div>
 
         {saveError && (
-          <p className="assets-canvas-page__error" style={{ marginTop: '0.5rem' }}>
+          <p
+            className="assets-canvas-page__error"
+            style={{ marginTop: '0.5rem' }}
+          >
             {saveError}
           </p>
         )}
 
-        <div className="assets-canvas-page__panel-actions" style={{ marginTop: '1rem' }}>
+        <div
+          className="assets-canvas-page__panel-actions"
+          style={{ marginTop: '1rem' }}
+        >
           <button type="submit" disabled={saving}>
             {saving ? '저장 중…' : '저장'}
           </button>
@@ -291,4 +346,3 @@ export function EditRelationshipOnPanel({
     </>
   )
 }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  

@@ -128,7 +128,7 @@ describe('CreateRelationshipOnPanel (edit mode)', () => {
       />,
     )
     expect(
-      screen.getByRole('heading', { name: '관계 설정' }),
+      screen.getByRole('heading', { name: '관계 편집' }),
     ).toBeInTheDocument()
     expect(screen.getByText(/이 관계의 From\/To는 고정/)).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: '관계 타입' })).toHaveValue(

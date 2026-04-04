@@ -6,6 +6,7 @@ import { getAssets } from '@/entities/asset'
 import { getObjectTypeSchemas } from '@/entities/object-type-schema'
 import { getRelationships } from '@/entities/relationship'
 import { getLinkTypeSchemas } from '@/entities/link-type-schema'
+import { CANVAS_THEME_STORAGE_KEY } from '../lib/canvasTheme'
 
 vi.mock('@/entities/asset', () => ({
   getAssets: vi.fn(),
@@ -87,6 +88,7 @@ const LINK_TYPE_SCHEMAS = [
 describe('CanvasPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(CANVAS_THEME_STORAGE_KEY)
     vi.mocked(getAssets).mockResolvedValue([
       {
         id: 'asset-1',
@@ -217,5 +219,28 @@ describe('CanvasPage', () => {
     await waitFor(() => {
       expect(screen.getByText('asset-1')).toBeInTheDocument()
     })
+  })
+
+  it('toggles data-canvas-theme when clicking theme button', async () => {
+    vi.mocked(getRelationships).mockResolvedValue([])
+
+    const { container } = render(<CanvasPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('freezer')).toBeInTheDocument()
+    })
+
+    const root = container.querySelector('.assets-canvas-page')
+    expect(root).toHaveAttribute('data-canvas-theme', 'light')
+
+    await userEvent.click(
+      screen.getByRole('button', { name: '다크 테마로 전환' }),
+    )
+    expect(root).toHaveAttribute('data-canvas-theme', 'dark')
+
+    await userEvent.click(
+      screen.getByRole('button', { name: '라이트 테마로 전환' }),
+    )
+    expect(root).toHaveAttribute('data-canvas-theme', 'light')
   })
 })

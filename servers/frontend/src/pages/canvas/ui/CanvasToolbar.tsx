@@ -1,8 +1,12 @@
+import type { CanvasTheme } from '../lib/canvasTheme'
+
 export function CanvasToolbar({
   relMode,
   objectTypePanelOpen,
   simPanelOpen,
   nodeCount,
+  canvasTheme,
+  onToggleCanvasTheme,
   onAddAsset,
   onEnterRelMode,
   onExitRelMode,
@@ -13,6 +17,8 @@ export function CanvasToolbar({
   objectTypePanelOpen: boolean
   simPanelOpen: boolean
   nodeCount: number
+  canvasTheme: CanvasTheme
+  onToggleCanvasTheme: () => void
   onAddAsset: () => void
   onEnterRelMode: () => void
   onExitRelMode: () => void
@@ -63,6 +69,23 @@ export function CanvasToolbar({
           관계 설정 — 캔버스에서 에셋을 클릭하세요
         </span>
       )}
+      <span className="assets-canvas-page__toolbar-spacer" aria-hidden />
+      <button
+        type="button"
+        onClick={onToggleCanvasTheme}
+        aria-label={
+          canvasTheme === 'light'
+            ? '다크 테마로 전환'
+            : '라이트 테마로 전환'
+        }
+        title={
+          canvasTheme === 'light'
+            ? '다크 테마로 전환'
+            : '라이트 테마로 전환'
+        }
+      >
+        {canvasTheme === 'light' ? '다크 모드' : '라이트 모드'}
+      </button>
     </div>
   )
 }
