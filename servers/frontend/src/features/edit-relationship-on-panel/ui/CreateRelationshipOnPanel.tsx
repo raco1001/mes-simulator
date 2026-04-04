@@ -1,12 +1,18 @@
 import { useMemo, useState } from 'react'
 import type { Node } from '@xyflow/react'
 import type { AssetDto } from '@/entities/asset'
-import { createRelationship, type CreateRelationshipRequest } from '@/entities/relationship'
+import { createRelationship, type CreateRelationshipRequest, type PropertyMapping } from '@/entities/relationship'
 import type { LinkTypeSchemaDto } from '@/entities/link-type-schema'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
 import { isEligibleProperty } from '@/shared/lib/canvasMetadata'
 import { CanvasSidePanel } from '@/widgets/canvas-side-panel'
 import './CreateRelationshipOnPanel.css'
+
+interface MappingRow {
+  fromProperty: string
+  toProperty: string
+  transformRule: string
+}
 
 /** Matches canvas flow node `data` shape (see pages/canvas AssetNode). */
 export type CreateRelationshipFlowNodeData = {
@@ -39,39 +45,38 @@ export function CreateRelationshipOnPanel({
   onCreated: () => void
 }) {
   const [selectedLinkType, setSelectedLinkType] = useState('')
-  const [transferKeys, setTransferKeys] = useState<string[]>([])
-  const [ratio, setRatio] = useState('1')
+  const [mappings, setMappings] = useState<MappingRow[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
+  // ── Source ──
   const sourceNode = sourceId ? nodes.find((n) => n.id === sourceId) : null
   const sourceAssetType = sourceNode?.data.asset.type ?? null
-  const linkSchema = linkTypeSchemas.find((s) => s.linkType === selectedLinkType) ?? null
-
   const sourceSchema = sourceAssetType
     ? objectTypeSchemas.find((s) => s.objectType === sourceAssetType) ?? null
     : null
-
-  const eligibleProps = useMemo(() => {
+  const sourceEligibleProps = useMemo(() => {
     if (!sourceSchema) return []
     return (sourceSchema.resolvedProperties ?? sourceSchema.ownProperties).filter(isEligibleProperty)
   }, [sourceSchema])
 
-  const sourceAsset = sourceNode?.data.asset ?? null
+  // ── Target ──
+  const targetNode = targetId ? nodes.find((n) => n.id === targetId) : null
+  const targetAssetType = targetNode?.data.asset.type ?? null
+  const targetSchema = targetAssetType
+    ? objectTypeSchemas.find((s) => s.objectType === targetAssetType) ?? null
+    : null
+  const targetEligibleProps = useMemo(() => {
+    if (!targetSchema) return []
+    return (targetSchema.resolvedProperties ?? targetSchema.ownProperties).filter(isEligibleProperty)
+  }, [targetSchema])
 
-  const metadataEligibleProps = useMemo(() => {
-    if (!sourceAsset) return []
-    const schemaKeys = new Set(eligibleProps.map((p) => p.key))
-    return Object.keys(sourceAsset.metadata ?? {})
-      .filter((key) => !schemaKeys.has(key))
-      .map((key) => ({ key }))
-  }, [sourceAsset, eligibleProps])
+  const linkSchema = linkTypeSchemas.find((s) => s.linkType === selectedLinkType) ?? null
+  const hasTransfersProperty = linkSchema?.properties.some((p) => p.key === 'transfers') ?? false
 
   const bothSelected = sourceId != null && targetId != null
   const canProceedToType = bothSelected
   const canProceedToProps = canProceedToType && selectedLinkType !== ''
-  const hasTransfersProperty = linkSchema?.properties.some((p) => p.key === 'transfers') ?? false
-
   const step = !bothSelected ? 1 : selectedLinkType === '' ? 2 : 3
 
   const assetLabel = (id: string | null) => {
@@ -80,29 +85,41 @@ export function CreateRelationshipOnPanel({
     return node ? `${node.data.asset.type} (${id.slice(0, 8)}...)` : id
   }
 
+  // ── Mapping helpers ──
+  const getUnit = (props: typeof sourceEligibleProps, key: string) =>
+    props.find((p) => p.key === key)?.unit ?? null
+
+  const addMapping = () =>
+    setMappings((prev) => [...prev, { fromProperty: '', toProperty: '', transformRule: 'value' }])
+
+  const updateMapping = (idx: number, patch: Partial<MappingRow>) =>
+    setMappings((prev) => prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)))
+
+  const removeMapping = (idx: number) =>
+    setMappings((prev) => prev.filter((_, i) => i !== idx))
+
+  // ── Submit ──
   const handleSubmit = async () => {
     if (!sourceId || !targetId || !selectedLinkType) return
     setCreateError(null)
     setSubmitting(true)
     try {
-      const properties: Record<string, unknown> = {}
-      if (hasTransfersProperty && transferKeys.length > 0) {
-        properties.transfers = transferKeys.map((key) => ({
-          key,
-          ratio: parseFloat(ratio) || 1,
+      const validMappings: PropertyMapping[] = mappings
+        .filter((m) => m.fromProperty && m.toProperty)
+        .map((m) => ({
+          fromProperty: m.fromProperty,
+          toProperty: m.toProperty,
+          transformRule: m.transformRule.trim() || 'value',
+          fromUnit: getUnit(sourceEligibleProps, m.fromProperty),
+          toUnit: getUnit(targetEligibleProps, m.toProperty),
         }))
-      }
-      if (linkSchema) {
-        const ratioSchema = linkSchema.properties.find((p) => p.key === 'ratio')
-        if (ratioSchema) {
-          properties.ratio = parseFloat(ratio) || 1
-        }
-      }
+
       const body: CreateRelationshipRequest = {
         fromAssetId: sourceId,
         toAssetId: targetId,
         relationshipType: selectedLinkType,
-        properties,
+        properties: {},
+        mappings: validMappings,
       }
       await createRelationship(body)
       onCreated()
@@ -194,101 +211,112 @@ export function CreateRelationshipOnPanel({
         <div className="create-rel__section">
           <span className="create-rel__section-title">Step 3 — 속성 설정</span>
 
-          {hasTransfersProperty && (eligibleProps.length > 0 || metadataEligibleProps.length > 0) && (
+          {hasTransfersProperty ? (
             <div className="create-rel__transfers">
-              <span className="create-rel__sub-label">전파할 속성 (transfers)</span>
-              <p className="create-rel__hint">
-                Source 에셋의 속성 중 관계를 통해 전파할 항목을 선택하세요
+              <span className="create-rel__sub-label">전파 속성 (transfers)</span>
+              <p className="create-rel__hint" style={{ marginBottom: '0.5rem' }}>
+                Source → Target 속성을 연결하고 연산 규칙을 입력하세요.{' '}
+                예: <code>value</code>, <code>value * 0.2</code>, <code>value / 3</code>
               </p>
-              {eligibleProps.length > 0 && (
-                <>
-                  <span className="create-rel__transfer-group">[스키마 속성]</span>
-                  {eligibleProps.map((p) => (
-                    <label key={p.key} className="create-rel__checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={transferKeys.includes(p.key)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setTransferKeys((k) => [...k, p.key])
-                          } else {
-                            setTransferKeys((k) => k.filter((x) => x !== p.key))
-                          }
-                        }}
-                      />
-                      <span>{p.key}</span>
-                      <span className="create-rel__prop-meta">
-                        {p.dataType} / {p.simulationBehavior}
-                        {p.baseValue != null ? ` (base: ${p.baseValue})` : ''}
-                      </span>
-                    </label>
-                  ))}
-                </>
-              )}
-              {metadataEligibleProps.length > 0 && (
-                <>
-                  <span className="create-rel__transfer-group">[에셋 메타데이터]</span>
-                  {metadataEligibleProps.map(({ key }) => {
-                    const raw = sourceAsset?.metadata?.[key]
-                    const display =
-                      typeof raw === 'string' ? raw : raw != null ? JSON.stringify(raw) : ''
-                    return (
-                      <label key={key} className="create-rel__checkbox-label">
+
+              <div className="create-rel__mapping-list">
+                {mappings.length === 0 && (
+                  <div className="create-rel__mapping-empty">
+                    매핑 없음 — 아래 버튼으로 추가하세요
+                  </div>
+                )}
+                {mappings.map((row, idx) => {
+                  const fromUnit = getUnit(sourceEligibleProps, row.fromProperty)
+                  const toUnit = getUnit(targetEligibleProps, row.toProperty)
+                  const unitMismatch = !!(fromUnit && toUnit && fromUnit !== toUnit)
+                  return (
+                    <div key={idx} className="create-rel__mapping-row">
+                      <select
+                        value={row.fromProperty}
+                        onChange={(e) => updateMapping(idx, { fromProperty: e.target.value })}
+                        aria-label="source 속성"
+                      >
+                        <option value="">source 속성...</option>
+                        {sourceEligibleProps.map((p) => (
+                          <option key={p.key} value={p.key}>
+                            {p.key}{p.unit ? ` (${p.unit})` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      <span className="create-rel__mapping-arrow">→</span>
+
+                      <select
+                        value={row.toProperty}
+                        onChange={(e) => updateMapping(idx, { toProperty: e.target.value })}
+                        aria-label="target 속성"
+                      >
+                        <option value="">target 속성...</option>
+                        {targetEligibleProps.map((p) => (
+                          <option key={p.key} value={p.key}>
+                            {p.key}{p.unit ? ` (${p.unit})` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="create-rel__mapping-row-footer">
+                        {fromUnit && <span className="create-rel__unit-badge">{fromUnit}</span>}
+                        {unitMismatch && (
+                          <span
+                            className="create-rel__unit-warn"
+                            title={`단위 불일치: ${fromUnit} ≠ ${toUnit}`}
+                          >
+                            ⚠️
+                          </span>
+                        )}
+                        {toUnit && !(unitMismatch && fromUnit === toUnit) && (
+                          <span className="create-rel__unit-badge">{toUnit}</span>
+                        )}
                         <input
-                          type="checkbox"
-                          checked={transferKeys.includes(key)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setTransferKeys((k) => [...k, key])
-                            } else {
-                              setTransferKeys((k) => k.filter((x) => x !== key))
-                            }
-                          }}
+                          type="text"
+                          value={row.transformRule}
+                          onChange={(e) => updateMapping(idx, { transformRule: e.target.value })}
+                          placeholder="value * 1.0"
+                          aria-label="연산 규칙"
                         />
-                        <span>{key}</span>
-                        <span className="create-rel__prop-meta">현재 값: {display}</span>
-                      </label>
-                    )
-                  })}
-                </>
+                        <button
+                          type="button"
+                          className="create-rel__mapping-delete"
+                          onClick={() => removeMapping(idx)}
+                          aria-label="매핑 삭제"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <button
+                type="button"
+                className="create-rel__add-mapping-btn"
+                onClick={addMapping}
+                disabled={sourceEligibleProps.length === 0 || targetEligibleProps.length === 0}
+              >
+                + 매핑 추가
+              </button>
+
+              {sourceEligibleProps.length === 0 && sourceSchema && (
+                <p className="create-rel__hint" style={{ marginTop: '0.4rem' }}>
+                  ⚠ Source({sourceAssetType})에 전파 가능한 속성이 없습니다
+                </p>
+              )}
+              {targetEligibleProps.length === 0 && targetSchema && (
+                <p className="create-rel__hint" style={{ marginTop: '0.4rem' }}>
+                  ⚠ Target({targetAssetType})에 전파 가능한 속성이 없습니다
+                </p>
               )}
             </div>
-          )}
-
-          {hasTransfersProperty &&
-            eligibleProps.length === 0 &&
-            metadataEligibleProps.length === 0 &&
-            sourceSchema && (
+          ) : (
             <p className="create-rel__hint">
-              Source 에셋({sourceAssetType})에 전파 가능한 속성이 없습니다
+              이 관계 타입({selectedLinkType})은 속성 전파를 지원하지 않습니다
             </p>
-          )}
-
-          {hasTransfersProperty &&
-            eligibleProps.length === 0 &&
-            metadataEligibleProps.length === 0 &&
-            !sourceSchema && (
-            <p className="create-rel__hint">
-              Source 에셋의 ObjectTypeSchema가 없어 속성을 자동 제공할 수 없습니다
-            </p>
-          )}
-
-          {linkSchema?.properties.some((p) => p.key === 'ratio') && (
-            <label className="create-rel__ratio-label">
-              Ratio
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
-                value={ratio}
-                onChange={(e) => setRatio(e.target.value)}
-              />
-            </label>
-          )}
-
-          {linkSchema && linkSchema.properties.length === 0 && (
-            <p className="create-rel__hint">이 관계 타입에는 추가 속성이 없습니다</p>
           )}
 
           {createError && <p className="assets-canvas-page__error">{createError}</p>}
@@ -299,10 +327,11 @@ export function CreateRelationshipOnPanel({
             disabled={submitting}
             onClick={handleSubmit}
           >
-            {submitting ? '생성 중...' : '관계 생성'}
+            {submitting ? '생성 중...' : '저장'}
           </button>
         </div>
       )}
     </CanvasSidePanel>
   )
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
