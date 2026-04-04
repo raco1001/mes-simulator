@@ -218,6 +218,11 @@
   cursor: not-allowed;
 }
 
+.create-rel__delete-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
 .create-rel__transfer-group {
   display: block;
   font-size: 0.75rem;

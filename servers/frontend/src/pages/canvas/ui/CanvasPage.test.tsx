@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AssetsCanvasPage } from './AssetsCanvasPage'
+import { CanvasPage } from './CanvasPage'
 import { getAssets } from '@/entities/asset'
 import { getObjectTypeSchemas } from '@/entities/object-type-schema'
 import { getRelationships } from '@/entities/relationship'
@@ -52,8 +52,24 @@ const LINK_TYPE_SCHEMAS = [
     fromConstraint: null,
     toConstraint: null,
     properties: [
-      { key: 'transfers', dataType: 'Array', simulationBehavior: 'Settable', mutability: 'Mutable', baseValue: [], constraints: {}, required: false },
-      { key: 'ratio', dataType: 'Number', simulationBehavior: 'Settable', mutability: 'Mutable', baseValue: 1, constraints: { min: 0, max: 1 }, required: false },
+      {
+        key: 'transfers',
+        dataType: 'Array',
+        simulationBehavior: 'Settable',
+        mutability: 'Mutable',
+        baseValue: [],
+        constraints: {},
+        required: false,
+      },
+      {
+        key: 'ratio',
+        dataType: 'Number',
+        simulationBehavior: 'Settable',
+        mutability: 'Mutable',
+        baseValue: 1,
+        constraints: { min: 0, max: 1 },
+        required: false,
+      },
     ],
   },
   {
@@ -68,7 +84,7 @@ const LINK_TYPE_SCHEMAS = [
   },
 ]
 
-describe('AssetsCanvasPage', () => {
+describe('CanvasPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getAssets).mockResolvedValue([
@@ -97,7 +113,11 @@ describe('AssetsCanvasPage', () => {
         schemaVersion: 'v1',
         objectType: 'freezer',
         displayName: 'Freezer',
-        traits: { persistence: 'Durable', dynamism: 'Dynamic', cardinality: 'Singular' },
+        traits: {
+          persistence: 'Durable',
+          dynamism: 'Dynamic',
+          cardinality: 'Singular',
+        },
         classifications: [],
         ownProperties: [],
         allowedLinks: [],
@@ -109,7 +129,7 @@ describe('AssetsCanvasPage', () => {
   it('renders canvas and loads assets and relationships', async () => {
     vi.mocked(getRelationships).mockResolvedValue([])
 
-    render(<AssetsCanvasPage />)
+    render(<CanvasPage />)
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(1)
@@ -120,14 +140,14 @@ describe('AssetsCanvasPage', () => {
     await waitFor(() => {
       expect(screen.getByText('freezer')).toBeInTheDocument()
       expect(screen.getByText('에셋 추가')).toBeInTheDocument()
-      expect(screen.getByText('관계 만들기')).toBeInTheDocument()
+      expect(screen.getByText('관계 설정')).toBeInTheDocument()
     })
   })
 
   it('shows loading then content', async () => {
     vi.mocked(getRelationships).mockResolvedValue([])
 
-    render(<AssetsCanvasPage />)
+    render(<CanvasPage />)
 
     expect(screen.getByText('Loading...')).toBeInTheDocument()
 
@@ -137,28 +157,44 @@ describe('AssetsCanvasPage', () => {
     })
   })
 
-  it('enters rel mode when clicking 관계 만들기', async () => {
+  it('enters rel mode when clicking 관계 설정', async () => {
     vi.mocked(getAssets).mockResolvedValue([
-      { id: 'a1', type: 'pump', connections: [], metadata: {}, createdAt: '', updatedAt: '' },
-      { id: 'a2', type: 'tank', connections: [], metadata: {}, createdAt: '', updatedAt: '' },
+      {
+        id: 'a1',
+        type: 'pump',
+        connections: [],
+        metadata: {},
+        createdAt: '',
+        updatedAt: '',
+      },
+      {
+        id: 'a2',
+        type: 'tank',
+        connections: [],
+        metadata: {},
+        createdAt: '',
+        updatedAt: '',
+      },
     ])
     vi.mocked(getRelationships).mockResolvedValue([])
 
-    render(<AssetsCanvasPage />)
+    render(<CanvasPage />)
 
     await waitFor(() => expect(screen.getByText('pump')).toBeInTheDocument())
 
-    await userEvent.click(screen.getByText('관계 만들기'))
+    await userEvent.click(screen.getByText('관계 설정'))
 
-    expect(screen.getByText('관계 만들기 취소')).toBeInTheDocument()
-    expect(screen.getByText(/관계 편집 모드/)).toBeInTheDocument()
-    expect(screen.getByText('관계 만들기', { selector: 'h3' })).toBeInTheDocument()
+    expect(screen.getByText('관계 설정 취소')).toBeInTheDocument()
+    expect(screen.getByText(/관계 설정 — 캔버스에서/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '관계 설정' }),
+    ).toBeInTheDocument()
   })
 
   it('shows system info when toggle is clicked in asset side panel', async () => {
     vi.mocked(getRelationships).mockResolvedValue([])
 
-    render(<AssetsCanvasPage />)
+    render(<CanvasPage />)
 
     await waitFor(() => {
       expect(screen.getByText('freezer')).toBeInTheDocument()
@@ -169,7 +205,9 @@ describe('AssetsCanvasPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('에셋 편집')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '시스템 정보' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: '시스템 정보' }),
+      ).toBeInTheDocument()
     })
 
     expect(screen.queryByText('asset-1')).not.toBeInTheDocument()

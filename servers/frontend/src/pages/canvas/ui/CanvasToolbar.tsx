@@ -30,7 +30,7 @@ export function CanvasToolbar({
           className="assets-canvas-page__toolbar-cancel"
           onClick={onExitRelMode}
         >
-          관계 만들기 취소
+          관계 설정 취소
         </button>
       ) : (
         <button
@@ -39,7 +39,7 @@ export function CanvasToolbar({
           disabled={nodeCount < 2 || objectTypePanelOpen}
           title="캔버스에서 에셋을 클릭하여 관계를 만들 수 있습니다"
         >
-          관계 만들기
+          관계 설정
         </button>
       )}
       <button
@@ -60,7 +60,7 @@ export function CanvasToolbar({
       </button>
       {relMode && (
         <span className="assets-canvas-page__rel-indicator">
-          관계 편집 모드 — 캔버스에서 에셋을 클릭하세요
+          관계 설정 — 캔버스에서 에셋을 클릭하세요
         </span>
       )}
     </div>

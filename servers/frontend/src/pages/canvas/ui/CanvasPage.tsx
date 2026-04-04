@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from 'react'
 import {
   ReactFlow,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -14,33 +19,45 @@ import {
   deleteAsset,
   type AssetDto,
 } from '@/entities/asset'
-import { getObjectTypeSchemas, type ObjectTypeSchemaDto } from '@/entities/object-type-schema'
-import { getLinkTypeSchemas, type LinkTypeSchemaDto } from '@/entities/link-type-schema'
+import {
+  getObjectTypeSchemas,
+  type ObjectTypeSchemaDto,
+} from '@/entities/object-type-schema'
+import {
+  getLinkTypeSchemas,
+  type LinkTypeSchemaDto,
+} from '@/entities/link-type-schema'
 import { getRelationships } from '@/entities/relationship'
 import { EDGE_TYPE, GRID_X, GRID_Y, NODE_TYPE } from '../lib/canvasConstants'
 import type { AssetNodeData } from './AssetNode'
 import { AssetNode } from './AssetNode'
-import { RelationshipEdgeComponent, type RelationshipEdge } from './RelationshipEdge'
+import {
+  RelationshipEdgeComponent,
+  type RelationshipEdge,
+} from './RelationshipEdge'
 import { CanvasSidePanel } from '@/widgets/canvas-side-panel'
 import { EditAssetOnPanel } from '@/features/edit-asset-on-panel'
-import {
-  CreateRelationshipOnPanel,
-  EditRelationshipOnPanel,
-} from '@/features/edit-relationship-on-panel'
+import { CreateRelationshipOnPanel } from '@/features/edit-relationship-on-panel'
 import { EditTypeOnPanel } from '@/features/edit-type-on-panel'
 import { RunSimulationOnPanel } from '@/features/run-simulation-on-panel'
 import { CanvasToolbar } from './CanvasToolbar'
 import { CanvasOnboarding } from './CanvasOnboarding'
 import { AddAssetModal } from './AddAssetModal'
-import './AssetsCanvasPage.css'
+import './CanvasPage.css'
 
-export function AssetsCanvasPage() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<AssetNodeData>>([])
+export function CanvasPage() {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<AssetNodeData>>(
+    [],
+  )
   const [edges, setEdges, onEdgesChange] = useEdgesState<RelationshipEdge>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [objectTypeSchemas, setObjectTypeSchemas] = useState<ObjectTypeSchemaDto[]>([])
-  const [linkTypeSchemas, setLinkTypeSchemas] = useState<LinkTypeSchemaDto[]>([])
+  const [objectTypeSchemas, setObjectTypeSchemas] = useState<
+    ObjectTypeSchemaDto[]
+  >([])
+  const [linkTypeSchemas, setLinkTypeSchemas] = useState<LinkTypeSchemaDto[]>(
+    [],
+  )
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [addFormOpen, setAddFormOpen] = useState(false)
@@ -145,7 +162,8 @@ export function AssetsCanvasPage() {
     return nodes.map((n) => {
       let className = ''
       if (relMode && n.id === relSourceId) className = 'rel-source-highlight'
-      else if (relMode && n.id === relTargetId) className = 'rel-target-highlight'
+      else if (relMode && n.id === relTargetId)
+        className = 'rel-target-highlight'
       return className !== (n.className ?? '') ? { ...n, className } : n
     })
   }, [nodes, relMode, relSourceId, relTargetId])
@@ -194,25 +212,36 @@ export function AssetsCanvasPage() {
     }
   }, [])
 
-  const showCreatePanel = relMode && !objectTypePanelOpen
-  const showAssetPanel =
-    !relMode && !simPanelOpen && !objectTypePanelOpen && selectedNode != null
-  const showRelEditPanel =
+  const editingRelationship =
     !relMode &&
     !simPanelOpen &&
     !objectTypePanelOpen &&
-    selectedRelationship != null &&
-    selectedEdge != null
+    selectedRelationship != null
+      ? selectedRelationship
+      : null
+
+  const showRelationshipPanel =
+    !simPanelOpen &&
+    !objectTypePanelOpen &&
+    (relMode || editingRelationship != null)
+
+  const showAssetPanel =
+    !relMode && !simPanelOpen && !objectTypePanelOpen && selectedNode != null
   const showSimPanel = simPanelOpen && !relMode && !objectTypePanelOpen
   const showObjectTypePanel = objectTypePanelOpen && !relMode
 
-  const assets: AssetDto[] = useMemo(() => nodes.map((n) => n.data.asset), [nodes])
+  const assets: AssetDto[] = useMemo(
+    () => nodes.map((n) => n.data.asset),
+    [nodes],
+  )
 
   if (loading) return <div className="assets-canvas-page">Loading...</div>
   if (error) return <div className="assets-canvas-page">Error: {error}</div>
 
   return (
-    <div className={`assets-canvas-page ${relMode ? 'assets-canvas-page--rel-mode' : ''}`}>
+    <div
+      className={`assets-canvas-page ${relMode ? 'assets-canvas-page--rel-mode' : ''}`}
+    >
       <CanvasToolbar
         relMode={relMode}
         objectTypePanelOpen={objectTypePanelOpen}
@@ -230,6 +259,7 @@ export function AssetsCanvasPage() {
           <CanvasOnboarding onAddFirstAsset={() => setAddFormOpen(true)} />
         )}
         <ReactFlow
+          proOptions={{ hideAttribution: true }}
           nodes={highlightedNodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -242,7 +272,6 @@ export function AssetsCanvasPage() {
           fitView
           fitViewOptions={{ padding: 0.2 }}
         >
-          <Controls />
           <Background />
         </ReactFlow>
 
@@ -268,7 +297,11 @@ export function AssetsCanvasPage() {
                       ? {
                           ...n,
                           data: {
-                            asset: { ...asset, type: type || asset.type, metadata },
+                            asset: {
+                              ...asset,
+                              type: type || asset.type,
+                              metadata,
+                            },
                           },
                         }
                       : n,
@@ -289,32 +322,22 @@ export function AssetsCanvasPage() {
           </CanvasSidePanel>
         )}
 
-        {showRelEditPanel && selectedRelationship && (
-          <CanvasSidePanel>
-            <EditRelationshipOnPanel
-              relationship={selectedRelationship}
-              linkTypeSchemas={linkTypeSchemas}
-              onClose={() => setSelectedEdgeId(null)}
-              onSaved={(updated) => {
-                setEdges((eds) =>
-                  eds.map((e) =>
-                    e.id === updated.id ? { ...e, data: { relationship: updated } } : e,
-                  ),
-                )
-                setSelectedEdgeId(null)
-              }}
-              onDeleted={(id) => {
-                setEdges((eds) => eds.filter((e) => e.id !== id))
-                setSelectedEdgeId(null)
-              }}
-            />
-          </CanvasSidePanel>
-        )}
-
-        {showCreatePanel && (
+        {showRelationshipPanel && (
           <CreateRelationshipOnPanel
-            sourceId={relSourceId}
-            targetId={relTargetId}
+            key={
+              editingRelationship
+                ? `edit-${editingRelationship.id}`
+                : 'create-rel'
+            }
+            editingRelationship={editingRelationship}
+            sourceId={
+              editingRelationship
+                ? editingRelationship.fromAssetId
+                : relSourceId
+            }
+            targetId={
+              editingRelationship ? editingRelationship.toAssetId : relTargetId
+            }
             nodes={nodes}
             linkTypeSchemas={linkTypeSchemas}
             objectTypeSchemas={objectTypeSchemas}
@@ -324,10 +347,27 @@ export function AssetsCanvasPage() {
               setRelSourceId(relTargetId)
               setRelTargetId(relSourceId)
             }}
-            onClose={exitRelMode}
+            onClose={() => {
+              if (editingRelationship) setSelectedEdgeId(null)
+              else exitRelMode()
+            }}
             onCreated={() => {
               exitRelMode()
               loadData()
+            }}
+            onSaved={(updated) => {
+              setEdges((eds) =>
+                eds.map((e) =>
+                  e.id === updated.id
+                    ? { ...e, data: { relationship: updated } }
+                    : e,
+                ),
+              )
+              setSelectedEdgeId(null)
+            }}
+            onDeleted={(id) => {
+              setEdges((eds) => eds.filter((e) => e.id !== id))
+              setSelectedEdgeId(null)
             }}
           />
         )}

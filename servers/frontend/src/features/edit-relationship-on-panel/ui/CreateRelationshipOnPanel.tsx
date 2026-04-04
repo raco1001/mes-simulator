@@ -1,7 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Node } from '@xyflow/react'
 import type { AssetDto } from '@/entities/asset'
-import { createRelationship, type CreateRelationshipRequest } from '@/entities/relationship'
+import {
+  createRelationship,
+  deleteRelationship,
+  updateRelationship,
+  type CreateRelationshipRequest,
+  type RelationshipDto,
+} from '@/entities/relationship'
 import type { LinkTypeSchemaDto } from '@/entities/link-type-schema'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
 import { isEligibleProperty } from '@/shared/lib/canvasMetadata'
@@ -15,7 +21,32 @@ export type CreateRelationshipFlowNodeData = {
   liveProperties?: Record<string, unknown>
 }
 
+function parseTransfersFromProperties(
+  properties: Record<string, unknown> | undefined,
+): { keys: string[]; ratioFromTransfers: string } {
+  const raw = properties?.transfers
+  if (!Array.isArray(raw)) return { keys: [], ratioFromTransfers: '1' }
+  const keys: string[] = []
+  let ratioFromTransfers = '1'
+  for (const item of raw) {
+    if (
+      item &&
+      typeof item === 'object' &&
+      'key' in item &&
+      typeof (item as { key: unknown }).key === 'string'
+    ) {
+      keys.push((item as { key: string }).key)
+      const r = (item as { ratio?: unknown }).ratio
+      if (typeof r === 'number' && Number.isFinite(r)) {
+        ratioFromTransfers = String(r)
+      }
+    }
+  }
+  return { keys, ratioFromTransfers }
+}
+
 export function CreateRelationshipOnPanel({
+  editingRelationship = null,
   sourceId,
   targetId,
   nodes,
@@ -26,7 +57,10 @@ export function CreateRelationshipOnPanel({
   onSwap,
   onClose,
   onCreated,
+  onSaved,
+  onDeleted,
 }: {
+  editingRelationship?: RelationshipDto | null
   sourceId: string | null
   targetId: string | null
   nodes: Node<CreateRelationshipFlowNodeData>[]
@@ -36,13 +70,44 @@ export function CreateRelationshipOnPanel({
   onSetTarget: (id: string | null) => void
   onSwap: () => void
   onClose: () => void
-  onCreated: () => void
+  /** Called after a new relationship is created (create mode only). */
+  onCreated?: () => void
+  /** Called after update (edit mode only). */
+  onSaved?: (updated: RelationshipDto) => void
+  /** Called after delete (edit mode only). */
+  onDeleted?: (id: string) => void
 }) {
+  const isEdit = editingRelationship != null
+  const lockAssets = isEdit
+
   const [selectedLinkType, setSelectedLinkType] = useState('')
   const [transferKeys, setTransferKeys] = useState<string[]>([])
   const [ratio, setRatio] = useState('1')
   const [submitting, setSubmitting] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!editingRelationship) {
+      setSelectedLinkType('')
+      setTransferKeys([])
+      setRatio('1')
+      setSubmitError(null)
+      return
+    }
+    setSelectedLinkType(editingRelationship.relationshipType)
+    const { keys, ratioFromTransfers } = parseTransfersFromProperties(
+      editingRelationship.properties,
+    )
+    setTransferKeys(keys)
+    const linkRatio = editingRelationship.properties?.ratio
+    if (typeof linkRatio === 'number' && Number.isFinite(linkRatio)) {
+      setRatio(String(linkRatio))
+    } else {
+      setRatio(ratioFromTransfers)
+    }
+    setSubmitError(null)
+  }, [editingRelationship])
 
   const sourceNode = sourceId ? nodes.find((n) => n.id === sourceId) : null
   const sourceAssetType = sourceNode?.data.asset.type ?? null
@@ -71,6 +136,7 @@ export function CreateRelationshipOnPanel({
   const canProceedToType = bothSelected
   const canProceedToProps = canProceedToType && selectedLinkType !== ''
   const hasTransfersProperty = linkSchema?.properties.some((p) => p.key === 'transfers') ?? false
+  const hasRatioProperty = linkSchema?.properties.some((p) => p.key === 'ratio') ?? false
 
   const step = !bothSelected ? 1 : selectedLinkType === '' ? 2 : 3
 
@@ -80,43 +146,76 @@ export function CreateRelationshipOnPanel({
     return node ? `${node.data.asset.type} (${id.slice(0, 8)}...)` : id
   }
 
+  const buildPropertiesPayload = (): Record<string, unknown> => {
+    const properties: Record<string, unknown> = {}
+    if (isEdit && editingRelationship?.properties) {
+      for (const [k, v] of Object.entries(editingRelationship.properties)) {
+        if (k === 'transfers' || k === 'ratio') continue
+        properties[k] = v
+      }
+    }
+    if (hasTransfersProperty) {
+      const r = parseFloat(ratio) || 1
+      if (transferKeys.length > 0) {
+        properties.transfers = transferKeys.map((key) => ({ key, ratio: r }))
+      } else if (isEdit) {
+        properties.transfers = []
+      }
+    }
+    if (hasRatioProperty) {
+      properties.ratio = parseFloat(ratio) || 1
+    }
+    return properties
+  }
+
   const handleSubmit = async () => {
     if (!sourceId || !targetId || !selectedLinkType) return
-    setCreateError(null)
+    setSubmitError(null)
     setSubmitting(true)
     try {
-      const properties: Record<string, unknown> = {}
-      if (hasTransfersProperty && transferKeys.length > 0) {
-        properties.transfers = transferKeys.map((key) => ({
-          key,
-          ratio: parseFloat(ratio) || 1,
-        }))
-      }
-      if (linkSchema) {
-        const ratioSchema = linkSchema.properties.find((p) => p.key === 'ratio')
-        if (ratioSchema) {
-          properties.ratio = parseFloat(ratio) || 1
+      const properties = buildPropertiesPayload()
+      if (isEdit && editingRelationship) {
+        const updated = await updateRelationship(editingRelationship.id, {
+          relationshipType: selectedLinkType,
+          properties,
+        })
+        onSaved?.(updated)
+      } else {
+        const body: CreateRelationshipRequest = {
+          fromAssetId: sourceId,
+          toAssetId: targetId,
+          relationshipType: selectedLinkType,
+          properties,
         }
+        await createRelationship(body)
+        onCreated?.()
       }
-      const body: CreateRelationshipRequest = {
-        fromAssetId: sourceId,
-        toAssetId: targetId,
-        relationshipType: selectedLinkType,
-        properties,
-      }
-      await createRelationship(body)
-      onCreated()
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : '생성 실패')
+      setSubmitError(err instanceof Error ? err.message : isEdit ? '저장 실패' : '생성 실패')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!editingRelationship || !onDeleted) return
+    if (!confirm('이 관계를 삭제할까요?')) return
+    setSubmitError(null)
+    setDeleting(true)
+    try {
+      await deleteRelationship(editingRelationship.id)
+      onDeleted(editingRelationship.id)
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : '삭제 실패')
+    } finally {
+      setDeleting(false)
     }
   }
 
   return (
     <CanvasSidePanel className="assets-canvas-page__create-rel-panel">
       <div className="assets-canvas-page__side-panel-header">
-        <h3>관계 만들기</h3>
+        <h3>관계 설정</h3>
         <button type="button" onClick={onClose} aria-label="닫기">
           ×
         </button>
@@ -136,7 +235,7 @@ export function CreateRelationshipOnPanel({
           <label>Source (From)</label>
           <div className={`create-rel__asset-chip ${sourceId ? 'filled' : ''}`}>
             {assetLabel(sourceId)}
-            {sourceId && (
+            {sourceId && !lockAssets && (
               <button type="button" onClick={() => onSetSource(null)} aria-label="source 해제">
                 ×
               </button>
@@ -147,19 +246,22 @@ export function CreateRelationshipOnPanel({
           <label>Target (To)</label>
           <div className={`create-rel__asset-chip ${targetId ? 'filled' : ''}`}>
             {assetLabel(targetId)}
-            {targetId && (
+            {targetId && !lockAssets && (
               <button type="button" onClick={() => onSetTarget(null)} aria-label="target 해제">
                 ×
               </button>
             )}
           </div>
         </div>
-        {bothSelected && (
+        {bothSelected && !lockAssets && (
           <button type="button" className="create-rel__swap-btn" onClick={onSwap}>
             ⇄ 방향 전환
           </button>
         )}
-        {!bothSelected && (
+        {lockAssets && (
+          <p className="create-rel__hint">이 관계의 From/To는 고정되어 있습니다.</p>
+        )}
+        {!bothSelected && !lockAssets && (
           <p className="create-rel__hint">캔버스에서 에셋을 클릭하여 선택하세요</p>
         )}
       </div>
@@ -273,7 +375,7 @@ export function CreateRelationshipOnPanel({
             </p>
           )}
 
-          {linkSchema?.properties.some((p) => p.key === 'ratio') && (
+          {hasRatioProperty && (
             <label className="create-rel__ratio-label">
               Ratio
               <input
@@ -291,16 +393,33 @@ export function CreateRelationshipOnPanel({
             <p className="create-rel__hint">이 관계 타입에는 추가 속성이 없습니다</p>
           )}
 
-          {createError && <p className="assets-canvas-page__error">{createError}</p>}
+          {submitError && <p className="assets-canvas-page__error">{submitError}</p>}
 
           <button
             type="button"
             className="create-rel__submit-btn"
             disabled={submitting}
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
           >
-            {submitting ? '생성 중...' : '관계 생성'}
+            {submitting
+              ? isEdit
+                ? '저장 중...'
+                : '생성 중...'
+              : isEdit
+                ? '저장'
+                : '관계 생성'}
           </button>
+
+          {isEdit && onDeleted && (
+            <button
+              type="button"
+              className="assets-canvas-page__delete-btn create-rel__delete-btn"
+              disabled={deleting}
+              onClick={() => void handleDelete()}
+            >
+              {deleting ? '삭제 중…' : '삭제'}
+            </button>
+          )}
         </div>
       )}
     </CanvasSidePanel>
