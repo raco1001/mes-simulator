@@ -37,4 +37,4 @@ export interface UpdateRelationshipRequest {
   relationshipType?: string
   properties?: Record<string, unknown>
   mappings?: PropertyMapping[] | null
-}
+} 

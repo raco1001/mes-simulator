@@ -1,1 +1,1 @@
-export { AssetsCanvasPage } from './ui/AssetsCanvasPage'
+export { CanvasPage } from './ui/CanvasPage'
