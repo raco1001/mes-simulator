@@ -9,6 +9,14 @@ internal readonly record struct TransferSpec(string Key, double Ratio, string Ta
 
 internal static class TransferSpecParser
 {
+    /// <summary>
+    /// Source properties for Supplies propagation: incoming patch wins, else from-asset state.
+    /// </summary>
+    public static Dictionary<string, object?> ResolveSourceProperties(StatePatchDto incoming, StateDto? fromState) =>
+        incoming.Properties.Count > 0
+            ? new Dictionary<string, object?>(incoming.Properties)
+            : new Dictionary<string, object?>(fromState?.Properties ?? new Dictionary<string, object?>());
+
     public static IReadOnlyList<TransferSpec> Parse(IReadOnlyDictionary<string, object> relationshipProperties)
     {
         if (!relationshipProperties.TryGetValue("transfers", out var raw) || raw is null)
@@ -29,15 +37,9 @@ internal static class TransferSpecParser
         StateDto? fromState)
     {
         if (specs.Count == 0)
-        {
-            return incoming.Properties.Count > 0
-                ? new Dictionary<string, object?>(incoming.Properties)
-                : new Dictionary<string, object?>(fromState?.Properties ?? new Dictionary<string, object?>());
-        }
+            return ResolveSourceProperties(incoming, fromState);
 
-        var source = incoming.Properties.Count > 0
-            ? new Dictionary<string, object?>(incoming.Properties)
-            : new Dictionary<string, object?>(fromState?.Properties ?? new Dictionary<string, object?>());
+        var source = ResolveSourceProperties(incoming, fromState);
         var result = new Dictionary<string, object?>();
 
         foreach (var spec in specs)
@@ -45,7 +47,7 @@ internal static class TransferSpecParser
             if (!source.TryGetValue(spec.Key, out var value) || value is null)
                 continue;
 
-            if (TryToDouble(value, out var number))
+            if (TryCoerceDouble(value, out var number))
                 result[spec.TargetKey] = number * spec.Ratio;
             else
                 result[spec.TargetKey] = value;
@@ -85,14 +87,14 @@ internal static class TransferSpecParser
             var key = keyObj?.ToString();
             if (string.IsNullOrWhiteSpace(key))
                 continue;
-            var ratio = dict.TryGetValue("ratio", out var ratioObj) && TryToDouble(ratioObj, out var r) ? r : 1d;
+            var ratio = dict.TryGetValue("ratio", out var ratioObj) && TryCoerceDouble(ratioObj, out var r) ? r : 1d;
             var target = dict.TryGetValue("as", out var asObj) ? asObj?.ToString() : null;
             specs.Add(new TransferSpec(key!, ratio, string.IsNullOrWhiteSpace(target) ? key! : target!));
         }
         return specs;
     }
 
-    private static bool TryToDouble(object? value, out double number)
+    internal static bool TryCoerceDouble(object? value, out double number)
     {
         if (value is null)
         {

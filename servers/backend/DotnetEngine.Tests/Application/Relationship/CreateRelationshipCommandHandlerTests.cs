@@ -67,6 +67,38 @@ public class CreateRelationshipCommandHandlerTests
     }
 
     [Fact]
+    public async Task CreateAsync_PassesMappingsToSavedDto()
+    {
+        RelationshipDto? captured = null;
+        var relRepo = new Mock<IRelationshipRepository>();
+        relRepo.Setup(r => r.AddAsync(It.IsAny<RelationshipDto>(), It.IsAny<CancellationToken>()))
+            .Callback<RelationshipDto, CancellationToken>((dto, _) => captured = dto)
+            .ReturnsAsync((RelationshipDto dto, CancellationToken _) => dto);
+
+        var sut = new CreateRelationshipCommandHandler(relRepo.Object);
+
+        var mappings = new[]
+        {
+            new PropertyMapping("temperature", "heat", "value * 1.5")
+        };
+        var result = await sut.CreateAsync(new CreateRelationshipRequest
+        {
+            FromAssetId = "a1",
+            ToAssetId = "a2",
+            RelationshipType = "Supplies",
+            Mappings = mappings
+        });
+
+        Assert.NotNull(captured);
+        Assert.Single(captured!.Mappings);
+        Assert.Equal("temperature", captured.Mappings[0].FromProperty);
+        Assert.Equal("heat", captured.Mappings[0].ToProperty);
+        Assert.Equal("value * 1.5", captured.Mappings[0].TransformRule);
+        Assert.Single(result.Mappings);
+        Assert.Equal("temperature", result.Mappings[0].FromProperty);
+    }
+
+    [Fact]
     public async Task CreateAsync_WhenConstraintMismatched_LogsWarningOnly()
     {
         var relRepo = new Mock<IRelationshipRepository>();

@@ -891,6 +891,36 @@
           }
         }
       },
+      "PropertyMapping": {
+        "type": "object",
+        "required": [
+          "fromProperty",
+          "toProperty"
+        ],
+        "properties": {
+          "fromProperty": {
+            "type": "string",
+            "description": "source asset property key"
+          },
+          "toProperty": {
+            "type": "string",
+            "description": "target asset property key"
+          },
+          "transformRule": {
+            "type": "string",
+            "description": "Transform expression. Supported: 'value', 'value * N', 'value / N', 'value + N', 'value - N'",
+            "default": "value"
+          },
+          "fromUnit": {
+            "type": "string",
+            "nullable": true
+          },
+          "toUnit": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "RelationshipDto": {
         "type": "object",
         "required": [
@@ -918,6 +948,14 @@
           "properties": {
             "type": "object",
             "additionalProperties": true
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PropertyMapping"
+            },
+            "default": [],
+            "description": "Property mappings for Supplies propagation. When empty, legacy properties.transfers TransferSpec is used."
           },
           "createdAt": {
             "type": "string",
@@ -991,6 +1029,14 @@
           "properties": {
             "type": "object",
             "additionalProperties": true
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PropertyMapping"
+            },
+            "default": [],
+            "description": "Optional property mappings; empty uses transfers-only behavior."
           }
         }
       },
@@ -1013,6 +1059,14 @@
             "type": "object",
             "additionalProperties": true,
             "nullable": true
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PropertyMapping"
+            },
+            "nullable": true,
+            "description": "When omitted, existing mappings are unchanged."
           }
         }
       },

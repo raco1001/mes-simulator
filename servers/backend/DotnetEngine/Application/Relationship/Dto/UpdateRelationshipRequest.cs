@@ -9,4 +9,5 @@ public sealed record UpdateRelationshipRequest
     public string? ToAssetId { get; init; }
     public string? RelationshipType { get; init; }
     public IReadOnlyDictionary<string, object>? Properties { get; init; }
+    public IReadOnlyList<PropertyMapping>? Mappings { get; init; }
 }

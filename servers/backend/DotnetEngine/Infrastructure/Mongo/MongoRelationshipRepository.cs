@@ -69,9 +69,28 @@ public sealed class MongoRelationshipRepository : IRelationshipRepository
             ToAssetId = doc.ToAssetId,
             RelationshipType = doc.RelationshipType,
             Properties = MetadataBsonConverter.ToDictionary(doc.Properties),
+            Mappings = ToMappingDtos(doc.Mappings),
             CreatedAt = ToDateTimeOffset(doc.CreatedAt),
             UpdatedAt = ToDateTimeOffset(doc.UpdatedAt)
         };
+    }
+
+    private static IReadOnlyList<PropertyMapping> ToMappingDtos(List<MongoPropertyMapping>? list)
+    {
+        if (list is null || list.Count == 0)
+            return Array.Empty<PropertyMapping>();
+        var result = new PropertyMapping[list.Count];
+        for (var i = 0; i < list.Count; i++)
+        {
+            var m = list[i];
+            result[i] = new PropertyMapping(
+                m.FromProperty,
+                m.ToProperty,
+                string.IsNullOrWhiteSpace(m.TransformRule) ? "value" : m.TransformRule,
+                m.FromUnit,
+                m.ToUnit);
+        }
+        return result;
     }
 
     private static MongoRelationshipDocument ToDocument(RelationshipDto dto)
@@ -83,9 +102,24 @@ public sealed class MongoRelationshipRepository : IRelationshipRepository
             ToAssetId = dto.ToAssetId,
             RelationshipType = dto.RelationshipType,
             Properties = MetadataBsonConverter.ToBsonDocument(dto.Properties),
+            Mappings = ToMongoMappings(dto.Mappings),
             CreatedAt = dto.CreatedAt.UtcDateTime,
             UpdatedAt = dto.UpdatedAt.UtcDateTime
         };
+    }
+
+    private static List<MongoPropertyMapping>? ToMongoMappings(IReadOnlyList<PropertyMapping> mappings)
+    {
+        if (mappings.Count == 0)
+            return null;
+        return mappings.Select(m => new MongoPropertyMapping
+        {
+            FromProperty = m.FromProperty,
+            ToProperty = m.ToProperty,
+            TransformRule = string.IsNullOrWhiteSpace(m.TransformRule) ? "value" : m.TransformRule,
+            FromUnit = m.FromUnit,
+            ToUnit = m.ToUnit
+        }).ToList();
     }
 
     private static DateTimeOffset ToDateTimeOffset(DateTime dt)

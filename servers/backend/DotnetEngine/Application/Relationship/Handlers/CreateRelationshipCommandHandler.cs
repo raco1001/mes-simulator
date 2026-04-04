@@ -53,6 +53,7 @@ public sealed class CreateRelationshipCommandHandler : ICreateRelationshipComman
             ToAssetId = request.ToAssetId,
             RelationshipType = request.RelationshipType,
             Properties = seededProperties,
+            Mappings = request.Mappings,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };

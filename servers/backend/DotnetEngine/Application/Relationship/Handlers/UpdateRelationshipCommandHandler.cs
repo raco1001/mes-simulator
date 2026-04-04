@@ -31,6 +31,7 @@ public sealed class UpdateRelationshipCommandHandler : IUpdateRelationshipComman
             ToAssetId = request.ToAssetId ?? existing.ToAssetId,
             RelationshipType = request.RelationshipType ?? existing.RelationshipType,
             Properties = request.Properties ?? existing.Properties,
+            Mappings = request.Mappings ?? existing.Mappings,
             CreatedAt = existing.CreatedAt,
             UpdatedAt = DateTimeOffset.UtcNow
         };

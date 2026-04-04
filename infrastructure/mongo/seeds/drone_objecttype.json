@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "v1",
+  "objectType": "Drone",
+  "displayName": "Drone",
+  "traits": {
+    "persistence": "Transient",
+    "dynamism": "Dynamic",
+    "cardinality": "Enumerable"
+  },
+  "classifications": [],
+  "ownProperties": [
+    {
+      "key": "battery_level",
+      "dataType": "Number",
+      "unit": "%",
+      "simulationBehavior": "Derived",
+      "mutability": "Mutable",
+      "baseValue": 100,
+      "constraints": { "min": 0, "max": 100 },
+      "alertThresholds": [
+        { "level": "warning", "condition": "lt", "value": 20 },
+        { "level": "error", "condition": "lt", "value": 10 }
+      ],
+      "derivedRule": {
+        "type": "linear",
+        "timeUnit": "hour",
+        "inputs": [{ "property": "power_draw", "coefficient": -1.0 }]
+      },
+      "required": true
+    },
+    {
+      "key": "power_draw",
+      "dataType": "Number",
+      "unit": "kW",
+      "simulationBehavior": "Settable",
+      "mutability": "Mutable",
+      "baseValue": 0.5,
+      "constraints": { "min": 0.0, "max": 5.0 },
+      "required": true
+    },
+    {
+      "key": "altitude",
+      "dataType": "Number",
+      "unit": "m",
+      "simulationBehavior": "Rate",
+      "mutability": "Mutable",
+      "baseValue": 0,
+      "constraints": { "min": 0, "max": 400 },
+      "required": false
+    },
+    {
+      "key": "flight_status",
+      "dataType": "String",
+      "simulationBehavior": "Settable",
+      "mutability": "Mutable",
+      "baseValue": "grounded",
+      "constraints": {
+        "enum": ["grounded", "takeoff", "flying", "landing", "charging"]
+      },
+      "required": true
+    }
+  ],
+  "allowedLinks": [
+    { "linkType": "Monitors", "direction": "outbound" },
+    { "linkType": "OperatedBy", "direction": "outbound" }
+  ]
+}

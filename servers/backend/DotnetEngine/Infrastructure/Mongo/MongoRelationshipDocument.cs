@@ -3,6 +3,24 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace DotnetEngine.Infrastructure.Mongo;
 
+public sealed class MongoPropertyMapping
+{
+    [BsonElement("fromProperty")]
+    public string FromProperty { get; set; } = string.Empty;
+
+    [BsonElement("toProperty")]
+    public string ToProperty { get; set; } = string.Empty;
+
+    [BsonElement("transformRule")]
+    public string TransformRule { get; set; } = "value";
+
+    [BsonElement("fromUnit")]
+    public string? FromUnit { get; set; }
+
+    [BsonElement("toUnit")]
+    public string? ToUnit { get; set; }
+}
+
 public sealed class MongoRelationshipDocument
 {
     [BsonId]
@@ -19,6 +37,9 @@ public sealed class MongoRelationshipDocument
 
     [BsonElement("properties")]
     public BsonDocument Properties { get; set; } = new BsonDocument();
+
+    [BsonElement("mappings")]
+    public List<MongoPropertyMapping>? Mappings { get; set; }
 
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }

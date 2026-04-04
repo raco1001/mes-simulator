@@ -1,6 +1,6 @@
 """MongoDB asset repository. Writes state with camelCase keys per MongoDB convention."""
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -47,6 +47,15 @@ class AssetRepository:
             client = self._get_client()
             self._db = client[self.settings.mongodb_database]
         return self._db
+
+    def get_asset(self, asset_id: str) -> dict[str, Any] | None:
+        """Return raw asset document from assets collection, or None."""
+        db = self._get_database()
+        assets: Collection = db["assets"]
+        doc = assets.find_one({"_id": asset_id})
+        if doc is None:
+            return None
+        return cast(dict[str, Any], doc)
 
     def save_asset(
         self,

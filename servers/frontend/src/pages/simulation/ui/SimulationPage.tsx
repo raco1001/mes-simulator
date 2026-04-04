@@ -6,6 +6,7 @@ import {
   startContinuousRun,
   stopRun,
   getRunEvents,
+  subscribeSimulationEvents,
   type EventDto,
 } from '@/entities/simulation'
 import './SimulationPage.css'
@@ -28,6 +29,8 @@ export function SimulationPage() {
   const [runEventsLoading, setRunEventsLoading] = useState(false)
   const [runEventsError, setRunEventsError] = useState<string | null>(null)
 
+  const [liveStates, setLiveStates] = useState<Record<string, Record<string, unknown>>>({})
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -42,6 +45,23 @@ export function SimulationPage() {
     }
     load()
   }, [])
+
+  useEffect(() => {
+    if (!continuousRunId) {
+      setLiveStates({})
+      return
+    }
+    const unsubscribe = subscribeSimulationEvents((tickEvent) => {
+      setLiveStates((prev) => ({
+        ...prev,
+        [tickEvent.assetId]: {
+          ...(prev[tickEvent.assetId] ?? {}),
+          ...tickEvent.properties,
+        },
+      }))
+    })
+    return unsubscribe
+  }, [continuousRunId])
 
   const handleRun = async () => {
     if (!triggerAssetId) return
@@ -189,6 +209,27 @@ export function SimulationPage() {
           </div>
         )}
       </section>
+
+      {Object.keys(liveStates).length > 0 && (
+        <section className="simulation-section simulation-live-states">
+          <h2>실시간 Asset 상태</h2>
+          <div className="simulation-live-grid">
+            {Object.entries(liveStates).map(([assetId, props]) => (
+              <div key={assetId} className="simulation-live-card">
+                <div className="simulation-live-card-title">
+                  {assets.find((a) => a.id === assetId)?.id ?? assetId}
+                </div>
+                {Object.entries(props).map(([k, v]) => (
+                  <div key={k} className="simulation-live-prop">
+                    <span className="simulation-live-prop-key">{k}:</span>{' '}
+                    <span className="simulation-live-prop-val">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {runEventsError && <p className="simulation-status simulation-error">{runEventsError}</p>}
 

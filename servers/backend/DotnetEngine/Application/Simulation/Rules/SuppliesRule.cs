@@ -1,3 +1,4 @@
+using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Domain.Simulation.Constants;
 
@@ -15,10 +16,20 @@ public sealed class SuppliesRule : IPropagationRule
     {
         var fromState = ctx.FromState;
         var incoming = ctx.IncomingPatch;
-        var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+        var source = TransferSpecParser.ResolveSourceProperties(incoming, fromState);
+
+        Dictionary<string, object?> transferred;
+        if (ctx.Relationship.Mappings is { Count: > 0 })
+            transferred = ApplyMappings(ctx.Relationship.Mappings, source);
+        else
+        {
+            var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+            transferred = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState);
+        }
+
         var outgoingPatch = new StatePatchDto
         {
-            Properties = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState),
+            Properties = transferred,
             Status = incoming.Status ?? fromState?.Status,
             LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
         };
@@ -47,5 +58,45 @@ public sealed class SuppliesRule : IPropagationRule
             OutgoingPatch = outgoingPatch,
             Events = [evt],
         };
+    }
+
+    private static Dictionary<string, object?> ApplyMappings(
+        IReadOnlyList<PropertyMapping> mappings,
+        IReadOnlyDictionary<string, object?> source)
+    {
+        var result = new Dictionary<string, object?>();
+        foreach (var m in mappings)
+        {
+            if (string.IsNullOrWhiteSpace(m.FromProperty) || string.IsNullOrWhiteSpace(m.ToProperty))
+                continue;
+            if (!source.TryGetValue(m.FromProperty, out var raw) || raw is null)
+                continue;
+            if (!TransferSpecParser.TryCoerceDouble(raw, out var value))
+                continue;
+            result[m.ToProperty] = ApplyTransform(m.TransformRule, value);
+        }
+        return result;
+    }
+
+    private static double ApplyTransform(string rule, double value)
+    {
+        if (string.IsNullOrWhiteSpace(rule) || rule.Trim().Equals("value", StringComparison.Ordinal))
+            return value;
+
+        var parts = rule.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 3
+            && parts[0].Equals("value", StringComparison.Ordinal)
+            && double.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var operand))
+        {
+            return parts[1] switch
+            {
+                "*" => value * operand,
+                "/" => operand != 0 ? value / operand : value,
+                "+" => value + operand,
+                "-" => value - operand,
+                _ => value
+            };
+        }
+        return value;
     }
 }

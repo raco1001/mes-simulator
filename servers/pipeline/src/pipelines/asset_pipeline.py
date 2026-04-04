@@ -2,19 +2,26 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from config.settings import Settings
-from domains.asset import AssetConstants, AssetState, AssetStatus
-from pipelines.asset_dto import AssetHealthUpdatedEventDto, AssetStateDto
+from domains.asset import AssetConstants, AssetState
+from pipelines.asset_dto import (
+    AssetHealthUpdatedEventDto,
+    AssetStateDto,
+    SimulationStateUpdatedEventDto,
+)
 
 
-def calculate_state(event: AssetHealthUpdatedEventDto) -> AssetState:
+def calculate_state(
+    event: AssetHealthUpdatedEventDto | SimulationStateUpdatedEventDto,
+    asset_type: str = "unknown",
+    schema: dict[str, Any] | None = None,
+) -> AssetState:
     """
-    Calculate asset state from health updated event.
+    Calculate asset state from health or simulation event.
 
     Rules:
     - If payload.status exists, use it.
-    - Else evaluate numeric properties against threshold metadata when provided.
-    - If no threshold metadata is provided, fallback to legacy defaults for temperature/power only.
+    - Else if schema (ObjectType payloadJson) is provided, use ownProperties.alertThresholds.
+    - Else evaluate payload.thresholds and legacy temperature/power defaults.
     """
     payload = event.payload
     properties = payload.get("properties")
@@ -24,16 +31,21 @@ def calculate_state(event: AssetHealthUpdatedEventDto) -> AssetState:
         properties = {}
 
     thresholds = payload.get("thresholds", {})
-    status = event_status or AssetConstants.Status.NORMAL
-    if event_status is None:
+
+    if event_status is not None and event_status != "":
+        status = str(event_status)
+    elif schema:
+        status = _evaluate_alert_thresholds(properties, schema)
+    else:
         status = _calculate_status_from_properties(properties, thresholds)
 
     # Extract metadata from envelope only (properties carries metrics)
     metadata = {
         k: v
         for k, v in payload.items()
-        if k not in ["properties", "status"]
+        if k not in ["properties", "status", "deltaSeconds"]
     }
+    _ = asset_type  # reserved for future logging / routing
 
     return AssetState(
         asset_id=event.asset_id,
@@ -43,6 +55,117 @@ def calculate_state(event: AssetHealthUpdatedEventDto) -> AssetState:
         updated_at=event.timestamp if isinstance(event.timestamp, datetime) else datetime.now(timezone.utc),
         metadata=metadata,
     )
+
+
+def _evaluate_alert_thresholds(properties: dict[str, Any], schema: dict[str, Any]) -> str:
+    """
+    Walk ownProperties[*].alertThresholds and return worst status:
+    error > warning > normal.
+    """
+    severity_rank = {
+        AssetConstants.Status.NORMAL: 0,
+        AssetConstants.Status.WARNING: 1,
+        AssetConstants.Status.ERROR: 2,
+    }
+    level_to_status = {
+        "warning": AssetConstants.Status.WARNING,
+        "error": AssetConstants.Status.ERROR,
+    }
+    worst = AssetConstants.Status.NORMAL
+
+    for prop_def in schema.get("ownProperties", []):
+        key = prop_def.get("key")
+        thresholds = prop_def.get("alertThresholds") or []
+        value = properties.get(key) if key is not None else None
+
+        if value is None or not isinstance(value, (int, float)) or not thresholds:
+            continue
+
+        for t in thresholds:
+            if not isinstance(t, dict):
+                continue
+            level = t.get("level")
+            condition = t.get("condition")
+            limit = t.get("value")
+            if level not in level_to_status or condition not in ("lt", "lte", "gt", "gte"):
+                continue
+            if not isinstance(limit, (int, float)):
+                continue
+
+            breached = (
+                (condition == "lt" and value < limit)
+                or (condition == "lte" and value <= limit)
+                or (condition == "gt" and value > limit)
+                or (condition == "gte" and value >= limit)
+            )
+            if breached:
+                candidate = level_to_status[level]
+                if severity_rank.get(candidate, 0) > severity_rank.get(worst, 0):
+                    worst = candidate
+
+    return worst
+
+
+def calculate_derived_properties(
+    current_state: dict[str, Any],
+    schema: dict[str, Any],
+    delta_seconds: float,
+) -> dict[str, Any]:
+    """
+    For simulationBehavior=Derived and derivedRule.type=linear, compute updated values.
+    Does not mutate current_state.
+    """
+    time_unit_to_seconds = {"second": 1.0, "minute": 60.0, "hour": 3600.0}
+    updates: dict[str, Any] = {}
+
+    for prop_def in schema.get("ownProperties", []):
+        if prop_def.get("simulationBehavior") != "Derived":
+            continue
+
+        rule = prop_def.get("derivedRule")
+        if not isinstance(rule, dict) or rule.get("type") != "linear":
+            continue
+
+        key = prop_def.get("key")
+        if not key:
+            continue
+
+        base = prop_def.get("baseValue", 0.0)
+        current_val = current_state.get(key, base)
+        if not isinstance(current_val, (int, float)):
+            try:
+                current_val = float(current_val)
+            except (TypeError, ValueError):
+                current_val = float(base) if isinstance(base, (int, float)) else 0.0
+
+        time_unit = rule.get("timeUnit", "second")
+        delta_units = delta_seconds / time_unit_to_seconds.get(str(time_unit), 1.0)
+
+        delta = 0.0
+        for inp in rule.get("inputs", []):
+            if not isinstance(inp, dict):
+                continue
+            prop = inp.get("property")
+            coef = inp.get("coefficient", 1.0)
+            if not isinstance(coef, (int, float)):
+                coef = 1.0
+            ref = current_state.get(prop, 0.0)
+            if isinstance(ref, (int, float)):
+                delta += float(coef) * float(ref)
+
+        delta *= delta_units
+        new_val = float(current_val) + delta
+
+        constraints = prop_def.get("constraints", {})
+        if isinstance(constraints, dict):
+            if "min" in constraints and isinstance(constraints["min"], (int, float)):
+                new_val = max(new_val, float(constraints["min"]))
+            if "max" in constraints and isinstance(constraints["max"], (int, float)):
+                new_val = min(new_val, float(constraints["max"]))
+
+        updates[str(key)] = round(new_val, 4)
+
+    return updates
 
 
 def _calculate_status_from_properties(

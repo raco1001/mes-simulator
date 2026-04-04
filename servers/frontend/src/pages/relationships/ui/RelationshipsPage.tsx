@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import { getAssets, type AssetDto } from '@/entities/asset'
+import { getObjectTypeSchema, type ObjectTypeSchemaDto } from '@/entities/object-type-schema'
 import {
   getRelationships,
   createRelationship,
@@ -8,8 +9,151 @@ import {
   type RelationshipDto,
   type CreateRelationshipRequest,
   type UpdateRelationshipRequest,
+  type PropertyMapping,
 } from '@/entities/relationship'
 import './RelationshipsPage.css'
+
+const emptyMappingRow = (): PropertyMapping => ({
+  fromProperty: '',
+  toProperty: '',
+  transformRule: 'value',
+})
+
+function filterValidMappings(mappings: PropertyMapping[]): PropertyMapping[] {
+  return mappings
+    .filter((m) => m.fromProperty.trim() && m.toProperty.trim())
+    .map((m) => ({
+      fromProperty: m.fromProperty.trim(),
+      toProperty: m.toProperty.trim(),
+      transformRule: (m.transformRule?.trim() || 'value'),
+      fromUnit: m.fromUnit ?? undefined,
+      toUnit: m.toUnit ?? undefined,
+    }))
+}
+
+function RelationshipMappingsFields({
+  fromSchema,
+  toSchema,
+  mappings,
+  setMappings,
+}: {
+  fromSchema: ObjectTypeSchemaDto | null
+  toSchema: ObjectTypeSchemaDto | null
+  mappings: PropertyMapping[]
+  setMappings: Dispatch<SetStateAction<PropertyMapping[]>>
+}) {
+  if (!fromSchema || !toSchema) return null
+
+  const fromProps = fromSchema.ownProperties ?? []
+  const toProps = toSchema.ownProperties ?? []
+
+  return (
+    <div className="relationships-mappings-block">
+      <div className="relationships-mappings-title">속성 매핑</div>
+      {mappings.map((m, idx) => {
+        const fromProp = fromProps.find((p) => p.key === m.fromProperty)
+        const toProp = toProps.find((p) => p.key === m.toProperty)
+        const unitMismatch =
+          Boolean(fromProp?.unit && toProp?.unit && fromProp.unit !== toProp.unit)
+
+        return (
+          <div key={idx} className="relationships-mappings-row">
+            <select
+              value={m.fromProperty}
+              onChange={(e) => {
+                const fp = fromProps.find((p) => p.key === e.target.value)
+                setMappings((prev) => {
+                  const next = [...prev]
+                  next[idx] = {
+                    ...m,
+                    fromProperty: e.target.value,
+                    fromUnit: fp?.unit,
+                  }
+                  return next
+                })
+              }}
+              aria-label="Source property"
+            >
+              <option value="">source 속성</option>
+              {fromProps.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.key}
+                  {p.unit ? ` (${p.unit})` : ''}
+                </option>
+              ))}
+            </select>
+            <span className="relationships-mappings-arrow" aria-hidden>
+              →
+            </span>
+            <select
+              value={m.toProperty}
+              onChange={(e) => {
+                const tp = toProps.find((p) => p.key === e.target.value)
+                setMappings((prev) => {
+                  const next = [...prev]
+                  next[idx] = {
+                    ...m,
+                    toProperty: e.target.value,
+                    toUnit: tp?.unit,
+                  }
+                  return next
+                })
+              }}
+              aria-label="Target property"
+            >
+              <option value="">target 속성</option>
+              {toProps.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.key}
+                  {p.unit ? ` (${p.unit})` : ''}
+                </option>
+              ))}
+            </select>
+            <input
+              value={m.transformRule ?? 'value'}
+              onChange={(e) => {
+                setMappings((prev) => {
+                  const next = [...prev]
+                  next[idx] = { ...m, transformRule: e.target.value }
+                  return next
+                })
+              }}
+              placeholder="value * 1.0"
+              className="relationships-mappings-transform"
+            />
+            {unitMismatch && (
+              <span
+                className="relationships-mappings-warn"
+                title={`단위 불일치: ${fromProp?.unit} ≠ ${toProp?.unit}`}
+              >
+                (warn)
+              </span>
+            )}
+            <button
+              type="button"
+              className="relationships-mappings-remove"
+              onClick={() => setMappings((prev) => prev.filter((_, i) => i !== idx))}
+            >
+              제거
+            </button>
+          </div>
+        )
+      })}
+      <button
+        type="button"
+        className="relationships-mappings-add"
+        onClick={() => setMappings((prev) => [...prev, emptyMappingRow()])}
+      >
+        + 매핑 추가
+      </button>
+    </div>
+  )
+}
+
+function mappingsSummary(rel: RelationshipDto): string {
+  const n = rel.mappings?.length ?? 0
+  return n > 0 ? `${n} mappings` : '—'
+}
 
 export function RelationshipsPage() {
   const [relationships, setRelationships] = useState<RelationshipDto[]>([])
@@ -20,12 +164,18 @@ export function RelationshipsPage() {
   const [formToAssetId, setFormToAssetId] = useState('')
   const [formType, setFormType] = useState('')
   const [formPropertiesJson, setFormPropertiesJson] = useState('{}')
+  const [formMappings, setFormMappings] = useState<PropertyMapping[]>([])
+  const [fromSchema, setFromSchema] = useState<ObjectTypeSchemaDto | null>(null)
+  const [toSchema, setToSchema] = useState<ObjectTypeSchemaDto | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
   const [editing, setEditing] = useState<RelationshipDto | null>(null)
   const [editFromAssetId, setEditFromAssetId] = useState('')
   const [editToAssetId, setEditToAssetId] = useState('')
   const [editType, setEditType] = useState('')
   const [editPropertiesJson, setEditPropertiesJson] = useState('{}')
+  const [editMappings, setEditMappings] = useState<PropertyMapping[]>([])
+  const [editFromSchema, setEditFromSchema] = useState<ObjectTypeSchemaDto | null>(null)
+  const [editToSchema, setEditToSchema] = useState<ObjectTypeSchemaDto | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
 
   const parseProperties = (json: string): Record<string, unknown> => {
@@ -64,21 +214,118 @@ export function RelationshipsPage() {
       await Promise.all([loadRelationships(), loadAssets()])
       setLoading(false)
     }
-    load()
+    void load()
   }, [])
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const id = formFromAssetId.trim()
+    if (!id) {
+      setFromSchema(null)
+      return
+    }
+    const asset = assets.find((a) => a.id === id)
+    if (!asset?.type) {
+      setFromSchema(null)
+      return
+    }
+    let cancelled = false
+    void getObjectTypeSchema(asset.type)
+      .then((s) => {
+        if (!cancelled) setFromSchema(s)
+      })
+      .catch(() => {
+        if (!cancelled) setFromSchema(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [formFromAssetId, assets])
+
+  useEffect(() => {
+    const id = formToAssetId.trim()
+    if (!id) {
+      setToSchema(null)
+      return
+    }
+    const asset = assets.find((a) => a.id === id)
+    if (!asset?.type) {
+      setToSchema(null)
+      return
+    }
+    let cancelled = false
+    void getObjectTypeSchema(asset.type)
+      .then((s) => {
+        if (!cancelled) setToSchema(s)
+      })
+      .catch(() => {
+        if (!cancelled) setToSchema(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [formToAssetId, assets])
+
+  useEffect(() => {
+    if (!editing) {
+      setEditFromSchema(null)
+      setEditToSchema(null)
+      return
+    }
+    const fromId = editFromAssetId.trim()
+    const fromAsset = assets.find((a) => a.id === fromId)
+    if (!fromAsset?.type) {
+      setEditFromSchema(null)
+    } else {
+      let cancelled = false
+      void getObjectTypeSchema(fromAsset.type)
+        .then((s) => {
+          if (!cancelled) setEditFromSchema(s)
+        })
+        .catch(() => {
+          if (!cancelled) setEditFromSchema(null)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+    return undefined
+  }, [editing, editFromAssetId, assets])
+
+  useEffect(() => {
+    if (!editing) return undefined
+    const toId = editToAssetId.trim()
+    const toAsset = assets.find((a) => a.id === toId)
+    if (!toAsset?.type) {
+      setEditToSchema(null)
+      return undefined
+    }
+    let cancelled = false
+    void getObjectTypeSchema(toAsset.type)
+      .then((s) => {
+        if (!cancelled) setEditToSchema(s)
+      })
+      .catch(() => {
+        if (!cancelled) setEditToSchema(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [editing, editToAssetId, assets])
+
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setCreateError(null)
     if (!formFromAssetId.trim() || !formToAssetId.trim() || !formType.trim()) {
       setCreateError('From, To, Type are required')
       return
     }
+    const validMappings = filterValidMappings(formMappings)
     const body: CreateRelationshipRequest = {
       fromAssetId: formFromAssetId.trim(),
       toAssetId: formToAssetId.trim(),
       relationshipType: formType.trim(),
       properties: parseProperties(formPropertiesJson),
+      ...(validMappings.length > 0 ? { mappings: validMappings } : {}),
     }
     try {
       await createRelationship(body)
@@ -86,6 +333,7 @@ export function RelationshipsPage() {
       setFormToAssetId('')
       setFormType('')
       setFormPropertiesJson('{}')
+      setFormMappings([])
       await loadRelationships()
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create relationship')
@@ -102,23 +350,36 @@ export function RelationshipsPage() {
         ? JSON.stringify(rel.properties, null, 2)
         : '{}',
     )
+    setEditMappings(
+      (rel.mappings ?? []).map((m) => ({
+        fromProperty: m.fromProperty,
+        toProperty: m.toProperty,
+        transformRule: m.transformRule ?? 'value',
+        fromUnit: m.fromUnit,
+        toUnit: m.toUnit,
+      })),
+    )
     setEditError(null)
   }
 
   const closeEdit = () => {
     setEditing(null)
     setEditError(null)
+    setEditFromSchema(null)
+    setEditToSchema(null)
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!editing) return
     setEditError(null)
+    const validMappings = filterValidMappings(editMappings)
     const body: UpdateRelationshipRequest = {
       fromAssetId: editFromAssetId.trim() || undefined,
       toAssetId: editToAssetId.trim() || undefined,
       relationshipType: editType.trim() || undefined,
       properties: parseProperties(editPropertiesJson),
+      mappings: validMappings,
     }
     try {
       await updateRelationship(editing.id, body)
@@ -167,6 +428,7 @@ export function RelationshipsPage() {
                 <th>To</th>
                 <th>Type</th>
                 <th>Properties</th>
+                <th>Mappings</th>
                 <th></th>
               </tr>
             </thead>
@@ -178,11 +440,12 @@ export function RelationshipsPage() {
                   <td>{rel.toAssetId}</td>
                   <td>{rel.relationshipType}</td>
                   <td className="relationships-properties">{propertiesSummary(rel.properties)}</td>
+                  <td>{mappingsSummary(rel)}</td>
                   <td>
                     <button type="button" onClick={() => openEdit(rel)} className="relationships-edit-btn">
                       수정
                     </button>
-                    <button type="button" onClick={() => handleDelete(rel.id)} className="relationships-delete-btn">
+                    <button type="button" onClick={() => void handleDelete(rel.id)} className="relationships-delete-btn">
                       삭제
                     </button>
                   </td>
@@ -195,7 +458,7 @@ export function RelationshipsPage() {
 
       <section className="relationships-page-section">
         <h2>관계 생성</h2>
-        <form onSubmit={handleCreateSubmit} className="relationships-form">
+        <form onSubmit={(e) => void handleCreateSubmit(e)} className="relationships-form">
           <div className="form-group">
             <label htmlFor="rel-from">From Asset ID</label>
             <input
@@ -252,6 +515,12 @@ export function RelationshipsPage() {
               rows={3}
             />
           </div>
+          <RelationshipMappingsFields
+            fromSchema={fromSchema}
+            toSchema={toSchema}
+            mappings={formMappings}
+            setMappings={setFormMappings}
+          />
           {createError && <div className="relationships-page-error">{createError}</div>}
           <button type="submit">생성</button>
         </form>
@@ -260,7 +529,7 @@ export function RelationshipsPage() {
       {editing && (
         <section className="relationships-page-section relationships-edit-modal">
           <h2>관계 수정 — {editing.id}</h2>
-          <form onSubmit={handleEditSubmit} className="relationships-form">
+          <form onSubmit={(e) => void handleEditSubmit(e)} className="relationships-form">
             <div className="form-group">
               <label htmlFor="edit-from">From Asset ID</label>
               <input
@@ -309,6 +578,12 @@ export function RelationshipsPage() {
                 rows={3}
               />
             </div>
+            <RelationshipMappingsFields
+              fromSchema={editFromSchema}
+              toSchema={editToSchema}
+              mappings={editMappings}
+              setMappings={setEditMappings}
+            />
             {editError && <div className="relationships-page-error">{editError}</div>}
             <div className="relationships-edit-actions">
               <button type="submit">저장</button>

@@ -34,6 +34,63 @@
       "type": "object",
       "additionalProperties": true
     },
+    "alertThresholds": {
+      "type": "array",
+      "description": "속성 값 기반 경보 임계값 목록. 온톨로지 스키마에 정의되며 파이프라인이 런타임에 읽어 판단한다.",
+      "items": {
+        "type": "object",
+        "required": ["level", "condition", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": ["warning", "error"]
+          },
+          "condition": {
+            "type": "string",
+            "enum": ["lt", "lte", "gt", "gte"]
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "derivedRule": {
+      "type": "object",
+      "description": "simulationBehavior=Derived 일 때만 유효. 선형 관계 기반 계산 규칙.",
+      "required": ["type", "inputs"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["linear"]
+        },
+        "timeUnit": {
+          "type": "string",
+          "enum": ["second", "minute", "hour"],
+          "default": "second"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["property", "coefficient"],
+            "additionalProperties": false,
+            "properties": {
+              "property": {
+                "type": "string",
+                "description": "같은 Asset 내 참조할 속성 key"
+              },
+              "coefficient": {
+                "type": "number",
+                "description": "음수 = 소비, 양수 = 증가"
+              }
+            }
+          }
+        }
+      }
+    },
     "required": {
       "type": "boolean"
     }
