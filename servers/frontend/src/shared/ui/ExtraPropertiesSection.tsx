@@ -1,5 +1,9 @@
 import type { ExtraProperty } from '@/entities/asset'
-import type { DataType } from '@/entities/object-type-schema'
+import type {
+  DataType,
+  Mutability,
+  SimulationBehavior,
+} from '@/entities/object-type-schema'
 import { UnitSelect } from '@/shared/ui/UnitSelect'
 
 const DATA_TYPES = [
@@ -10,6 +14,16 @@ const DATA_TYPES = [
   'Array',
   'Object',
 ] as const satisfies readonly DataType[]
+
+const SIMULATION_BEHAVIORS = [
+  'Constant',
+  'Settable',
+  'Rate',
+  'Accumulator',
+  'Derived',
+] as const satisfies readonly SimulationBehavior[]
+
+const MUTABILITY_OPTIONS: Mutability[] = ['Mutable', 'Immutable']
 
 export function ExtraPropertiesSection({
   extraProperties,
@@ -25,6 +39,9 @@ export function ExtraPropertiesSection({
   return (
     <div className="assets-canvas-page__meta-section">
       <span>확장 속성 (extraProperties)</span>
+      <span className="assets-canvas-page__meta-section-hint">
+        시뮬 동작·변경 가능 여부는 백엔드 엔진에 반영됩니다.
+      </span>
       {extraProperties.map((p, i) => (
         <div
           key={i}
@@ -50,6 +67,36 @@ export function ExtraPropertiesSection({
                 </option>
               ))}
             </select>
+            <select
+              value={p.simulationBehavior}
+              onChange={(e) =>
+                onUpdate(i, {
+                  simulationBehavior: e.target.value as SimulationBehavior,
+                })
+              }
+              aria-label={`extra-prop-behavior-${i}`}
+              title="시뮬레이션 동작 (엔진에 반영)"
+            >
+              {SIMULATION_BEHAVIORS.map((sb) => (
+                <option key={sb} value={sb}>
+                  {sb}
+                </option>
+              ))}
+            </select>
+            <select
+              value={p.mutability}
+              onChange={(e) =>
+                onUpdate(i, { mutability: e.target.value as Mutability })
+              }
+              aria-label={`extra-prop-mutability-${i}`}
+              title="Immutable이면 패치로 값 변경 불가"
+            >
+              {MUTABILITY_OPTIONS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
             {p.dataType === 'Number' ? (
               <UnitSelect
                 compact
@@ -59,10 +106,11 @@ export function ExtraPropertiesSection({
             ) : null}
           </div>
           <input
-            placeholder="value"
+            placeholder="초기값 (BaseValue)"
             value={String(p.value ?? '')}
             onChange={(e) => onUpdate(i, { value: e.target.value })}
             aria-label={`extra-prop-value-${i}`}
+            title="상태가 없을 때 시드값"
           />
           <button
             type="button"

@@ -121,7 +121,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             var objectTypeSchema = asset is null
                 ? null
                 : await _objectTypeSchemaRepository.GetByObjectTypeAsync(asset.Type, cancellationToken);
-            var mergedState = ComputeState(assetId, currentState, patch, objectTypeSchema);
+            var mergedState = ComputeState(assetId, currentState, patch, objectTypeSchema, asset);
 
             var occurredAt = DateTimeOffset.UtcNow;
             var nodeEvent = new EventDto
@@ -214,7 +214,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 ? null
                 : await _objectTypeSchemaRepository.GetByObjectTypeAsync(asset.Type, cancellationToken);
             var effectivePatch = BuildEffectiveCyclePatch(currentState, patch);
-            var mergedState = ComputeState(assetId, currentState, effectivePatch, objectTypeSchema);
+            var mergedState = ComputeState(assetId, currentState, effectivePatch, objectTypeSchema, asset);
 
             var nodeEvent = new EventDto
             {
@@ -244,7 +244,8 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         string assetId,
         StateDto? current,
         StatePatchDto patch,
-        ObjectTypeSchemaDto? objectTypeSchema)
+        ObjectTypeSchemaDto? objectTypeSchema,
+        AssetDto? asset = null)
     {
         if (objectTypeSchema is null)
             return MergeStateFallback(assetId, current, patch);
@@ -253,8 +254,8 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         var currentProperties = new Dictionary<string, object?>(current?.Properties ?? new Dictionary<string, object?>());
         var mergedProperties = new Dictionary<string, object?>(currentProperties);
 
-        var schemaProperties = objectTypeSchema.ResolvedProperties ?? objectTypeSchema.OwnProperties;
-        foreach (var definition in schemaProperties)
+        var effectiveProperties = EffectivePropertySetResolver.Resolve(objectTypeSchema, asset);
+        foreach (var definition in effectiveProperties)
         {
             currentProperties.TryGetValue(definition.Key, out var currentValue);
             patch.Properties.TryGetValue(definition.Key, out var patchValue);
@@ -281,7 +282,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 mergedProperties[definition.Key] = computed;
         }
 
-        foreach (var kv in patch.Properties.Where(kv => schemaProperties.All(p => p.Key != kv.Key)))
+        foreach (var kv in patch.Properties.Where(kv => effectiveProperties.All(p => p.Key != kv.Key)))
         {
             if (kv.Value is null) mergedProperties.Remove(kv.Key);
             else mergedProperties[kv.Key] = kv.Value;

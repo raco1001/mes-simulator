@@ -10,6 +10,7 @@ from pipelines.asset_dto import (
 from pipelines.asset_pipeline import (
     asset_state_to_dto,
     build_alert_event,
+    build_effective_schema,
     calculate_derived_properties,
     calculate_state,
 )
@@ -216,6 +217,87 @@ class TestCalculateDerivedProperties:
         current = {"battery_level": 100.0, "power_draw": 0.5}
         out = calculate_derived_properties(current, _DRONE_SCHEMA, 3600.0)
         assert out["battery_level"] == 99.5
+
+
+_EXTRA_ONLY_DERIVED = [
+    {
+        "key": "custom_metric",
+        "simulationBehavior": "Derived",
+        "baseValue": 10,
+        "constraints": {"min": 0, "max": 100},
+        "derivedRule": {
+            "type": "linear",
+            "timeUnit": "second",
+            "inputs": [{"property": "input_x", "coefficient": 1.0}],
+        },
+        "alertThresholds": [
+            {"level": "error", "condition": "gt", "value": 50},
+        ],
+    },
+    {"key": "input_x", "simulationBehavior": "Settable", "baseValue": 2},
+]
+
+
+class TestBuildEffectiveSchema:
+    """Schema + metadata.extraProperties merge (extra wins on duplicate keys)."""
+
+    def test_metadata_only_extras_feed_derived_and_thresholds(self) -> None:
+        eff = build_effective_schema(None, {"extraProperties": _EXTRA_ONLY_DERIVED})
+        assert eff is not None
+        assert len(eff["ownProperties"]) == 2
+
+        out = calculate_derived_properties(
+            {"custom_metric": 10.0, "input_x": 5.0}, eff, 1.0
+        )
+        assert out["custom_metric"] == 15.0
+
+        event = AssetHealthUpdatedEventDto(
+            eventType="asset.health.updated",
+            assetId="extra-1",
+            timestamp=datetime.now(timezone.utc),
+            payload={"properties": {"custom_metric": 55, "input_x": 1}},
+        )
+        state = calculate_state(event, asset_type="Custom", schema=eff)
+        assert state.status == AssetConstants.Status.ERROR
+
+    def test_duplicate_key_extra_overrides_schema(self) -> None:
+        schema = {
+            "ownProperties": [
+                {"key": "x", "simulationBehavior": "Settable", "baseValue": 1},
+            ]
+        }
+        metadata = {
+            "extraProperties": [
+                {
+                    "key": "x",
+                    "simulationBehavior": "Derived",
+                    "baseValue": 0,
+                    "derivedRule": {
+                        "type": "linear",
+                        "timeUnit": "second",
+                        "inputs": [{"property": "y", "coefficient": 1.0}],
+                    },
+                },
+                {"key": "y", "simulationBehavior": "Settable", "baseValue": 3},
+            ]
+        }
+        eff = build_effective_schema(schema, metadata)
+        assert eff is not None
+        assert len(eff["ownProperties"]) == 2
+        x_def = next(p for p in eff["ownProperties"] if p.get("key") == "x")
+        assert x_def.get("simulationBehavior") == "Derived"
+
+    def test_resolved_properties_preferred_over_own(self) -> None:
+        schema = {
+            "ownProperties": [{"key": "a", "simulationBehavior": "Settable", "baseValue": 1}],
+            "resolvedProperties": [
+                {"key": "b", "simulationBehavior": "Settable", "baseValue": 2}
+            ],
+        }
+        eff = build_effective_schema(schema, {})
+        assert eff is not None
+        keys = {p["key"] for p in eff["ownProperties"]}
+        assert keys == {"b"}
 
 
 class TestSimulationStateWithSchema:

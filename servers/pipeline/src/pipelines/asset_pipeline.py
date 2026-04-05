@@ -10,6 +10,65 @@ from pipelines.asset_dto import (
 )
 
 
+def _schema_property_definitions(schema_payload: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Prefer resolvedProperties when non-empty (matches backend Resolved ?? Own)."""
+    if not schema_payload or not isinstance(schema_payload, dict):
+        return []
+    resolved = schema_payload.get("resolvedProperties")
+    own = schema_payload.get("ownProperties")
+    if isinstance(resolved, list) and len(resolved) > 0:
+        return [dict(p) for p in resolved if isinstance(p, dict)]
+    if isinstance(own, list):
+        return [dict(p) for p in own if isinstance(p, dict)]
+    return []
+
+
+def _parse_extra_property_items(metadata: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not metadata or not isinstance(metadata, dict):
+        return []
+    raw = metadata.get("extraProperties")
+    if not isinstance(raw, list):
+        return []
+    return [dict(item) for item in raw if isinstance(item, dict)]
+
+
+def _merge_property_defs_last_wins(defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Schema first, then extras; duplicate keys keep the last definition (extra wins)."""
+    merged: list[dict[str, Any]] = []
+    index_by_key: dict[str, int] = {}
+    for p in defs:
+        key = p.get("key")
+        if not key:
+            continue
+        k = str(key)
+        if k in index_by_key:
+            merged[index_by_key[k]] = p
+        else:
+            index_by_key[k] = len(merged)
+            merged.append(p)
+    return merged
+
+
+def build_effective_schema(
+    schema_payload: dict[str, Any] | None,
+    metadata: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """
+    Merge ontology payload with asset metadata.extraProperties for pipeline thresholds/derived.
+    Duplicate property keys: last definition wins (extras after schema).
+    """
+    base = _schema_property_definitions(schema_payload)
+    extras = _parse_extra_property_items(metadata)
+    merged = _merge_property_defs_last_wins(base + extras)
+    if schema_payload and isinstance(schema_payload, dict):
+        out = dict(schema_payload)
+        out["ownProperties"] = merged
+        return out
+    if merged:
+        return {"ownProperties": merged}
+    return None
+
+
 def calculate_state(
     event: AssetHealthUpdatedEventDto | SimulationStateUpdatedEventDto,
     asset_type: str = "unknown",

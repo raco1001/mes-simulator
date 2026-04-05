@@ -18,6 +18,7 @@ from pipelines.asset_dto import (
 from pipelines.asset_pipeline import (
     asset_state_to_dto,
     build_alert_event,
+    build_effective_schema,
     calculate_derived_properties,
     calculate_state,
 )
@@ -71,11 +72,15 @@ class AssetWorker:
         """Process asset.health.updated event."""
         logger.info(f"Processing asset.health.updated: {event.asset_id}")
 
-        asset_doc = self.repository.get_asset(event.asset_id)
-        asset_type = (asset_doc or {}).get("type", "unknown") if asset_doc else "unknown"
+        asset_doc = self.repository.get_asset(event.asset_id) or {}
+        asset_type = asset_doc.get("type", "unknown") if isinstance(asset_doc, dict) else "unknown"
         schema = self.object_type_repository.get_by_object_type(str(asset_type))
+        metadata = asset_doc.get("metadata") if isinstance(asset_doc, dict) else None
+        if not isinstance(metadata, dict):
+            metadata = {}
+        effective_schema = build_effective_schema(schema, metadata)
 
-        state = calculate_state(event, asset_type=str(asset_type), schema=schema)
+        state = calculate_state(event, asset_type=str(asset_type), schema=effective_schema)
         state_dto = asset_state_to_dto(state)
 
         # Save state
@@ -106,22 +111,29 @@ class AssetWorker:
         """Process simulation.state.updated event (backend propagation)."""
         logger.info(f"Processing simulation.state.updated: {event.asset_id}")
 
-        asset_doc = self.repository.get_asset(event.asset_id)
-        asset_type = (asset_doc or {}).get("type", "unknown") if asset_doc else "unknown"
+        asset_doc = self.repository.get_asset(event.asset_id) or {}
+        asset_type = asset_doc.get("type", "unknown") if isinstance(asset_doc, dict) else "unknown"
         schema = self.object_type_repository.get_by_object_type(str(asset_type))
+        metadata = asset_doc.get("metadata") if isinstance(asset_doc, dict) else None
+        if not isinstance(metadata, dict):
+            metadata = {}
+        effective_schema = build_effective_schema(schema, metadata)
 
         payload = dict(event.payload)
         props = payload.get("properties")
         if not isinstance(props, dict):
             props = {}
         merged_props = dict(props)
-        if schema:
+        if effective_schema:
             delta_seconds = float(payload.get("deltaSeconds", 1.0))
-            merged_props = {**props, **calculate_derived_properties(dict(props), schema, delta_seconds)}
+            merged_props = {
+                **props,
+                **calculate_derived_properties(dict(props), effective_schema, delta_seconds),
+            }
         payload["properties"] = merged_props
 
         event_merged = event.model_copy(update={"payload": payload})
-        state = calculate_state(event_merged, asset_type=str(asset_type), schema=schema)
+        state = calculate_state(event_merged, asset_type=str(asset_type), schema=effective_schema)
 
         state_dto = asset_state_to_dto(state)
         self.repository.save_state(state_dto)
