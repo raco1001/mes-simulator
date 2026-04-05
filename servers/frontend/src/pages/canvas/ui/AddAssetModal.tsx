@@ -1,7 +1,13 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { createAsset } from '@/entities/asset'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
-import { buildMetadataFromTypeSelection } from '@/shared/lib/canvasMetadata'
+import { useAssetMetadataForm } from '@/shared/lib/useAssetMetadataForm'
+import {
+  ExtraPropertiesSection,
+  FlatExtraMetadataSection,
+} from '@/shared/ui/ExtraPropertiesSection'
+
+const CREATE_INITIAL_METADATA: Record<string, unknown> = {}
 
 export function AddAssetModal({
   objectTypeSchemas,
@@ -12,43 +18,30 @@ export function AddAssetModal({
   onClose: () => void
   onCreated: () => void
 }) {
-  const [type, setType] = useState('')
-  const [metadata, setMetadata] = useState<Record<string, unknown>>({})
+  const {
+    type,
+    metadata,
+    extraProperties,
+    schemaProps,
+    extraKeys,
+    handleTypeChange,
+    setMetaValue,
+    removeExtraKey,
+    addExtraRow,
+    addExtraProperty,
+    updateExtraProperty,
+    removeExtraProperty,
+    buildMetadataForSave,
+  } = useAssetMetadataForm({
+    objectTypeSchemas,
+    resetKey: 'create',
+    initialType: '',
+    initialMetadata: CREATE_INITIAL_METADATA,
+    mergeOnInit: false,
+  })
+
   const [submitting, setSubmitting] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-
-  const selectedSchema = objectTypeSchemas.find((s) => s.objectType === type) ?? null
-  const schemaProps = selectedSchema?.resolvedProperties ?? selectedSchema?.ownProperties ?? []
-  const schemaKeySet = useMemo(
-    () => new Set(schemaProps.map((p) => p.key)),
-    [schemaProps],
-  )
-  const extraKeys = useMemo(
-    () => Object.keys(metadata).filter((k) => !schemaKeySet.has(k)),
-    [metadata, schemaKeySet],
-  )
-
-  const handleTypeChange = (newType: string) => {
-    setType(newType)
-    setMetadata((prev) => buildMetadataFromTypeSelection(newType, objectTypeSchemas, prev))
-  }
-
-  const setMetaValue = (key: string, raw: string) => {
-    setMetadata((m) => ({ ...m, [key]: raw }))
-  }
-
-  const removeExtraKey = (key: string) => {
-    setMetadata((m) => {
-      const next = { ...m }
-      delete next[key]
-      return next
-    })
-  }
-
-  const addExtraRow = () => {
-    const k = `extra_${Date.now()}`
-    setMetadata((m) => ({ ...m, [k]: '' }))
-  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -60,10 +53,11 @@ export function AddAssetModal({
     }
     setSubmitting(true)
     try {
+      const meta = buildMetadataForSave()
       await createAsset({
         type: t,
         connections: [],
-        metadata: Object.keys(metadata).length ? metadata : {},
+        metadata: Object.keys(meta).length ? meta : {},
       })
       onCreated()
     } catch (err) {
@@ -114,25 +108,23 @@ export function AddAssetModal({
               ))}
             </div>
           )}
-          <div className="assets-canvas-page__meta-section">
-            <span>추가 메타데이터</span>
-            {extraKeys.map((key) => (
-              <div key={key} className="assets-canvas-page__meta-row">
-                <input placeholder="key" value={key} readOnly />
-                <input
-                  placeholder="value"
-                  value={String(metadata[key] ?? '')}
-                  onChange={(e) => setMetaValue(key, e.target.value)}
-                />
-                <button type="button" onClick={() => removeExtraKey(key)}>
-                  삭제
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={addExtraRow}>
-              항목 추가
-            </button>
-          </div>
+
+          <ExtraPropertiesSection
+            extraProperties={extraProperties}
+            onAdd={addExtraProperty}
+            onUpdate={updateExtraProperty}
+            onRemove={removeExtraProperty}
+          />
+
+          <FlatExtraMetadataSection
+            extraKeys={extraKeys}
+            metadata={metadata}
+            onSetValue={setMetaValue}
+            onRemoveKey={removeExtraKey}
+            onAddRow={addExtraRow}
+            addButtonLabel="항목 추가"
+          />
+
           {createError && <p className="assets-canvas-page__error">{createError}</p>}
           <button type="submit" disabled={submitting}>
             {submitting ? '생성 중…' : '생성'}

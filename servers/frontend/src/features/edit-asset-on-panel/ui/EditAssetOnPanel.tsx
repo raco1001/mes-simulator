@@ -1,29 +1,11 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import type { AssetDto } from '@/entities/asset'
-import type {
-  DataType,
-  ObjectTypeSchemaDto,
-} from '@/entities/object-type-schema'
+import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
 import {
-  buildMetadataFromTypeSelection,
-  mergeAssetMetadataWithSchema,
-  EXTRA_PROPERTIES_KEY,
-} from '@/shared/lib/canvasMetadata'
-import { UnitSelect } from '@/shared/ui/UnitSelect'
-
-/** 인스턴스 수준 확장 속성 — ObjectType의 PropertyDefinition 보다 단순한 형태 */
-interface ExtraProperty {
-  key: string
-  dataType: DataType
-  unit?: string
-  value: unknown
-}
-
-const emptyExtraProperty = (): ExtraProperty => ({
-  key: '',
-  dataType: 'String',
-  value: '',
-})
+  ExtraPropertiesSection,
+  FlatExtraMetadataSection,
+} from '@/shared/ui/ExtraPropertiesSection'
+import { useAssetMetadataForm } from '@/shared/lib/useAssetMetadataForm'
 
 export function EditAssetOnPanel({
   asset,
@@ -38,28 +20,27 @@ export function EditAssetOnPanel({
   onSave: (type: string, metadata: Record<string, unknown>) => Promise<void>
   onDeleted: () => Promise<void>
 }) {
-  const [type, setType] = useState(asset.type)
-
-  // metadata state에서는 extraProperties 키를 제거하여 별도 state로 분리 관리
-  const [metadata, setMetadata] = useState<Record<string, unknown>>(() => {
-    const merged = mergeAssetMetadataWithSchema(
-      asset.type,
-      objectTypeSchemas,
-      (asset.metadata ?? {}) as Record<string, unknown>,
-    )
-    const { [EXTRA_PROPERTIES_KEY]: _ignored, ...rest } = merged
-    return rest
+  const {
+    type,
+    metadata,
+    extraProperties,
+    schemaProps,
+    extraKeys,
+    handleTypeChange,
+    setMetaValue,
+    removeExtraKey,
+    addExtraRow,
+    addExtraProperty,
+    updateExtraProperty,
+    removeExtraProperty,
+    buildMetadataForSave,
+  } = useAssetMetadataForm({
+    objectTypeSchemas,
+    resetKey: asset.id,
+    initialType: asset.type,
+    initialMetadata: (asset.metadata ?? {}) as Record<string, unknown>,
+    mergeOnInit: true,
   })
-
-  // extraProperties는 metadata와 독립적인 state
-  const [extraProperties, setExtraProperties] = useState<ExtraProperty[]>(
-    () => {
-      const raw = ((asset.metadata ?? {}) as Record<string, unknown>)[
-        EXTRA_PROPERTIES_KEY
-      ]
-      return Array.isArray(raw) ? (raw as ExtraProperty[]) : []
-    },
-  )
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -67,89 +48,16 @@ export function EditAssetOnPanel({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [showSystemInfo, setShowSystemInfo] = useState(false)
 
-  const schema = objectTypeSchemas.find((s) => s.objectType === type) ?? null
-  const schemaProps = schema?.resolvedProperties ?? schema?.ownProperties ?? []
-  const schemaKeySet = useMemo(
-    () => new Set(schemaProps.map((p) => p.key)),
-    [schemaProps],
-  )
-
-  // EXTRA_PROPERTIES_KEY는 별도 state로 관리하므로 flat extra 목록에서 제외
-  const extraKeys = useMemo(
-    () =>
-      Object.keys(metadata).filter(
-        (k) => !schemaKeySet.has(k) && k !== EXTRA_PROPERTIES_KEY,
-      ),
-    [metadata, schemaKeySet],
-  )
-
-  // ── 스키마/flat extra 헬퍼 ──────────────────────────────────────────────
-  const setMetaValue = (key: string, raw: string) => {
-    setMetadata((m) => ({ ...m, [key]: raw }))
-  }
-
-  const removeExtraKey = (key: string) => {
-    setMetadata((m) => {
-      const next = { ...m }
-      delete next[key]
-      return next
-    })
-  }
-
-  const addExtraRow = () => {
-    const k = `extra_${Date.now()}`
-    setMetadata((m) => ({ ...m, [k]: '' }))
-  }
-
-  // ── extraProperties 헬퍼 ────────────────────────────────────────────────
-  const addExtraProperty = () => {
-    setExtraProperties((prev) => [...prev, emptyExtraProperty()])
-  }
-
-  const updateExtraProperty = (
-    index: number,
-    patch: Partial<ExtraProperty>,
-  ) => {
-    setExtraProperties((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
-    )
-  }
-
-  const removeExtraProperty = (index: number) => {
-    setExtraProperties((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  // ── 타입 변경 ────────────────────────────────────────────────────────────
-  const handleTypeChange = (newType: string) => {
-    setType(newType)
-    setMetadata((prev) => {
-      const built = buildMetadataFromTypeSelection(
-        newType,
-        objectTypeSchemas,
-        prev,
-      )
-      // 빌드된 결과에서도 extraProperties 키 제거 (별도 state 유지)
-      const { [EXTRA_PROPERTIES_KEY]: _ignored, ...rest } = built
-      return rest
-    })
-    // extraProperties 상태는 타입 변경과 무관하게 유지됨
-  }
-
   const copyId = () => {
     void navigator.clipboard.writeText(asset.id)
   }
 
-  // ── 저장 ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSaveError(null)
     setSaving(true)
     try {
-      const finalMetadata: Record<string, unknown> = { ...metadata }
-      if (extraProperties.length > 0) {
-        finalMetadata[EXTRA_PROPERTIES_KEY] = extraProperties
-      }
-      await onSave(type.trim(), finalMetadata)
+      await onSave(type.trim(), buildMetadataForSave())
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : '저장 실패')
     } finally {
@@ -157,7 +65,6 @@ export function EditAssetOnPanel({
     }
   }
 
-  // ── 삭제 ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!window.confirm('이 에셋을 삭제할까요? 이 작업은 되돌릴 수 없습니다.'))
       return
@@ -241,7 +148,6 @@ export function EditAssetOnPanel({
           </select>
         </label>
 
-        {/* 스키마 속성 (ObjectType에서 정의된 속성) */}
         {schemaProps.length > 0 && (
           <div className="assets-canvas-page__meta-section">
             <span>스키마 속성</span>
@@ -266,116 +172,21 @@ export function EditAssetOnPanel({
           </div>
         )}
 
-        {/* 인스턴스 확장 속성 (extraProperties) — 단위·타입 지정 가능 */}
-        <div className="assets-canvas-page__meta-section">
-          <span>확장 속성 (extraProperties)</span>
-          {extraProperties.map((p, i) => (
-            <div
-              key={i}
-              className="assets-canvas-page__meta-row assets-canvas-page__meta-row--extra"
-            >
-              <input
-                placeholder="key"
-                value={p.key}
-                onChange={(e) =>
-                  updateExtraProperty(i, { key: e.target.value })
-                }
-                aria-label={`extra-prop-key-${i}`}
-              />
-              <div className="assets-canvas-page__meta-row-selects">
-                <select
-                  value={p.dataType}
-                  onChange={(e) =>
-                    updateExtraProperty(i, {
-                      dataType: e.target.value as DataType,
-                    })
-                  }
-                  aria-label={`extra-prop-datatype-${i}`}
-                >
-                  {(
-                    [
-                      'Number',
-                      'String',
-                      'Boolean',
-                      'DateTime',
-                      'Array',
-                      'Object',
-                    ] as const
-                  ).map((dt) => (
-                    <option key={dt} value={dt}>
-                      {dt}
-                    </option>
-                  ))}
-                </select>
-                {p.dataType === 'Number' ? (
-                  <UnitSelect
-                    compact
-                    value={p.unit}
-                    onChange={(unit) =>
-                      updateExtraProperty(i, { unit: unit || undefined })
-                    }
-                  />
-                ) : null}
-              </div>
-              <input
-                placeholder="value"
-                value={String(p.value ?? '')}
-                onChange={(e) =>
-                  updateExtraProperty(i, { value: e.target.value })
-                }
-                aria-label={`extra-prop-value-${i}`}
-              />
-              <button
-                type="button"
-                className="assets-canvas-page__meta-row-delete"
-                onClick={() => removeExtraProperty(i)}
-              >
-                삭제
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="assets-canvas-page__meta-section-add-btn"
-            onClick={addExtraProperty}
-          >
-            + 속성 추가
-          </button>
-        </div>
+        <ExtraPropertiesSection
+          extraProperties={extraProperties}
+          onAdd={addExtraProperty}
+          onUpdate={updateExtraProperty}
+          onRemove={removeExtraProperty}
+        />
 
-        {/* 추가 메타데이터 — 스키마/extraProperties 외의 평면 키 (레거시/시스템 키) */}
-        <div className="assets-canvas-page__meta-section">
-          <span>추가 메타데이터 (스키마 외 키)</span>
-          {extraKeys.map((key) => (
-            <div key={key} className="assets-canvas-page__meta-row">
-              <input
-                placeholder="key"
-                value={key}
-                readOnly
-                aria-label="extra-key"
-              />
-              <input
-                placeholder="value"
-                value={String(metadata[key] ?? '')}
-                onChange={(e) => setMetaValue(key, e.target.value)}
-              />
-              <button
-                type="button"
-                className="assets-canvas-page__meta-row-delete"
-                onClick={() => removeExtraKey(key)}
-              >
-                삭제
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="assets-canvas-page__meta-section-add-btn"
-            onClick={addExtraRow}
-          >
-            항목 추가
-          </button>
-        </div>
+        <FlatExtraMetadataSection
+          extraKeys={extraKeys}
+          metadata={metadata}
+          onSetValue={setMetaValue}
+          onRemoveKey={removeExtraKey}
+          onAddRow={addExtraRow}
+          addButtonLabel="항목 추가"
+        />
 
         {saveError && <p className="assets-canvas-page__error">{saveError}</p>}
         <button type="submit" disabled={saving}>

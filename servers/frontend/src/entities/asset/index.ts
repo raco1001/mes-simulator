@@ -1,4 +1,9 @@
-export type { AssetDto, CreateAssetRequest, UpdateAssetRequest } from './model/types'
+export type {
+  AssetDto,
+  CreateAssetRequest,
+  ExtraProperty,
+  UpdateAssetRequest,
+} from './model/types'
 export {
   getAssets,
   getAssetById,

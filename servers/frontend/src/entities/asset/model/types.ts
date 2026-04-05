@@ -2,6 +2,16 @@
  * Asset entity types (shared/api-schemas/assets.json 기반)
  */
 
+import type { DataType } from '@/entities/object-type-schema'
+
+/** metadata.extraProperties 배열 항목 (인스턴스 확장 속성) */
+export interface ExtraProperty {
+  key: string
+  dataType: DataType
+  unit?: string
+  value: unknown
+}
+
 export interface AssetDto {
   id: string
   type: string

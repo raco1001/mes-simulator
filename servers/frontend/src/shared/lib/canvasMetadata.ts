@@ -7,6 +7,30 @@ import type {
 /** metadata 안의 예약 키 — extraProperties는 별도 state로 관리되므로 flat extra 목록에서 제외 */
 export const EXTRA_PROPERTIES_KEY = 'extraProperties' as const
 
+/** API/레거시에서 camelCase 외 키로 들어올 수 있음 (예: extraproperties) */
+export function isReservedExtraPropertiesKey(key: string): boolean {
+  return key.toLowerCase() === 'extraproperties'
+}
+
+export function stripReservedExtraPropertiesKeys(
+  meta: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...meta }
+  for (const k of Object.keys(out)) {
+    if (isReservedExtraPropertiesKey(k)) delete out[k]
+  }
+  return out
+}
+
+export function getReservedExtraPropertiesRaw(
+  meta: Record<string, unknown>,
+): unknown {
+  for (const k of Object.keys(meta)) {
+    if (isReservedExtraPropertiesKey(k)) return meta[k]
+  }
+  return undefined
+}
+
 export function isEligibleProperty(p: PropertyDefinition): boolean {
   return (
     p.dataType === 'Number' &&
@@ -32,7 +56,7 @@ export function buildMetadataFromTypeSelection(
   for (const [k, v] of Object.entries(previousMeta)) {
     if (!schemaKeys.has(k)) preserved[k] = v
   }
-  return { ...injected, ...preserved }
+  return stripReservedExtraPropertiesKeys({ ...injected, ...preserved })
 }
 
 /** 패널 오픈 시 에셋 메타 + 스키마 기본값 병합 */
@@ -47,5 +71,5 @@ export function mergeAssetMetadataWithSchema(
   for (const p of props) {
     if (out[p.key] === undefined) out[p.key] = p.baseValue ?? ''
   }
-  return out
+  return stripReservedExtraPropertiesKeys(out)
 }
