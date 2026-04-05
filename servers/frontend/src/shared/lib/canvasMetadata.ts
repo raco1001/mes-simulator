@@ -4,6 +4,9 @@ import type {
   SimulationBehavior,
 } from '@/entities/object-type-schema'
 
+/** metadata 안의 예약 키 — extraProperties는 별도 state로 관리되므로 flat extra 목록에서 제외 */
+export const EXTRA_PROPERTIES_KEY = 'extraProperties' as const
+
 export function isEligibleProperty(p: PropertyDefinition): boolean {
   return (
     p.dataType === 'Number' &&

@@ -8,6 +8,26 @@ export interface UnitSelectProps {
   onChange: (unit: string) => void
   placeholder?: string
   style?: CSSProperties
+  /** 한 줄(폼 행)에 넣을 때: 검색 없이 select만 표시 */
+  compact?: boolean
+}
+
+const inputStyle: CSSProperties = {
+  padding: '4px 8px',
+  borderRadius: 4,
+  border: '1px solid #555',
+  background: '#1a1a1a',
+  color: '#fff',
+  width: '100%',
+  boxSizing: 'border-box',
+}
+
+/** flex 행에 넣을 때 부모 너비를 잡아먹지 않도록 */
+const compactSelectStyle: CSSProperties = {
+  ...inputStyle,
+  width: 'auto',
+  minWidth: '5.25rem',
+  maxWidth: '11rem',
 }
 
 export function UnitSelect({
@@ -15,6 +35,7 @@ export function UnitSelect({
   onChange,
   placeholder = '단위 선택',
   style,
+  compact = false,
 }: UnitSelectProps) {
   const [search, setSearch] = useState('')
 
@@ -27,13 +48,31 @@ export function UnitSelect({
     [search],
   )
 
-  const inputStyle: CSSProperties = {
-    padding: '4px 8px',
-    borderRadius: 4,
-    border: '1px solid #555',
-    background: '#1a1a1a',
-    color: '#fff',
-    width: '100%',
+  if (compact) {
+    return (
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={placeholder}
+        style={{ ...compactSelectStyle, ...style }}
+      >
+        <option value="">{placeholder}</option>
+        <optgroup label="기본 단위">
+          {BASE_UNITS.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="파생 단위">
+          {DERIVED_UNITS.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    )
   }
 
   return (

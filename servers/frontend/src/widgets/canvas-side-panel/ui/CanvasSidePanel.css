@@ -102,13 +102,120 @@
 
 .assets-canvas-page__meta-row {
   display: flex;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem;
   margin-bottom: 0.35rem;
 }
 
-.assets-canvas-page__meta-row input {
-  flex: 1;
-  min-width: 0;
+/* Flex row: avoid min-width:0 + width:100% collapsing text fields beside select/button */
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row input {
+  flex: 1 1 6rem;
+  min-width: 5rem;
+  width: auto;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 6.5rem;
+  margin-top: 0;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row button[type='button'] {
+  flex-shrink: 0;
+  white-space: nowrap;
+  width: auto;
+  margin-top: 0;
+  align-self: center;
+}
+
+.assets-canvas-page__meta-row-unit {
+  flex: 1 1 7rem;
+  min-width: 6rem;
+  max-width: 12rem;
+}
+
+/* 확장 속성(extraProperties): 상위 flex로 간격·높이 통일 */
+.assets-canvas-page__meta-row--extra {
+  --meta-extra-control-h: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+/* dataType + (optional) unit — select 사이 간격만 좁게 */
+.assets-canvas-page__meta-row-selects {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 0 0 auto;
+  gap: 0.3rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row--extra > input {
+  flex: 1 1 4.5rem;
+  min-width: 4rem;
+  width: auto;
+  max-width: 100%;
+  margin-top: 0;
+  height: var(--meta-extra-control-h);
+  min-height: var(--meta-extra-control-h);
+  box-sizing: border-box;
+  line-height: 1.25;
+  padding: 0 0.45rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row-selects select {
+  flex: 0 0 auto;
+  margin-top: 0;
+  height: var(--meta-extra-control-h);
+  min-height: var(--meta-extra-control-h);
+  box-sizing: border-box;
+  line-height: 1.25;
+  padding: 0 0.4rem;
+  width: auto;
+  min-width: 6.75rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row-selects select:last-of-type:not(:only-of-type) {
+  min-width: 5.25rem;
+  max-width: 11rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row .assets-canvas-page__meta-row-delete {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--meta-extra-control-h);
+  min-height: var(--meta-extra-control-h);
+  max-height: var(--meta-extra-control-h);
+  padding: 0 0.65rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  background: var(--app-bg-secondary, #2a2a2a);
+  border: 1px solid var(--app-border, #555);
+  border-radius: 4px;
+  color: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-section-add-btn {
+  margin-top: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  background: var(--app-bg-secondary, #2a2a2a);
+  border: 1px solid var(--app-border, #555);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
 }
 
 .assets-canvas-page__error {

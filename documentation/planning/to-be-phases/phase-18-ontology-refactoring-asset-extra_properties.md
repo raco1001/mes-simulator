@@ -1,3 +1,67 @@
+# 구현 계획: `metadata.extraProperties` 인스턴스 확장 속성 편집 기능
+
+## 개요
+
+Asset 편집 패널에서 `metadata.extraProperties` 필드를 ObjectType의 `ownProperties`와 동일한 방식(key, dataType, unit, value)으로 편집할 수 있도록 한다.
+
+- **변경 파일: 2개** (프론트엔드만)
+- **백엔드 / MongoDB / OpenAPI 변경 없음**
+
+### 설계 확정 사항
+
+| 항목         | 결정                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| JSON 형태    | 배열 (`ExtraProperty[]`) — `ownProperties`와 동일                                                             |
+| 필드 구성    | `key`, `dataType`, `unit?`, `value` — 인스턴스 수준이므로 `simulationBehavior`, `mutability`, `required` 제외 |
+| 저장 위치    | `metadata.extraProperties` (기존 평면 extra 키와 분리)                                                        |
+| 타입 변경 시 | `extraProperties` 상태 유지 (별도 state로 관리하므로 자동 보존)                                               |
+| 빈 배열 처리 | `extraProperties`가 비어있으면 metadata에 키 자체를 포함하지 않음                                             |
+
+---
+
+## Step 1: `canvasMetadata.ts` — 예약 키 상수 추가
+
+**파일**: `servers/frontend/src/shared/lib/canvasMetadata.ts`
+
+### 변경 내용
+
+파일 상단에 상수를 export 추가한다.
+
+**현재 코드 (1번째 줄):**
+
+```ts
+import type {
+  ObjectTypeSchemaDto,
+  PropertyDefinition,
+  SimulationBehavior,
+} from '@/entities/object-type-schema'
+```
+
+**변경 후:**
+
+```ts
+import type {
+  ObjectTypeSchemaDto,
+  PropertyDefinition,
+  SimulationBehavior,
+} from '@/entities/object-type-schema'
+
+/** metadata 안의 예약 키 — extraProperties는 별도 state로 관리되므로 flat extra 목록에서 제외 */
+export const EXTRA_PROPERTIES_KEY = 'extraProperties' as const
+```
+
+> `buildMetadataFromTypeSelection`과 `mergeAssetMetadataWithSchema` 함수 본문은 수정하지 않는다.
+> `extraProperties`는 스키마 키가 아니므로 기존 preserved 로직에 의해 이미 자동 보존된다.
+
+---
+
+## Step 2: `EditAssetOnPanel.tsx` — 전체 재작성
+
+**파일**: `servers/frontend/src/features/edit-asset-on-panel/ui/EditAssetOnPanel.tsx`
+
+아래 전체 코드로 파일을 교체한다.
+
+```tsx
 import { useMemo, useState, type FormEvent } from 'react'
 import type { AssetDto } from '@/entities/asset'
 import type {
@@ -270,10 +334,7 @@ export function EditAssetOnPanel({
         <div className="assets-canvas-page__meta-section">
           <span>확장 속성 (extraProperties)</span>
           {extraProperties.map((p, i) => (
-            <div
-              key={i}
-              className="assets-canvas-page__meta-row assets-canvas-page__meta-row--extra"
-            >
+            <div key={i} className="assets-canvas-page__meta-row">
               <input
                 placeholder="key"
                 value={p.key}
@@ -282,41 +343,38 @@ export function EditAssetOnPanel({
                 }
                 aria-label={`extra-prop-key-${i}`}
               />
-              <div className="assets-canvas-page__meta-row-selects">
-                <select
-                  value={p.dataType}
-                  onChange={(e) =>
-                    updateExtraProperty(i, {
-                      dataType: e.target.value as DataType,
-                    })
+              <select
+                value={p.dataType}
+                onChange={(e) =>
+                  updateExtraProperty(i, {
+                    dataType: e.target.value as DataType,
+                  })
+                }
+                aria-label={`extra-prop-datatype-${i}`}
+              >
+                {(
+                  [
+                    'Number',
+                    'String',
+                    'Boolean',
+                    'DateTime',
+                    'Array',
+                    'Object',
+                  ] as const
+                ).map((dt) => (
+                  <option key={dt} value={dt}>
+                    {dt}
+                  </option>
+                ))}
+              </select>
+              {p.dataType === 'Number' && (
+                <UnitSelect
+                  value={p.unit}
+                  onChange={(unit) =>
+                    updateExtraProperty(i, { unit: unit || undefined })
                   }
-                  aria-label={`extra-prop-datatype-${i}`}
-                >
-                  {(
-                    [
-                      'Number',
-                      'String',
-                      'Boolean',
-                      'DateTime',
-                      'Array',
-                      'Object',
-                    ] as const
-                  ).map((dt) => (
-                    <option key={dt} value={dt}>
-                      {dt}
-                    </option>
-                  ))}
-                </select>
-                {p.dataType === 'Number' ? (
-                  <UnitSelect
-                    compact
-                    value={p.unit}
-                    onChange={(unit) =>
-                      updateExtraProperty(i, { unit: unit || undefined })
-                    }
-                  />
-                ) : null}
-              </div>
+                />
+              )}
               <input
                 placeholder="value"
                 value={String(p.value ?? '')}
@@ -325,20 +383,12 @@ export function EditAssetOnPanel({
                 }
                 aria-label={`extra-prop-value-${i}`}
               />
-              <button
-                type="button"
-                className="assets-canvas-page__meta-row-delete"
-                onClick={() => removeExtraProperty(i)}
-              >
+              <button type="button" onClick={() => removeExtraProperty(i)}>
                 삭제
               </button>
             </div>
           ))}
-          <button
-            type="button"
-            className="assets-canvas-page__meta-section-add-btn"
-            onClick={addExtraProperty}
-          >
+          <button type="button" onClick={addExtraProperty}>
             + 속성 추가
           </button>
         </div>
@@ -359,20 +409,12 @@ export function EditAssetOnPanel({
                 value={String(metadata[key] ?? '')}
                 onChange={(e) => setMetaValue(key, e.target.value)}
               />
-              <button
-                type="button"
-                className="assets-canvas-page__meta-row-delete"
-                onClick={() => removeExtraKey(key)}
-              >
+              <button type="button" onClick={() => removeExtraKey(key)}>
                 삭제
               </button>
             </div>
           ))}
-          <button
-            type="button"
-            className="assets-canvas-page__meta-section-add-btn"
-            onClick={addExtraRow}
-          >
+          <button type="button" onClick={addExtraRow}>
             항목 추가
           </button>
         </div>
@@ -398,3 +440,36 @@ export function EditAssetOnPanel({
     </>
   )
 }
+```
+
+---
+
+## 검증 체크리스트
+
+에이전트는 아래 항목을 순서대로 확인한다.
+
+### 정적 검증
+
+```bash
+cd servers/frontend && pnpm tsc --noEmit
+```
+
+타입 에러 0건이어야 한다.
+
+### 동작 검증 (수동)
+
+1. **신규 extraProperty 추가**: 에셋 편집 패널에서 "확장 속성 + 속성 추가" 클릭 → key/dataType/value 입력 후 저장 → 저장된 asset의 `metadata.extraProperties`가 배열로 들어있는지 확인
+2. **Number 타입 선택 시 UnitSelect 표시**: dataType을 `Number`로 변경하면 UnitSelect가 나타나는지 확인
+3. **불러오기 복원**: 기존에 `extraProperties`가 저장된 asset을 편집 패널로 열면 값이 복원되는지 확인
+4. **타입 변경 후 유지**: ObjectType을 변경해도 `extraProperties` 목록이 사라지지 않는지 확인
+5. **flat extra 키 분리**: 기존 평면 extra 키(`extra_xxxx` 등)가 "추가 메타데이터" 섹션에만 표시되고 "확장 속성" 섹션과 섞이지 않는지 확인
+6. **빈 배열 저장**: 모든 extraProperty를 삭제하고 저장하면 `metadata.extraProperties` 키가 생략되는지 확인
+
+---
+
+## 변경 파일 요약
+
+| 파일                                                                        | 변경 유형  | 내용                                                           |
+| --------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------- |
+| `servers/frontend/src/shared/lib/canvasMetadata.ts`                         | 추가 (2줄) | `EXTRA_PROPERTIES_KEY` 상수 export                             |
+| `servers/frontend/src/features/edit-asset-on-panel/ui/EditAssetOnPanel.tsx` | 교체       | `ExtraProperty` 인터페이스 + 관련 state/helpers + UI 섹션 추가 |
