@@ -4,7 +4,11 @@
 export interface RunSimulationRequestDto {
   triggerAssetId: string
   patch?: StatePatchDto
+  /** BFS depth; omit or ≤0 uses server default (leaf-oriented). */
   maxDepth?: number
+  runTick?: number
+  /** Continuous engine polling (ms), 1–5000. */
+  engineTickIntervalMs?: number
 }
 
 export interface StatePatchDto {

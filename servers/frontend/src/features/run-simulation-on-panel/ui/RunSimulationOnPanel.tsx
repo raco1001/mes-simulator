@@ -24,7 +24,8 @@ export function RunSimulationOnPanel({
 }) {
   const [mode, setMode] = useState<'single' | 'continuous'>('single')
   const [triggerAssetId, setTriggerAssetId] = useState(selectedAssetId ?? '')
-  const [maxDepth, setMaxDepth] = useState('5')
+  const [maxDepth, setMaxDepth] = useState('100')
+  const [engineTickIntervalMs, setEngineTickIntervalMs] = useState('1000')
   const [running, setRunning] = useState(false)
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [events, setEvents] = useState<EventDto[]>([])
@@ -58,9 +59,12 @@ export function RunSimulationOnPanel({
     setEvents([])
     setRunning(true)
     try {
+      const depth = parseInt(maxDepth, 10)
+      const tickMs = Math.min(5000, Math.max(1, parseInt(engineTickIntervalMs, 10) || 1000))
       const result = await runSimulation({
         triggerAssetId,
-        maxDepth: parseInt(maxDepth) || 5,
+        maxDepth: Number.isFinite(depth) ? depth : 100,
+        engineTickIntervalMs: tickMs,
       })
       setResultMessage(result.message)
       if (result.runId) {
@@ -82,9 +86,12 @@ export function RunSimulationOnPanel({
     setTickCount(0)
     setRunning(true)
     try {
+      const depth = parseInt(maxDepth, 10)
+      const tickMs = Math.min(5000, Math.max(1, parseInt(engineTickIntervalMs, 10) || 1000))
       const result = await startContinuousRun({
         triggerAssetId,
-        maxDepth: parseInt(maxDepth) || 5,
+        maxDepth: Number.isFinite(depth) ? depth : 100,
+        engineTickIntervalMs: tickMs,
       })
       if (result.success && result.runId) {
         setActiveRunId(result.runId)
@@ -160,13 +167,24 @@ export function RunSimulationOnPanel({
           </select>
         </label>
         <label>
-          최대 전파 깊이
+          최대 전파 깊이 (리프까지 권장: 100+)
           <input
             type="number"
             min="1"
-            max="20"
+            max="2000"
             value={maxDepth}
             onChange={(e) => setMaxDepth(e.target.value)}
+            disabled={running}
+          />
+        </label>
+        <label title="연속 시뮬 엔진이 깨어나는 주기(ms). 단발 실행에도 Rate/Accumulator 델타에 사용됩니다.">
+          엔진 tick (ms)
+          <input
+            type="number"
+            min={1}
+            max={5000}
+            value={engineTickIntervalMs}
+            onChange={(e) => setEngineTickIntervalMs(e.target.value)}
             disabled={running}
           />
         </label>

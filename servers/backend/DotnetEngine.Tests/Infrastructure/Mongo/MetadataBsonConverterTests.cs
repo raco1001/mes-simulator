@@ -7,6 +7,19 @@ namespace DotnetEngine.Tests.Infrastructure.Mongo;
 
 public class MetadataBsonConverterTests
 {
+    [Theory]
+    [InlineData("extraProperties", "extraProperties")]
+    [InlineData("ExtraProperties", "extraProperties")]
+    [InlineData("dataType", "dataType")]
+    [InlineData("DataType", "dataType")]
+    [InlineData("simulationBehavior", "simulationBehavior")]
+    [InlineData("asset_id", "assetId")]
+    [InlineData("current_temp", "currentTemp")]
+    public void ToCamelCaseKey_PreservesInnerCasingOrSnakeToCamel(string input, string expected)
+    {
+        Assert.Equal(expected, MetadataBsonConverter.ToCamelCaseKey(input));
+    }
+
     [Fact]
     public void ToBsonDocument_NullOrEmpty_ReturnsEmptyBsonDocument()
     {

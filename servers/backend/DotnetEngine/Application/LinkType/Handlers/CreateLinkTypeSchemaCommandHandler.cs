@@ -26,6 +26,8 @@ public sealed class CreateLinkTypeSchemaCommandHandler : ICreateLinkTypeSchemaCo
             FromConstraint = request.FromConstraint,
             ToConstraint = request.ToConstraint,
             Properties = request.Properties,
+            DefaultPropertyMappings = request.DefaultPropertyMappings,
+            AllowedPropertyMappingPairs = request.AllowedPropertyMappingPairs,
             CreatedAt = now,
             UpdatedAt = now
         };

@@ -15,10 +15,19 @@ public sealed class ConnectedToRule : IPropagationRule
     {
         var fromState = ctx.FromState;
         var incoming = ctx.IncomingPatch;
-        var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+        var source = TransferSpecParser.ResolveSourceProperties(incoming, fromState);
+        Dictionary<string, object?> outgoingProps;
+        if (ctx.Relationship.Mappings is { Count: > 0 })
+            outgoingProps = PropertyMappingPropagation.ApplyMappings(ctx.Relationship.Mappings, source);
+        else
+        {
+            var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+            outgoingProps = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState);
+        }
+
         var outgoingPatch = new StatePatchDto
         {
-            Properties = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState),
+            Properties = outgoingProps,
             Status = incoming.Status ?? fromState?.Status,
             LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
         };

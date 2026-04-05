@@ -3,6 +3,7 @@ using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Domain.Simulation;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
@@ -24,7 +25,9 @@ public sealed class WhatIfSimulationQueryHandler : IWhatIfSimulationQuery
 
     public async Task<WhatIfResult> RunAsync(RunSimulationRequest request, CancellationToken cancellationToken = default)
     {
-        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
+        var maxDepth = request.MaxDepth <= 0
+            ? SimulationEngineConstants.DefaultLeafPropagationMaxDepth
+            : request.MaxDepth;
         var (affected, depthMap) = await CollectAffectedAsync(request.TriggerAssetId, maxDepth, cancellationToken);
         var before = await BuildBeforeSnapshotsAsync(affected, cancellationToken);
 

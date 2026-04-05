@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Linq;
 using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Domain.Simulation;
 using Microsoft.Extensions.Hosting;
 
 namespace DotnetEngine.Application.Simulation.Workers;
@@ -14,7 +16,6 @@ namespace DotnetEngine.Application.Simulation.Workers;
 /// </summary>
 public sealed class SimulationEngineService : BackgroundService
 {
-    private const int TickIntervalMs = 1000;
     private const string MetadataTickIntervalMs = "tickIntervalMs";
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -50,6 +51,11 @@ public sealed class SimulationEngineService : BackgroundService
                         // 한 Run 실패 시 다른 Run 계속 처리
                     }
                 }
+
+                var delayMs = runs.Count == 0
+                    ? SimulationEngineConstants.DefaultEngineTickIntervalMs
+                    : runs.Min(r => SimulationEngineConstants.ClampEngineTickIntervalMs(r.EngineTickIntervalMs));
+                await Task.Delay(delayMs, stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -57,10 +63,8 @@ public sealed class SimulationEngineService : BackgroundService
             }
             catch
             {
-                // 루프 단위 예외 시 다음 주기까지 대기
+                await Task.Delay(SimulationEngineConstants.DefaultEngineTickIntervalMs, stoppingToken);
             }
-
-            await Task.Delay(TickIntervalMs, stoppingToken);
         }
     }
 
@@ -91,6 +95,7 @@ public sealed class SimulationEngineService : BackgroundService
                 MaxDepth = run.MaxDepth,
                 Patch = null,
                 RunTick = nextTick,
+                EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(run.EngineTickIntervalMs),
             };
             await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
         }
@@ -101,9 +106,10 @@ public sealed class SimulationEngineService : BackgroundService
                 var request = new RunSimulationRequest
                 {
                     TriggerAssetId = assetId,
-                    MaxDepth = 0,
+                    MaxDepth = run.MaxDepth,
                     Patch = null,
                     RunTick = nextTick,
+                    EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(run.EngineTickIntervalMs),
                 };
                 await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
             }

@@ -11,7 +11,7 @@ import {
 } from '@/entities/relationship'
 import type { LinkTypeSchemaDto } from '@/entities/link-type-schema'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
-import { isEligibleProperty } from '@/shared/lib/canvasMetadata'
+import { mergeNumberMappingProperties } from '@/shared/lib/canvasMetadata'
 import { CanvasSidePanel } from '@/widgets/canvas-side-panel'
 import './CreateRelationshipOnPanel.css'
 
@@ -96,10 +96,14 @@ export function CreateRelationshipOnPanel({
   const sourceSchema = sourceAssetType
     ? objectTypeSchemas.find((s) => s.objectType === sourceAssetType) ?? null
     : null
-  const sourceEligibleProps = useMemo(() => {
-    if (!sourceSchema) return []
-    return (sourceSchema.resolvedProperties ?? sourceSchema.ownProperties).filter(isEligibleProperty)
-  }, [sourceSchema])
+  const sourceEligibleProps = useMemo(
+    () =>
+      mergeNumberMappingProperties(
+        sourceSchema,
+        sourceNode?.data.asset.metadata,
+      ),
+    [sourceSchema, sourceNode?.data.asset.metadata],
+  )
 
   // ── Target ──
   const targetNode = targetId ? nodes.find((n) => n.id === targetId) : null
@@ -107,10 +111,14 @@ export function CreateRelationshipOnPanel({
   const targetSchema = targetAssetType
     ? objectTypeSchemas.find((s) => s.objectType === targetAssetType) ?? null
     : null
-  const targetEligibleProps = useMemo(() => {
-    if (!targetSchema) return []
-    return (targetSchema.resolvedProperties ?? targetSchema.ownProperties).filter(isEligibleProperty)
-  }, [targetSchema])
+  const targetEligibleProps = useMemo(
+    () =>
+      mergeNumberMappingProperties(
+        targetSchema,
+        targetNode?.data.asset.metadata,
+      ),
+    [targetSchema, targetNode?.data.asset.metadata],
+  )
 
   const linkSchema = linkTypeSchemas.find((s) => s.linkType === selectedLinkType) ?? null
 
@@ -254,7 +262,15 @@ export function CreateRelationshipOnPanel({
           <span className="create-rel__section-title">Step 2 — 관계 타입</span>
           <select
             value={selectedLinkType}
-            onChange={(e) => setSelectedLinkType(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value
+              setSelectedLinkType(v)
+              const schema = linkTypeSchemas.find((s) => s.linkType === v)
+              const defaults = schema?.defaultPropertyMappings
+              if (defaults?.length && mappings.length === 0) {
+                setMappings(toRows(defaults))
+              }
+            }}
             aria-label="관계 타입"
           >
             <option value="">선택하세요...</option>
@@ -267,6 +283,19 @@ export function CreateRelationshipOnPanel({
           {linkSchema && (
             <p className="create-rel__hint">
               방향: {linkSchema.direction} / 지속성: {linkSchema.temporality}
+              {linkSchema.allowedPropertyMappingPairs &&
+                linkSchema.allowedPropertyMappingPairs.length > 0 && (
+                  <>
+                    {' '}
+                    · 허용 매핑 쌍:{' '}
+                    {linkSchema.allowedPropertyMappingPairs
+                      .map(
+                        (p) =>
+                          `${p.fromPropertyKey}→${p.toPropertyKey}`,
+                      )
+                      .join(', ')}
+                  </>
+                )}
             </p>
           )}
         </div>
@@ -277,8 +306,9 @@ export function CreateRelationshipOnPanel({
           <span className="create-rel__section-title">Step 3 — 속성 매핑</span>
 
           <p className="create-rel__hint" style={{ marginBottom: '0.5rem' }}>
-            Source → Target 속성을 연결하고 연산 규칙을 입력하세요.{' '}
-            예: <code>value</code>, <code>value * 0.2</code>, <code>value / 3</code>
+            Source → Target (Number). 예: <code>value</code>, <code>value * 0.2</code>,{' '}
+            <code>min value 10</code>, <code>clamp value 0 100</code>, <code>abs value</code>. 단위
+            불일치 시 kW↔W 등 백엔드 변환이 가능하면 런타임에 적용됩니다.
           </p>
 
           <div className="create-rel__mapping-list">

@@ -28,4 +28,7 @@ public sealed class MongoSimulationRunDocument
 
     [BsonElement("tickIndex")]
     public int TickIndex { get; set; }
+
+    [BsonElement("engineTickIntervalMs")]
+    public int EngineTickIntervalMs { get; set; } = 1000;
 }

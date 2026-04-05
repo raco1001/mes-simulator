@@ -52,6 +52,7 @@ public class CreateRelationshipCommandHandlerTests
             assetRepository: null,
             objectTypeSchemaRepository: null,
             linkTypeSchemaRepository: linkRepo.Object,
+            mappingValidator: null,
             logger: null);
 
         var result = await sut.CreateAsync(new CreateRelationshipRequest
@@ -158,6 +159,7 @@ public class CreateRelationshipCommandHandlerTests
             assetRepo.Object,
             objectRepo.Object,
             linkRepo.Object,
+            mappingValidator: null,
             logger.Object);
 
         var result = await sut.CreateAsync(new CreateRelationshipRequest

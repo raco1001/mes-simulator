@@ -99,11 +99,15 @@ public static class EffectivePropertySetResolver
         if (!TryGetString(dict, "key", out var key) || string.IsNullOrWhiteSpace(key))
             return;
 
-        var dataTypeStr = TryGetString(dict, "dataType", out var ds) ? ds : "String";
+        var dataTypeStr = TryGetString(dict, "dataType", out var ds)
+            ? ds
+            : (TryGetString(dict, "datatype", out var ds2) ? ds2 : "String");
         if (!Enum.TryParse<DataType>(dataTypeStr, ignoreCase: true, out var dataType))
             dataType = DataType.String;
 
-        var simStr = TryGetString(dict, "simulationBehavior", out var sb) ? sb : "Settable";
+        var simStr = TryGetString(dict, "simulationBehavior", out var sb)
+            ? sb
+            : (TryGetString(dict, "simulationbehavior", out var sb2) ? sb2 : "Settable");
         if (!Enum.TryParse<SimulationBehavior>(simStr, ignoreCase: true, out var sim))
             sim = SimulationBehavior.Settable;
 

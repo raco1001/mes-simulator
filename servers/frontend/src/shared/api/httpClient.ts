@@ -21,7 +21,16 @@ export const httpClient = {
       if (response.status === 404) {
         throw new Error('Resource not found')
       }
-      throw new Error(`API request failed: ${response.statusText}`)
+      let detail = response.statusText
+      try {
+        const err = (await response.json()) as { message?: string }
+        if (typeof err?.message === 'string' && err.message.length > 0) {
+          detail = err.message
+        }
+      } catch {
+        /* non-JSON error body */
+      }
+      throw new Error(detail)
     }
 
     return response.json()

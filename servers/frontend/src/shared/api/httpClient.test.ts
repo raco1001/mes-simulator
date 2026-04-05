@@ -48,7 +48,7 @@ describe('httpClient', () => {
     } as Response)
 
     await expect(httpClient.request('/api/foo')).rejects.toThrow(
-      'API request failed: Internal Server Error',
+      'Internal Server Error',
     )
   })
 

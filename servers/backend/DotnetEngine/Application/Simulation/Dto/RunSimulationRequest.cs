@@ -1,3 +1,5 @@
+using DotnetEngine.Domain.Simulation;
+
 namespace DotnetEngine.Application.Simulation.Dto;
 
 /// <summary>
@@ -8,7 +10,10 @@ public sealed record RunSimulationRequest
 {
     public required string TriggerAssetId { get; init; }
     public StatePatchDto? Patch { get; init; }
-    public int MaxDepth { get; init; } = 3;
+    /// <summary>≤0이면 <see cref="SimulationEngineConstants.DefaultLeafPropagationMaxDepth"/>.</summary>
+    public int MaxDepth { get; init; }
     /// <summary>Run 전역 tick (이벤트 payload.tick에 포함). 단건 실행 시 0.</summary>
     public int RunTick { get; init; }
+    /// <summary>연속 시뮬 엔진 폴링 주기(ms). 1–5000.</summary>
+    public int EngineTickIntervalMs { get; init; } = SimulationEngineConstants.DefaultEngineTickIntervalMs;
 }

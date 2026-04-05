@@ -1,3 +1,4 @@
+using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 
 namespace DotnetEngine.Application.Simulation.Dto;
@@ -15,6 +16,8 @@ public sealed record SimulationRunDto
     /// <summary>상태 패치 표현 (currentTemp, currentPower, status, lastEventType 등).</summary>
     public IReadOnlyDictionary<string, object> Trigger { get; init; } = new Dictionary<string, object>();
     public int MaxDepth { get; init; }
+    /// <summary>백그라운드 엔진 폴링 주기(ms). 1–5000.</summary>
+    public int EngineTickIntervalMs { get; init; } = SimulationEngineConstants.DefaultEngineTickIntervalMs;
     /// <summary>Run 전역 tick 번호. 지속 Run에서만 엔진이 증가.</summary>
     public int TickIndex { get; init; }
 }

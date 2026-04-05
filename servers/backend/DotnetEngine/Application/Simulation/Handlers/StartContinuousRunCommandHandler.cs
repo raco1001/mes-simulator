@@ -1,6 +1,7 @@
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
+using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 using System.Linq;
 
@@ -31,7 +32,10 @@ public sealed class StartContinuousRunCommandHandler : IStartContinuousRunComman
             };
 
         var runId = Guid.NewGuid().ToString("N");
-        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
+        var maxDepth = request.MaxDepth <= 0
+            ? SimulationEngineConstants.DefaultLeafPropagationMaxDepth
+            : request.MaxDepth;
+        var engineTick = SimulationEngineConstants.ClampEngineTickIntervalMs(request.EngineTickIntervalMs);
         var startedAt = DateTimeOffset.UtcNow;
         var trigger = StatePatchToDictionary(request.Patch);
 
@@ -44,6 +48,7 @@ public sealed class StartContinuousRunCommandHandler : IStartContinuousRunComman
             TriggerAssetId = request.TriggerAssetId,
             Trigger = trigger,
             MaxDepth = maxDepth,
+            EngineTickIntervalMs = engineTick,
             TickIndex = 0,
         };
         await _simulationRunRepository.CreateAsync(runDto, cancellationToken);

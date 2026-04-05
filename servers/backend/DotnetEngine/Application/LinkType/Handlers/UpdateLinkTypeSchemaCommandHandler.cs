@@ -28,6 +28,8 @@ public sealed class UpdateLinkTypeSchemaCommandHandler : IUpdateLinkTypeSchemaCo
             FromConstraint = request.FromConstraint ?? current.FromConstraint,
             ToConstraint = request.ToConstraint ?? current.ToConstraint,
             Properties = request.Properties ?? current.Properties,
+            DefaultPropertyMappings = request.DefaultPropertyMappings ?? current.DefaultPropertyMappings,
+            AllowedPropertyMappingPairs = request.AllowedPropertyMappingPairs ?? current.AllowedPropertyMappingPairs,
             UpdatedAt = DateTimeOffset.UtcNow
         };
         return await _repository.UpdateAsync(linkType, next, cancellationToken);

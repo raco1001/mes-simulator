@@ -5,6 +5,7 @@ using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
+using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.Constants;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
@@ -63,9 +64,10 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
     public async Task<RunResult> RunAsync(RunSimulationRequest request, CancellationToken cancellationToken = default)
     {
         var runId = Guid.NewGuid().ToString("N");
-        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
+        var maxDepth = ResolveMaxDepth(request.MaxDepth);
         var startedAt = DateTimeOffset.UtcNow;
         var triggerDict = StatePatchToDictionary(request.Patch);
+        var engineTick = SimulationEngineConstants.ClampEngineTickIntervalMs(request.EngineTickIntervalMs);
 
         var runDto = new SimulationRunDto
         {
@@ -76,6 +78,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             TriggerAssetId = request.TriggerAssetId,
             Trigger = triggerDict,
             MaxDepth = maxDepth,
+            EngineTickIntervalMs = engineTick,
             TickIndex = 0,
         };
         await _simulationRunRepository.CreateAsync(runDto, cancellationToken);
@@ -100,7 +103,8 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         CancellationToken cancellationToken = default)
     {
         var runTick = request.RunTick;
-        var maxDepth = request.MaxDepth <= 0 ? 3 : request.MaxDepth;
+        var maxDepth = ResolveMaxDepth(request.MaxDepth);
+        var runRecord = await _simulationRunRepository.GetByIdAsync(runId, cancellationToken);
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var cycleAccumulatedPatches = new Dictionary<string, StatePatchDto>(StringComparer.Ordinal);
         var mergedStates = new Dictionary<string, StateDto>(StringComparer.Ordinal);
@@ -121,7 +125,13 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
             var objectTypeSchema = asset is null
                 ? null
                 : await _objectTypeSchemaRepository.GetByObjectTypeAsync(asset.Type, cancellationToken);
-            var mergedState = ComputeState(assetId, currentState, patch, objectTypeSchema, asset);
+            var mergedState = ComputeState(
+                assetId,
+                currentState,
+                patch,
+                objectTypeSchema,
+                asset,
+                ComputeSimulationDeltaTime(currentState, runRecord));
 
             var occurredAt = DateTimeOffset.UtcNow;
             var nodeEvent = new EventDto
@@ -185,6 +195,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
 
                 if (visited.Contains(rel.ToAssetId))
                 {
+                    // Future: tie-break / damping / iteration cap via SimulationEngineConstants.MaxCycleResolutionIterations for event-loop graphs.
                     _logger.LogWarning("Cycle detected during propagation: {FromAssetId} -> {ToAssetId} (run {RunId}, tick {Tick})", assetId, rel.ToAssetId, runId, runTick);
                     AccumulateCyclePatch(cycleAccumulatedPatches, rel.ToAssetId, nextPatch);
                 }
@@ -214,7 +225,13 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 ? null
                 : await _objectTypeSchemaRepository.GetByObjectTypeAsync(asset.Type, cancellationToken);
             var effectivePatch = BuildEffectiveCyclePatch(currentState, patch);
-            var mergedState = ComputeState(assetId, currentState, effectivePatch, objectTypeSchema, asset);
+            var mergedState = ComputeState(
+                assetId,
+                currentState,
+                effectivePatch,
+                objectTypeSchema,
+                asset,
+                ComputeSimulationDeltaTime(currentState, runRecord));
 
             var nodeEvent = new EventDto
             {
@@ -240,12 +257,22 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         return mergedStates;
     }
 
+    private static TimeSpan ComputeSimulationDeltaTime(StateDto? current, SimulationRunDto? run)
+    {
+        var last = current?.UpdatedAt ?? run?.StartedAt ?? DateTimeOffset.UtcNow;
+        return SimulationEngineConstants.ClampSimulationDelta(DateTimeOffset.UtcNow - last);
+    }
+
+    private static int ResolveMaxDepth(int maxDepth) =>
+        maxDepth <= 0 ? SimulationEngineConstants.DefaultLeafPropagationMaxDepth : maxDepth;
+
     private StateDto ComputeState(
         string assetId,
         StateDto? current,
         StatePatchDto patch,
         ObjectTypeSchemaDto? objectTypeSchema,
-        AssetDto? asset = null)
+        AssetDto? asset,
+        TimeSpan deltaTime)
     {
         if (objectTypeSchema is null)
             return MergeStateFallback(assetId, current, patch);
@@ -273,7 +300,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 Definition = definition,
                 CurrentValue = currentValue,
                 PatchValue = patchValue,
-                DeltaTime = TimeSpan.FromSeconds(1),
+                DeltaTime = deltaTime,
                 AllProperties = mergedProperties
             });
             if (computed is null)

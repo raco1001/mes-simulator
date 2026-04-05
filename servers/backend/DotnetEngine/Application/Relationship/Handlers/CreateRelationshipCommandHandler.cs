@@ -1,3 +1,4 @@
+using System.Linq;
 using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Relationship.Ports.Driving;
 using DotnetEngine.Application.Relationship.Ports.Driven;
@@ -19,10 +20,11 @@ public sealed class CreateRelationshipCommandHandler : ICreateRelationshipComman
     private readonly IAssetRepository? _assetRepository;
     private readonly IObjectTypeSchemaRepository? _objectTypeSchemaRepository;
     private readonly ILinkTypeSchemaRepository? _linkTypeSchemaRepository;
+    private readonly IRelationshipPropertyMappingValidator? _mappingValidator;
     private readonly ILogger<CreateRelationshipCommandHandler>? _logger;
 
     public CreateRelationshipCommandHandler(IRelationshipRepository repository)
-        : this(repository, null, null, null, null)
+        : this(repository, null, null, null, null, null)
     {
     }
 
@@ -31,17 +33,37 @@ public sealed class CreateRelationshipCommandHandler : ICreateRelationshipComman
         IAssetRepository? assetRepository,
         IObjectTypeSchemaRepository? objectTypeSchemaRepository,
         ILinkTypeSchemaRepository? linkTypeSchemaRepository,
+        IRelationshipPropertyMappingValidator? mappingValidator,
         ILogger<CreateRelationshipCommandHandler>? logger)
     {
         _repository = repository;
         _assetRepository = assetRepository;
         _objectTypeSchemaRepository = objectTypeSchemaRepository;
         _linkTypeSchemaRepository = linkTypeSchemaRepository;
+        _mappingValidator = mappingValidator;
         _logger = logger;
     }
 
     public async Task<RelationshipDto> CreateAsync(CreateRelationshipRequest request, CancellationToken cancellationToken = default)
     {
+        LinkTypeSchemaDto? linkSchema = null;
+        if (_linkTypeSchemaRepository != null)
+            linkSchema = await _linkTypeSchemaRepository.GetByLinkTypeAsync(request.RelationshipType, cancellationToken);
+
+        var effectiveMappings = request.Mappings.Count > 0
+            ? request.Mappings
+            : (linkSchema?.DefaultPropertyMappings ?? Array.Empty<PropertyMapping>());
+
+        if (_mappingValidator != null && effectiveMappings.Count > 0)
+        {
+            await _mappingValidator.ValidateAsync(
+                effectiveMappings,
+                request.FromAssetId,
+                request.ToAssetId,
+                linkSchema,
+                cancellationToken);
+        }
+
         var seededProperties = await BuildSeededPropertiesAsync(request, cancellationToken);
         await ValidateConstraintsWithWarningAsync(request, cancellationToken);
 
@@ -53,7 +75,7 @@ public sealed class CreateRelationshipCommandHandler : ICreateRelationshipComman
             ToAssetId = request.ToAssetId,
             RelationshipType = request.RelationshipType,
             Properties = seededProperties,
-            Mappings = request.Mappings,
+            Mappings = effectiveMappings.ToList(),
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };

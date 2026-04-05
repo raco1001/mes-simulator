@@ -1128,9 +1128,7 @@
       "RunSimulationRequest": {
         "type": "object",
         "required": [
-          "triggerAssetId",
-          "maxDepth",
-          "runTick"
+          "triggerAssetId"
         ],
         "properties": {
           "triggerAssetId": {
@@ -1146,10 +1144,19 @@
           },
           "maxDepth": {
             "type": "integer",
-            "default": 3
+            "description": "BFS depth cap; omit or ≤0 to use server default (leaf-oriented, typically 100).",
+            "default": 0
           },
           "runTick": {
-            "type": "integer"
+            "type": "integer",
+            "default": 0
+          },
+          "engineTickIntervalMs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "default": 1000,
+            "description": "Continuous simulation engine polling interval (ms)."
           }
         }
       },

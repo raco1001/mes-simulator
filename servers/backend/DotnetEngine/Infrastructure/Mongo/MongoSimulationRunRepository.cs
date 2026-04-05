@@ -1,4 +1,5 @@
 using DotnetEngine.Application.Simulation.Dto;
+using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using MongoDB.Driver;
@@ -77,6 +78,9 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
             TriggerAssetId = doc.TriggerAssetId,
             Trigger = MetadataBsonConverter.ToDictionary(doc.Trigger),
             MaxDepth = doc.MaxDepth,
+            EngineTickIntervalMs = doc.EngineTickIntervalMs <= 0
+                ? SimulationEngineConstants.DefaultEngineTickIntervalMs
+                : SimulationEngineConstants.ClampEngineTickIntervalMs(doc.EngineTickIntervalMs),
             TickIndex = doc.TickIndex,
         };
     }
@@ -92,6 +96,7 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
             TriggerAssetId = dto.TriggerAssetId,
             Trigger = MetadataBsonConverter.ToBsonDocument(dto.Trigger),
             MaxDepth = dto.MaxDepth,
+            EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(dto.EngineTickIntervalMs),
             TickIndex = dto.TickIndex,
         };
     }

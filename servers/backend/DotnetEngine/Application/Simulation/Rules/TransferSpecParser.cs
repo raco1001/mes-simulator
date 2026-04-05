@@ -5,9 +5,9 @@ using DotnetEngine.Application.Simulation.Dto;
 
 namespace DotnetEngine.Application.Simulation.Rules;
 
-internal readonly record struct TransferSpec(string Key, double Ratio, string TargetKey);
+public readonly record struct TransferSpec(string Key, double Ratio, string TargetKey);
 
-internal static class TransferSpecParser
+public static class TransferSpecParser
 {
     /// <summary>
     /// Source properties for Supplies propagation: incoming patch wins, else from-asset state.
@@ -94,7 +94,7 @@ internal static class TransferSpecParser
         return specs;
     }
 
-    internal static bool TryCoerceDouble(object? value, out double number)
+    public static bool TryCoerceDouble(object? value, out double number)
     {
         if (value is null)
         {

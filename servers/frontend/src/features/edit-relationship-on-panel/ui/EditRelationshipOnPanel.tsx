@@ -7,7 +7,7 @@ import {
 } from '@/entities/relationship'
 import type { LinkTypeSchemaDto } from '@/entities/link-type-schema'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
-import { isEligibleProperty } from '@/shared/lib/canvasMetadata'
+import { mergeNumberMappingProperties } from '@/shared/lib/canvasMetadata'
 import './CreateRelationshipOnPanel.css'
 
 interface MappingRow {
@@ -31,6 +31,8 @@ export function EditRelationshipOnPanel({
   objectTypeSchemas,
   fromAssetType,
   toAssetType,
+  fromAssetMetadata,
+  toAssetMetadata,
   onClose,
   onSaved,
   onDeleted,
@@ -40,6 +42,9 @@ export function EditRelationshipOnPanel({
   objectTypeSchemas: ObjectTypeSchemaDto[]
   fromAssetType?: string | null
   toAssetType?: string | null
+  /** 있으면 extraProperties 기반 매핑 후보 병합 */
+  fromAssetMetadata?: Record<string, unknown> | null
+  toAssetMetadata?: Record<string, unknown> | null
   onClose: () => void
   onSaved: (updated: RelationshipDto) => void
   onDeleted: (id: string) => void
@@ -59,6 +64,10 @@ export function EditRelationshipOnPanel({
       ? linkTypeSchemas.map((s) => s.linkType)
       : [relationship.relationshipType]
 
+  const linkSchemaForType = linkTypeSchemas.find(
+    (s) => s.linkType === relationshipType,
+  )
+
   // ── Schema-derived property lists ──
   const sourceSchema = fromAssetType
     ? (objectTypeSchemas.find((s) => s.objectType === fromAssetType) ?? null)
@@ -69,21 +78,19 @@ export function EditRelationshipOnPanel({
 
   const sourceProps = useMemo(
     () =>
-      sourceSchema
-        ? (
-            sourceSchema.resolvedProperties ?? sourceSchema.ownProperties
-          ).filter(isEligibleProperty)
-        : [],
-    [sourceSchema],
+      mergeNumberMappingProperties(
+        sourceSchema,
+        fromAssetMetadata ?? undefined,
+      ),
+    [sourceSchema, fromAssetMetadata],
   )
   const targetProps = useMemo(
     () =>
-      targetSchema
-        ? (
-            targetSchema.resolvedProperties ?? targetSchema.ownProperties
-          ).filter(isEligibleProperty)
-        : [],
-    [targetSchema],
+      mergeNumberMappingProperties(
+        targetSchema,
+        toAssetMetadata ?? undefined,
+      ),
+    [targetSchema, toAssetMetadata],
   )
 
   const getUnit = (props: typeof sourceProps, key: string) =>
@@ -197,10 +204,19 @@ export function EditRelationshipOnPanel({
 
           {sourceProps.length > 0 && targetProps.length > 0 && (
             <p className="create-rel__hint" style={{ marginBottom: '0.5rem' }}>
-              규칙 예시: <code>value</code>, <code>value * 0.2</code>,{' '}
-              <code>value / 3</code>
+              Number 속성만. <code>value</code>, <code>value * 0.2</code>,{' '}
+              <code>min value N</code>, <code>clamp value 0 100</code>, <code>abs value</code>
             </p>
           )}
+          {linkSchemaForType?.allowedPropertyMappingPairs &&
+            linkSchemaForType.allowedPropertyMappingPairs.length > 0 && (
+              <p className="create-rel__hint" style={{ marginBottom: '0.5rem' }}>
+                허용 쌍:{' '}
+                {linkSchemaForType.allowedPropertyMappingPairs
+                  .map((p) => `${p.fromPropertyKey}→${p.toPropertyKey}`)
+                  .join(', ')}
+              </p>
+            )}
 
           <div className="create-rel__mapping-list">
             {mappings.length === 0 && (

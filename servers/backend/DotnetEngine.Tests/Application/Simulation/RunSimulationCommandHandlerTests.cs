@@ -5,6 +5,7 @@ using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Handlers;
+using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
@@ -44,6 +45,7 @@ public class RunSimulationCommandHandlerTests
         Assert.NotNull(capturedDto);
         Assert.Equal(SimulationRunStatus.Pending, capturedDto.Status);
         Assert.Equal(0, capturedDto.TickIndex);
+        Assert.Equal(SimulationEngineConstants.DefaultEngineTickIntervalMs, capturedDto.EngineTickIntervalMs);
     }
 
     [Fact]
@@ -284,7 +286,7 @@ public class RunSimulationCommandHandlerTests
                 AssetId = "asset-1",
                 Properties = new Dictionary<string, object?> { ["temp"] = 10d },
                 Status = "normal",
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = DateTimeOffset.UtcNow.AddSeconds(-1)
             });
         mockAssetRepo.Setup(r => r.UpsertStateAsync(It.IsAny<StateDto>(), It.IsAny<CancellationToken>()))
             .Callback<StateDto, CancellationToken>((s, _) => capturedState = s)
@@ -323,7 +325,8 @@ public class RunSimulationCommandHandlerTests
         }, cancellationToken: CancellationToken.None);
 
         Assert.NotNull(capturedState);
-        Assert.Equal(12d, capturedState!.Properties["temp"]);
+        var temp = Convert.ToDouble(capturedState!.Properties["temp"]);
+        Assert.InRange(temp, 11.99, 12.02);
     }
 
     [Fact]
@@ -473,6 +476,8 @@ public class RunSimulationCommandHandlerTests
         var m = new Mock<ISimulationRunRepository>();
         m.Setup(r => r.CreateAsync(It.IsAny<SimulationRunDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
+        m.Setup(r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SimulationRunDto?)null);
         m.Setup(r => r.UpdateStatusAsync(It.IsAny<string>(), It.IsAny<SimulationRunStatus>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         m.Setup(r => r.UpdateTickIndexAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))

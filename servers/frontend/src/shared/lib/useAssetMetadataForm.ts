@@ -7,7 +7,6 @@ import {
 } from 'react'
 import type { ExtraProperty } from '@/entities/asset'
 import type {
-  DataType,
   Mutability,
   ObjectTypeSchemaDto,
   SimulationBehavior,
@@ -16,46 +15,19 @@ import {
   buildMetadataFromTypeSelection,
   mergeAssetMetadataWithSchema,
   EXTRA_PROPERTIES_KEY,
-  getReservedExtraPropertiesRaw,
   isReservedExtraPropertiesKey,
   stripReservedExtraPropertiesKeys,
+  parseExtraPropertiesFromMetadata,
 } from '@/shared/lib/canvasMetadata'
+import {
+  normalizeExtraProperty,
+  sanitizeExtraPropertyForSave,
+} from '@/shared/lib/extraPropertiesCore'
 
 const DEFAULT_SIM_BEHAVIOR: SimulationBehavior = 'Settable'
 const DEFAULT_MUTABILITY: Mutability = 'Mutable'
 
-const VALID_DATA_TYPES: DataType[] = [
-  'Number',
-  'String',
-  'Boolean',
-  'DateTime',
-  'Array',
-  'Object',
-]
-const VALID_SIM: SimulationBehavior[] = [
-  'Constant',
-  'Settable',
-  'Rate',
-  'Accumulator',
-  'Derived',
-]
-const VALID_MUT: Mutability[] = ['Immutable', 'Mutable']
-
-function coerceDataType(v: unknown): DataType {
-  return VALID_DATA_TYPES.includes(v as DataType) ? (v as DataType) : 'String'
-}
-
-function coerceSimulationBehavior(v: unknown): SimulationBehavior {
-  return VALID_SIM.includes(v as SimulationBehavior)
-    ? (v as SimulationBehavior)
-    : DEFAULT_SIM_BEHAVIOR
-}
-
-function coerceMutability(v: unknown): Mutability {
-  return VALID_MUT.includes(v as Mutability)
-    ? (v as Mutability)
-    : DEFAULT_MUTABILITY
-}
+export { normalizeExtraProperty }
 
 export function emptyExtraProperty(): ExtraProperty {
   return {
@@ -67,43 +39,10 @@ export function emptyExtraProperty(): ExtraProperty {
   }
 }
 
-/** 레거시 항목에 simulationBehavior / mutability 없을 때 기본값 부여 */
-export function normalizeExtraProperty(raw: unknown): ExtraProperty | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const o = raw as Record<string, unknown>
-  const key = typeof o.key === 'string' ? o.key : ''
-  const constraints =
-    o.constraints &&
-    typeof o.constraints === 'object' &&
-    !Array.isArray(o.constraints)
-      ? (o.constraints as Record<string, unknown>)
-      : undefined
-  return {
-    key,
-    dataType: coerceDataType(o.dataType),
-    unit: typeof o.unit === 'string' ? o.unit : undefined,
-    value: o.value,
-    simulationBehavior: coerceSimulationBehavior(o.simulationBehavior),
-    mutability: coerceMutability(o.mutability),
-    constraints,
-  }
-}
-
-function normalizeExtraPropertiesList(items: unknown[]): ExtraProperty[] {
-  const out: ExtraProperty[] = []
-  for (const item of items) {
-    const n = normalizeExtraProperty(item)
-    if (n) out.push(n)
-  }
-  return out
-}
-
 function parseExtraProperties(
   meta: Record<string, unknown> | undefined,
 ): ExtraProperty[] {
-  const raw = meta ? getReservedExtraPropertiesRaw(meta) : undefined
-  if (!Array.isArray(raw)) return []
-  return normalizeExtraPropertiesList(raw)
+  return parseExtraPropertiesFromMetadata(meta)
 }
 
 function deriveFormState(
@@ -257,7 +196,7 @@ export function useAssetMetadataForm({
   const buildMetadataForSave = useCallback((): Record<string, unknown> => {
     const out = stripReservedExtraPropertiesKeys({ ...metadata })
     if (extraProperties.length > 0) {
-      out[EXTRA_PROPERTIES_KEY] = extraProperties
+      out[EXTRA_PROPERTIES_KEY] = extraProperties.map(sanitizeExtraPropertyForSave)
     }
     return out
   }, [metadata, extraProperties])
