@@ -2,6 +2,7 @@ using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Ports.Driven;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace DotnetEngine.Infrastructure.Mongo;
@@ -64,6 +65,43 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
         await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
+    public async Task ReplaceInitialSnapshotAsync(string id, IReadOnlyDictionary<string, object> snapshot, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoSimulationRunDocument>.Filter.Eq(d => d.Id, id);
+        var bson = SnapshotToBson(snapshot);
+        var update = Builders<MongoSimulationRunDocument>.Update.Set(d => d.InitialSnapshot, bson);
+        await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    public async Task AppendOverrideAsync(string id, SimulationOverrideEntryDto entry, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoSimulationRunDocument>.Filter.Eq(d => d.Id, id);
+        var doc = new BsonDocument
+        {
+            ["assetId"] = entry.AssetId,
+            ["propertyKey"] = entry.PropertyKey,
+            ["value"] = MetadataBsonConverter.ToBsonValue(entry.Value) ?? BsonNull.Value,
+            ["fromTick"] = entry.FromTick,
+        };
+        if (entry.ToTick.HasValue)
+            doc["toTick"] = entry.ToTick.Value;
+
+        var update = Builders<MongoSimulationRunDocument>.Update.Push(d => d.Overrides, doc);
+        await _collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    private static BsonDocument SnapshotToBson(IReadOnlyDictionary<string, object> snapshot)
+    {
+        var bson = new BsonDocument();
+        foreach (var kv in snapshot)
+        {
+            var v = MetadataBsonConverter.ToBsonValue(kv.Value);
+            if (v != null)
+                bson[kv.Key] = v;
+        }
+        return bson;
+    }
+
     private static SimulationRunDto ToDto(MongoSimulationRunDocument doc)
     {
         var status = string.IsNullOrEmpty(doc.Status) || !Enum.TryParse<SimulationRunStatus>(doc.Status, ignoreCase: true, out var s)
@@ -82,7 +120,43 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
                 ? SimulationEngineConstants.DefaultEngineTickIntervalMs
                 : SimulationEngineConstants.ClampEngineTickIntervalMs(doc.EngineTickIntervalMs),
             TickIndex = doc.TickIndex,
+            InitialSnapshot = MetadataBsonConverter.ToDictionary(doc.InitialSnapshot),
+            Overrides = ToOverrideDtos(doc.Overrides),
         };
+    }
+
+    private static IReadOnlyList<SimulationOverrideEntryDto> ToOverrideDtos(List<BsonDocument> list)
+    {
+        if (list.Count == 0)
+            return Array.Empty<SimulationOverrideEntryDto>();
+
+        var result = new List<SimulationOverrideEntryDto>(list.Count);
+        foreach (var b in list)
+        {
+            if (!b.TryGetValue("assetId", out var av) || av.IsBsonNull)
+                continue;
+            if (!b.TryGetValue("propertyKey", out var pk) || pk.IsBsonNull)
+                continue;
+            if (!b.TryGetValue("fromTick", out var ft) || !(ft.IsInt32 || ft.IsInt64))
+                continue;
+            var val = b.GetValue("value", BsonNull.Value);
+            var obj = MetadataBsonConverter.ToObject(val);
+            var fromTick = ft.IsInt32 ? ft.AsInt32 : (int)ft.AsInt64;
+            int? toTick = null;
+            if (b.TryGetValue("toTick", out var tt) && tt is not null && !tt.IsBsonNull && (tt.IsInt32 || tt.IsInt64))
+                toTick = tt.IsInt32 ? tt.AsInt32 : (int)tt.AsInt64;
+
+            result.Add(new SimulationOverrideEntryDto
+            {
+                AssetId = av.AsString,
+                PropertyKey = pk.AsString,
+                Value = obj ?? "",
+                FromTick = fromTick,
+                ToTick = toTick,
+            });
+        }
+
+        return result;
     }
 
     private static MongoSimulationRunDocument ToDocument(SimulationRunDto dto)
@@ -98,6 +172,15 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
             MaxDepth = dto.MaxDepth,
             EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(dto.EngineTickIntervalMs),
             TickIndex = dto.TickIndex,
+            InitialSnapshot = SnapshotToBson(dto.InitialSnapshot),
+            Overrides = dto.Overrides.Select(o => new BsonDocument
+            {
+                ["assetId"] = o.AssetId,
+                ["propertyKey"] = o.PropertyKey,
+                ["value"] = MetadataBsonConverter.ToBsonValue(o.Value) ?? BsonNull.Value,
+                ["fromTick"] = o.FromTick,
+                ["toTick"] = o.ToTick.HasValue ? o.ToTick.Value : BsonNull.Value,
+            }).ToList(),
         };
     }
 

@@ -113,7 +113,7 @@ class AssetRepository:
 
         # model_dump(by_alias=True) already yields camelCase (assetId, currentTemp, etc.)
         # Do NOT apply _dict_keys_to_camel: it would turn "assetId" into "assetid".
-        state_dict = state_dto.model_dump(by_alias=True)
+        state_dict = state_dto.model_dump(by_alias=True, exclude_none=True)
         states.update_one(
             {"assetId": state_dto.asset_id},
             {

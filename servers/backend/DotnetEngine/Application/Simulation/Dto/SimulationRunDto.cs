@@ -20,4 +20,10 @@ public sealed record SimulationRunDto
     public int EngineTickIntervalMs { get; init; } = SimulationEngineConstants.DefaultEngineTickIntervalMs;
     /// <summary>Run 전역 tick 번호. 지속 Run에서만 엔진이 증가.</summary>
     public int TickIndex { get; init; }
+    /// <summary>Run 시작 시점 참여 에셋 스냅샷 (assetId → { properties, status }). Phase 21 재현용.</summary>
+    public IReadOnlyDictionary<string, object> InitialSnapshot { get; init; } = new Dictionary<string, object>();
+
+    /// <summary>사용자 변조 이력.</summary>
+    public IReadOnlyList<SimulationOverrideEntryDto> Overrides { get; init; } = Array.Empty<SimulationOverrideEntryDto>();
 }
+

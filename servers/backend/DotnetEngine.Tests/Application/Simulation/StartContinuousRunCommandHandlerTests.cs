@@ -1,3 +1,6 @@
+using DotnetEngine.Application.Asset.Ports.Driven;
+using DotnetEngine.Application.Relationship.Dto;
+using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Domain.Simulation.ValueObjects;
 using DotnetEngine.Application.Simulation.Handlers;
@@ -10,6 +13,22 @@ namespace DotnetEngine.Tests.Application.Simulation;
 
 public class StartContinuousRunCommandHandlerTests
 {
+    private static StartContinuousRunCommandHandler CreateHandler(Mock<ISimulationRunRepository> mockRunRepo)
+    {
+        var mockAssetRepo = new Mock<IAssetRepository>();
+        mockAssetRepo
+            .Setup(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DotnetEngine.Application.Asset.Dto.StateDto?)null);
+        var mockRelRepo = new Mock<IRelationshipRepository>();
+        mockRelRepo
+            .Setup(r => r.GetOutgoingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<RelationshipDto>());
+        mockRunRepo
+            .Setup(r => r.ReplaceInitialSnapshotAsync(It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, object>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return new StartContinuousRunCommandHandler(mockRunRepo.Object, mockAssetRepo.Object, mockRelRepo.Object);
+    }
+
     [Fact]
     public async Task StartAsync_CreateAsync_ReceivesStatusRunningAndEndedAtNull()
     {
@@ -23,7 +42,7 @@ public class StartContinuousRunCommandHandlerTests
             .Callback<SimulationRunDto, CancellationToken>((dto, _) => capturedDto = dto)
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
 
-        var handler = new StartContinuousRunCommandHandler(mockRunRepo.Object);
+        var handler = CreateHandler(mockRunRepo);
         var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3 };
 
         var result = await handler.StartAsync(request, CancellationToken.None);
@@ -47,7 +66,7 @@ public class StartContinuousRunCommandHandlerTests
             .Setup(r => r.CreateAsync(It.IsAny<SimulationRunDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SimulationRunDto dto, CancellationToken _) => dto);
 
-        var handler = new StartContinuousRunCommandHandler(mockRunRepo.Object);
+        var handler = CreateHandler(mockRunRepo);
         var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3 };
 
         await handler.StartAsync(request, CancellationToken.None);
@@ -76,7 +95,7 @@ public class StartContinuousRunCommandHandlerTests
             .Setup(r => r.GetRunningAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { existingRun });
 
-        var handler = new StartContinuousRunCommandHandler(mockRunRepo.Object);
+        var handler = CreateHandler(mockRunRepo);
         var request = new RunSimulationRequest { TriggerAssetId = "asset-1", MaxDepth = 3 };
 
         var result = await handler.StartAsync(request, CancellationToken.None);

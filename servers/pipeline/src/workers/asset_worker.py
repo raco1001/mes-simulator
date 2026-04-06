@@ -120,6 +120,9 @@ class AssetWorker:
         effective_schema = build_effective_schema(schema, metadata)
 
         payload = dict(event.payload)
+        simulation_status = payload.get("simulationStatus")
+        if simulation_status is not None:
+            payload.pop("status", None)
         props = payload.get("properties")
         if not isinstance(props, dict):
             props = {}
@@ -135,7 +138,8 @@ class AssetWorker:
         event_merged = event.model_copy(update={"payload": payload})
         state = calculate_state(event_merged, asset_type=str(asset_type), schema=effective_schema)
 
-        state_dto = asset_state_to_dto(state)
+        sim_s = simulation_status if isinstance(simulation_status, str) else None
+        state_dto = asset_state_to_dto(state, simulation_status=sim_s)
         self.repository.save_state(state_dto)
         self.repository.save_event(
             asset_id=event.asset_id,
@@ -171,6 +175,16 @@ class AssetWorker:
             elif event_type == AssetConstants.EventType.SIMULATION_STATE_UPDATED:
                 event_dto = SimulationStateUpdatedEventDto(**event)
                 self.process_simulation_state_updated(event_dto)
+            elif event_type in (
+                AssetConstants.EventType.SIMULATION_TICK_STARTED,
+                AssetConstants.EventType.SIMULATION_TICK_COMPLETED,
+            ):
+                logger.info(
+                    "Tick envelope %s runId=%s payload=%s",
+                    event_type,
+                    event.get("runId"),
+                    event.get("payload"),
+                )
             elif event_type == AssetConstants.EventType.RECOMMENDATION_APPLIED:
                 self.process_recommendation_applied(event)
             else:

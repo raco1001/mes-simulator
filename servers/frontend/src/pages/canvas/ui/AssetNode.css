@@ -12,7 +12,15 @@
 
 .asset-node__type {
   font-weight: 600;
+  margin-bottom: 0.1rem;
+}
+
+.asset-node__type-code {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--app-muted, #888);
   margin-bottom: 0.25rem;
+  word-break: break-all;
 }
 
 .asset-node__meta {

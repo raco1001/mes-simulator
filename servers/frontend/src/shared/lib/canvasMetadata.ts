@@ -9,9 +9,48 @@ import { normalizeExtraPropertiesList } from '@/shared/lib/extraPropertiesCore'
 /** metadata 안의 예약 키 — extraProperties는 별도 state로 관리되므로 flat extra 목록에서 제외 */
 export const EXTRA_PROPERTIES_KEY = 'extraProperties' as const
 
-/** API/레거시에서 camelCase 외 키로 들어올 수 있음 (예: extraproperties) */
+/** 캔버스/폼 표시용 에셋 이름 (ObjectType 코드와 별도) */
+export const ASSET_NAME_KEY = 'assetName' as const
+
+/**
+ * 확장 속성 배열 키 (camelCase·레거시·snake_case).
+ * flat “추가 메타데이터” 및 strip 시 제외.
+ */
 export function isReservedExtraPropertiesKey(key: string): boolean {
-  return key.toLowerCase() === 'extraproperties'
+  const lower = key.toLowerCase()
+  return lower === 'extraproperties' || lower === 'extra_properties'
+}
+
+/** 전용 입력으로 다루므로 스키마 외 키 목록에서 제외 */
+export function isAssetNameMetadataKey(key: string): boolean {
+  return key.toLowerCase() === 'assetname'
+}
+
+/** Flat 메타데이터 섹션에 노출하지 않는 well-known 키 */
+export function isHiddenFromFlatMetadataKeys(key: string): boolean {
+  return isReservedExtraPropertiesKey(key) || isAssetNameMetadataKey(key)
+}
+
+/** 대소문자 변형 포함 metadata에서 표시 이름 읽기 */
+export function getMetadataAssetName(meta: Record<string, unknown>): string {
+  for (const k of Object.keys(meta)) {
+    if (isAssetNameMetadataKey(k) && meta[k] != null)
+      return String(meta[k])
+  }
+  return ''
+}
+
+/** assetName 키 변형을 제거한 뒤 trim 비어 있지 않으면 canonical 키로 설정 */
+export function applyAssetNameToMetadata(
+  meta: Record<string, unknown>,
+): Record<string, unknown> {
+  const name = getMetadataAssetName(meta).trim()
+  const out = { ...meta }
+  for (const k of Object.keys(out)) {
+    if (isAssetNameMetadataKey(k)) delete out[k]
+  }
+  if (name) out[ASSET_NAME_KEY] = name
+  return out
 }
 
 export function stripReservedExtraPropertiesKeys(
@@ -24,12 +63,15 @@ export function stripReservedExtraPropertiesKeys(
   return out
 }
 
+/** extraProperties 우선, 없으면 extra_properties */
 export function getReservedExtraPropertiesRaw(
   meta: Record<string, unknown>,
 ): unknown {
-  for (const k of Object.keys(meta)) {
-    if (isReservedExtraPropertiesKey(k)) return meta[k]
-  }
+  const keys = Object.keys(meta)
+  const camel = keys.find((k) => k.toLowerCase() === 'extraproperties')
+  if (camel !== undefined) return meta[camel]
+  const snake = keys.find((k) => k.toLowerCase() === 'extra_properties')
+  if (snake !== undefined) return meta[snake]
   return undefined
 }
 
@@ -140,7 +182,9 @@ export function buildMetadataFromTypeSelection(
   for (const [k, v] of Object.entries(previousMeta)) {
     if (!schemaKeys.has(k)) preserved[k] = v
   }
-  return stripReservedExtraPropertiesKeys({ ...injected, ...preserved })
+  return applyAssetNameToMetadata(
+    stripReservedExtraPropertiesKeys({ ...injected, ...preserved }),
+  )
 }
 
 /** 패널 오픈 시 에셋 메타 + 스키마 기본값 병합 */
@@ -155,5 +199,5 @@ export function mergeAssetMetadataWithSchema(
   for (const p of props) {
     if (out[p.key] === undefined) out[p.key] = p.baseValue ?? ''
   }
-  return stripReservedExtraPropertiesKeys(out)
+  return applyAssetNameToMetadata(stripReservedExtraPropertiesKeys(out))
 }

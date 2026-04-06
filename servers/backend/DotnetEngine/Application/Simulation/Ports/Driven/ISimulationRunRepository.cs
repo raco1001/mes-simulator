@@ -15,4 +15,8 @@ public interface ISimulationRunRepository
     Task UpdateStatusAsync(string id, SimulationRunStatus status, DateTimeOffset? endedAt, CancellationToken cancellationToken = default);
     Task UpdateTickIndexAsync(string id, int tickIndex, CancellationToken cancellationToken = default);
     Task EndAsync(string id, DateTimeOffset endedAt, CancellationToken cancellationToken = default);
+
+    Task ReplaceInitialSnapshotAsync(string id, IReadOnlyDictionary<string, object> snapshot, CancellationToken cancellationToken = default);
+
+    Task AppendOverrideAsync(string id, SimulationOverrideEntryDto entry, CancellationToken cancellationToken = default);
 }

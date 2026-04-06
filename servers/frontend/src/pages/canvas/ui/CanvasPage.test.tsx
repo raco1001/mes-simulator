@@ -8,13 +8,17 @@ import { getRelationships } from '@/entities/relationship'
 import { getLinkTypeSchemas } from '@/entities/link-type-schema'
 import { CANVAS_THEME_STORAGE_KEY } from '../lib/canvasTheme'
 
-vi.mock('@/entities/asset', () => ({
-  getAssets: vi.fn(),
-  createAsset: vi.fn(),
-  getAssetById: vi.fn(),
-  updateAsset: vi.fn(),
-  deleteAsset: vi.fn(),
-}))
+vi.mock('@/entities/asset', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/entities/asset')>()
+  return {
+    ...actual,
+    getAssets: vi.fn(),
+    createAsset: vi.fn(),
+    getAssetById: vi.fn(),
+    updateAsset: vi.fn(),
+    deleteAsset: vi.fn(),
+  }
+})
 
 vi.mock('@/entities/relationship', () => ({
   getRelationships: vi.fn(),
@@ -40,6 +44,7 @@ vi.mock('@/entities/simulation', () => ({
   startContinuousRun: vi.fn(),
   stopRun: vi.fn(),
   getRunEvents: vi.fn(),
+  getRunningSimulationRuns: vi.fn().mockResolvedValue([]),
   subscribeSimulationEvents: vi.fn(() => () => {}),
 }))
 

@@ -2,10 +2,14 @@ import { useState, type FormEvent } from 'react'
 import type { AssetDto } from '@/entities/asset'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
 import {
+  ASSET_NAME_KEY,
+  getMetadataAssetName,
+} from '@/shared/lib/canvasMetadata'
+import { useAssetMetadataForm } from '@/shared/lib/useAssetMetadataForm'
+import {
   ExtraPropertiesSection,
   FlatExtraMetadataSection,
 } from '@/shared/ui/ExtraPropertiesSection'
-import { useAssetMetadataForm } from '@/shared/lib/useAssetMetadataForm'
 
 export function EditAssetOnPanel({
   asset,
@@ -146,6 +150,17 @@ export function EditAssetOnPanel({
               <option value={type}>{type} (스키마 없음)</option>
             ) : null}
           </select>
+        </label>
+        <label>
+          표시 이름 (선택)
+          <input
+            type="text"
+            value={getMetadataAssetName(metadata)}
+            onChange={(e) => setMetaValue(ASSET_NAME_KEY, e.target.value)}
+            placeholder="캔버스에 표시할 이름"
+            autoComplete="off"
+            aria-label="asset-display-name"
+          />
         </label>
 
         {schemaProps.length > 0 && (

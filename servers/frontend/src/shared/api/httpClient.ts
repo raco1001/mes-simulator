@@ -1,5 +1,41 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
+async function parseErrorDetail(response: Response): Promise<string> {
+  let detail = response.statusText
+  try {
+    const raw = (await response.text()).trim()
+    if (!raw) return detail
+    try {
+      const err = JSON.parse(raw) as { message?: string; error?: string }
+      const msg = err?.message ?? err?.error
+      if (typeof msg === 'string' && msg.length > 0) return msg
+    } catch {
+      if (raw.length < 200) return raw
+    }
+  } catch {
+    /* ignore */
+  }
+  return detail
+}
+
+async function parseSuccessBody<T>(response: Response): Promise<T> {
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T
+  }
+  const text = await response.text()
+  const trimmed = text.trim()
+  if (trimmed.length === 0) {
+    return undefined as T
+  }
+  try {
+    return JSON.parse(trimmed) as T
+  } catch {
+    throw new Error(
+      `Invalid JSON response (${response.status}): ${trimmed.slice(0, 120)}`,
+    )
+  }
+}
+
 /**
  * Shared HTTP client: connection config + generic request only.
  * Domain-specific endpoints and types live in entities.
@@ -21,19 +57,11 @@ export const httpClient = {
       if (response.status === 404) {
         throw new Error('Resource not found')
       }
-      let detail = response.statusText
-      try {
-        const err = (await response.json()) as { message?: string }
-        if (typeof err?.message === 'string' && err.message.length > 0) {
-          detail = err.message
-        }
-      } catch {
-        /* non-JSON error body */
-      }
+      const detail = await parseErrorDetail(response)
       throw new Error(detail)
     }
 
-    return response.json()
+    return parseSuccessBody<T>(response)
   },
 
   /** 204 No Content 등 본문이 없는 성공 응답용 */
@@ -51,7 +79,12 @@ export const httpClient = {
       if (response.status === 404) {
         throw new Error('Resource not found')
       }
-      throw new Error(`API request failed: ${response.statusText}`)
+      const detail = await parseErrorDetail(response)
+      throw new Error(detail)
+    }
+
+    if (response.status !== 204 && response.status !== 205) {
+      await response.text()
     }
   },
 }

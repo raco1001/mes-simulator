@@ -11,7 +11,9 @@ event-schemas/
 │   ├── asset.created.json
 │   ├── asset.health.updated.json
 │   ├── alert.generated.json
-│   └── simulation.state.updated.json
+│   ├── simulation.state.updated.json
+│   ├── simulation.tick.started.json
+│   └── simulation.tick.completed.json
 ├── topics/              # Kafka 토픽 정의
 │   └── topics.json
 ├── versions/            # 스키마 버전 관리
@@ -93,9 +95,10 @@ Asset에서 알림이 생성되었을 때 발생하는 이벤트입니다.
 ### 4. simulation.state.updated
 
 시뮬레이션 전파 과정에서 상태가 갱신될 때 발생하는 이벤트입니다.
-`payload`는 두 변형을 가집니다:
-- 노드 업데이트: `tick`, `depth`, `status`, `temperature`, `power`
+`payload`는 `oneOf` 변형을 가집니다:
+- 레거시 노드: `tick`, `depth`, `status`, `temperature`, `power`
 - 관계 전파: `tick`, `depth`, `relationshipType`, `fromAssetId`, `relationshipId?`
+- Phase 21 동적 노드: `tick`, `tickIndex`, `depth`, `properties`, 선택적 `propertyChanges`, `simulationStatus`, 선택적 `cycleAccumulated`
 
 **예시 (관계 전파):**
 ```json
@@ -123,7 +126,7 @@ Asset에서 알림이 생성되었을 때 발생하는 이벤트입니다.
 
 1. **factory.asset.events**
    - 모든 asset 관련 이벤트를 수집하는 실사용 단일 통합 토픽
-   - 이벤트: `asset.created`, `asset.health.updated`, `simulation.state.updated`, `alert.generated`
+   - 이벤트: `asset.created`, `asset.health.updated`, `simulation.state.updated`, `simulation.tick.started`, `simulation.tick.completed`, `alert.generated`
    - (참고) 과거 분리 토픽(`factory.asset.health`, `factory.asset.alert`)은 현재 코드에서 사용하지 않으며 계약에서 제외됨.
 
 ## 버전 관리

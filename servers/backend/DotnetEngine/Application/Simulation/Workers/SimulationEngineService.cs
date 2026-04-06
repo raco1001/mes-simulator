@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
-using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Domain.Simulation;
+using DotnetEngine.Domain.Simulation.Constants;
 using Microsoft.Extensions.Hosting;
 
 namespace DotnetEngine.Application.Simulation.Workers;
@@ -38,13 +38,14 @@ public sealed class SimulationEngineService : BackgroundService
                 var command = scope.ServiceProvider.GetRequiredService<IRunSimulationCommand>();
                 var assetRepo = scope.ServiceProvider.GetRequiredService<IAssetRepository>();
                 var relRepo = scope.ServiceProvider.GetRequiredService<IRelationshipRepository>();
+                var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
                 var runs = await runRepo.GetRunningAsync(stoppingToken);
                 foreach (var run in runs)
                 {
                     try
                     {
-                        await ProcessRunAsync(run, runRepo, command, assetRepo, relRepo, _simulationNotifier, stoppingToken);
+                        await ProcessRunAsync(run, runRepo, command, assetRepo, relRepo, eventPublisher, _simulationNotifier, stoppingToken);
                     }
                     catch
                     {
@@ -74,20 +75,30 @@ public sealed class SimulationEngineService : BackgroundService
         IRunSimulationCommand command,
         IAssetRepository assetRepo,
         IRelationshipRepository relRepo,
+        IEventPublisher eventPublisher,
         ISimulationNotifier notifier,
         CancellationToken cancellationToken)
     {
-        var participating = await GetParticipatingAssetIdsAsync(run.TriggerAssetId, relRepo, cancellationToken);
+        var participating = await SimulationParticipation.GetParticipatingAssetIdsAsync(run.TriggerAssetId, relRepo, cancellationToken);
         if (participating.Count == 0)
             return;
 
-        var now = DateTimeOffset.UtcNow;
         var due = await GetDueAssetIdsAsync(participating, run.StartedAt, assetRepo, cancellationToken);
-
         var nextTick = run.TickIndex + 1;
         await runRepo.UpdateTickIndexAsync(run.Id, nextTick, cancellationToken);
 
-        if (due.Count == participating.Count)
+        var dueList = due.ToList();
+        await PublishTickEnvelopeAsync(
+            eventPublisher,
+            EventTypes.SimulationTickStarted,
+            run.Id,
+            nextTick,
+            dueList,
+            changedAssetIds: null,
+            cancellationToken);
+
+        var changed = new HashSet<string>(StringComparer.Ordinal);
+        if (dueList.Count == participating.Count)
         {
             var request = new RunSimulationRequest
             {
@@ -97,11 +108,13 @@ public sealed class SimulationEngineService : BackgroundService
                 RunTick = nextTick,
                 EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(run.EngineTickIntervalMs),
             };
-            await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
+            var outcome = await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
+            foreach (var id in outcome.ChangedAssetIds)
+                changed.Add(id);
         }
         else
         {
-            foreach (var assetId in due)
+            foreach (var assetId in dueList)
             {
                 var request = new RunSimulationRequest
                 {
@@ -111,11 +124,52 @@ public sealed class SimulationEngineService : BackgroundService
                     RunTick = nextTick,
                     EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(run.EngineTickIntervalMs),
                 };
-                await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
+                var outcome = await command.RunOnePropagationAsync(run.Id, request, cancellationToken: cancellationToken);
+                foreach (var id in outcome.ChangedAssetIds)
+                    changed.Add(id);
             }
         }
 
+        await PublishTickEnvelopeAsync(
+            eventPublisher,
+            EventTypes.SimulationTickCompleted,
+            run.Id,
+            nextTick,
+            dueList,
+            changed.ToList(),
+            cancellationToken);
+
         await EmitTickEventsAsync(run.Id, nextTick, participating, assetRepo, notifier, cancellationToken);
+    }
+
+    private static async Task PublishTickEnvelopeAsync(
+        IEventPublisher publisher,
+        string eventType,
+        string runId,
+        int tickIndex,
+        IReadOnlyList<string> dueAssetIds,
+        IReadOnlyList<string>? changedAssetIds,
+        CancellationToken cancellationToken)
+    {
+        var payload = new Dictionary<string, object>
+        {
+            ["tickIndex"] = tickIndex,
+            ["dueAssetIds"] = dueAssetIds,
+            ["engineCycleId"] = $"{runId}:{tickIndex}",
+        };
+        if (changedAssetIds != null)
+            payload["changedAssetIds"] = changedAssetIds;
+
+        var evt = new EventDto
+        {
+            AssetId = EventTypes.SimulationEngineAssetId,
+            EventType = eventType,
+            OccurredAt = DateTimeOffset.UtcNow,
+            SimulationRunId = runId,
+            RunTick = tickIndex,
+            Payload = payload,
+        };
+        await publisher.PublishAsync(evt, cancellationToken);
     }
 
     private static async Task EmitTickEventsAsync(
@@ -145,32 +199,6 @@ public sealed class SimulationEngineService : BackgroundService
 
             await notifier.NotifyAsync(tickEvent, cancellationToken);
         }
-    }
-
-    private static async Task<HashSet<string>> GetParticipatingAssetIdsAsync(
-        string triggerAssetId,
-        IRelationshipRepository relRepo,
-        CancellationToken cancellationToken)
-    {
-        var visited = new HashSet<string>(StringComparer.Ordinal);
-        var queue = new Queue<string>();
-        queue.Enqueue(triggerAssetId);
-
-        while (queue.Count > 0)
-        {
-            var id = queue.Dequeue();
-            if (!visited.Add(id))
-                continue;
-
-            var outgoing = await relRepo.GetOutgoingAsync(id, cancellationToken);
-            foreach (var rel in outgoing)
-            {
-                if (!visited.Contains(rel.ToAssetId))
-                    queue.Enqueue(rel.ToAssetId);
-            }
-        }
-
-        return visited;
     }
 
     private static async Task<List<string>> GetDueAssetIdsAsync(

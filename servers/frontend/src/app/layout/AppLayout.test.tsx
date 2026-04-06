@@ -35,6 +35,7 @@ vi.mock('@/entities/simulation', () => ({
   startContinuousRun: vi.fn(),
   stopRun: vi.fn(),
   getRunEvents: vi.fn(),
+  getRunningSimulationRuns: vi.fn().mockResolvedValue([]),
   subscribeSimulationEvents: vi.fn(() => () => {}),
 }))
 

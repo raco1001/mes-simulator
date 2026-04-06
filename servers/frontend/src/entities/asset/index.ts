@@ -11,3 +11,4 @@ export {
   updateAsset,
   deleteAsset,
 } from './api/assetApi'
+export { getAssetLabel } from './lib/getAssetLabel'

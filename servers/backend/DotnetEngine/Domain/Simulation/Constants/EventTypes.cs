@@ -14,6 +14,15 @@ public static class EventTypes
     /// <summary>시뮬레이션 전파로 에셋 상태 갱신. 현재 주로 사용.</summary>
     public const string SimulationStateUpdated = "simulation.state.updated";
 
+    /// <summary>지속 시뮬 엔진 루프 한 사이클 시작 (Kafka 봉투).</summary>
+    public const string SimulationTickStarted = "simulation.tick.started";
+
+    /// <summary>지속 시뮬 엔진 루프 한 사이클 완료 (Kafka 봉투).</summary>
+    public const string SimulationTickCompleted = "simulation.tick.completed";
+
+    /// <summary>Kafka 틱 봉투 이벤트용 관례적 assetId.</summary>
+    public const string SimulationEngineAssetId = "__engine__";
+
     /// <summary>전력 값 변경.</summary>
     public const string PowerChanged = "power_changed";
 
@@ -34,6 +43,8 @@ public static class EventTypes
     private static readonly HashSet<string> ObservationSet = new(StringComparer.Ordinal)
     {
         SimulationStateUpdated,
+        SimulationTickStarted,
+        SimulationTickCompleted,
         PowerChanged,
         StateTransitioned,
     };

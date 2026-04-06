@@ -262,12 +262,17 @@ def _calculate_status_from_properties(
     return status
 
 
-def asset_state_to_dto(state: AssetState) -> AssetStateDto:
+def asset_state_to_dto(
+    state: AssetState,
+    simulation_status: str | None = None,
+) -> AssetStateDto:
     """Convert AssetState to AssetStateDto for MongoDB storage."""
     return AssetStateDto(
         asset_id=state.asset_id,
         properties=state.properties,
         status=state.status,
+        operational_status=state.status,
+        simulation_status=simulation_status,
         last_event_type=state.last_event_type,
         updated_at=state.updated_at,
         metadata=state.metadata,

@@ -1,19 +1,15 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import type { AssetDto } from '@/entities/asset'
+import {
+  formatAssetMetadataSummary,
+  getAssetDisplayTitle,
+} from '@/shared/lib/assetDisplay'
 import './AssetNode.css'
 
 export type AssetNodeData = {
   asset: AssetDto
   liveStatus?: string
   liveProperties?: Record<string, unknown>
-}
-
-function metadataSummary(meta: Record<string, unknown> | undefined): string {
-  if (!meta || Object.keys(meta).length === 0) return '-'
-  return Object.entries(meta)
-    .slice(0, 2)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(', ')
 }
 
 function formatPropValue(v: unknown): string {
@@ -38,12 +34,19 @@ export function AssetNode(props: NodeProps<Node<AssetNodeData, 'asset'>>) {
 
   const live = data.liveProperties
   const hasLiveEntries = live && Object.keys(live).length > 0
+  const displayTitle = getAssetDisplayTitle(asset)
+  const showTypeCode = displayTitle !== asset.type
 
   return (
     <>
       <Handle type="target" position={Position.Left} />
       <div className={`asset-node ${liveClass}`}>
-        <div className="asset-node__type">{asset.type}</div>
+        <div className="asset-node__type">{displayTitle}</div>
+        {showTypeCode ? (
+          <div className="asset-node__type-code" title={asset.id}>
+            {asset.type}
+          </div>
+        ) : null}
         {hasLiveEntries ? (
           <div className="asset-node__props">
             {Object.entries(live).map(([k, v]) => (
@@ -54,7 +57,9 @@ export function AssetNode(props: NodeProps<Node<AssetNodeData, 'asset'>>) {
             ))}
           </div>
         ) : (
-          <div className="asset-node__meta">{metadataSummary(asset.metadata)}</div>
+          <div className="asset-node__meta">
+            {formatAssetMetadataSummary(asset.metadata)}
+          </div>
         )}
         {data.liveStatus && (
           <div className={`asset-node__status asset-node__status--${data.liveStatus.toLowerCase()}`}>

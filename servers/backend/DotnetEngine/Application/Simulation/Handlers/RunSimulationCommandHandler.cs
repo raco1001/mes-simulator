@@ -96,7 +96,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         };
     }
 
-    public async Task<IReadOnlyDictionary<string, StateDto>> RunOnePropagationAsync(
+    public async Task<RunPropagationOutcome> RunOnePropagationAsync(
         string runId,
         RunSimulationRequest request,
         bool dryRun = false,
@@ -108,6 +108,7 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var cycleAccumulatedPatches = new Dictionary<string, StatePatchDto>(StringComparer.Ordinal);
         var mergedStates = new Dictionary<string, StateDto>(StringComparer.Ordinal);
+        var changedAssetIds = new List<string>();
         var queue = new Queue<(string AssetId, StatePatchDto Patch, int Depth)>();
         queue.Enqueue((request.TriggerAssetId, request.Patch ?? new StatePatchDto(), 0));
 
@@ -134,6 +135,10 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 ComputeSimulationDeltaTime(currentState, runRecord));
 
             var occurredAt = DateTimeOffset.UtcNow;
+            var propertyChanges = BuildPropertyChanges(currentState?.Properties, mergedState.Properties);
+            var statusChanged = !string.Equals(currentState?.Status, mergedState.Status, StringComparison.OrdinalIgnoreCase);
+            var hasChange = propertyChanges.Count > 0 || statusChanged;
+            var serializableProps = ToSerializableProperties(mergedState.Properties);
             var nodeEvent = new EventDto
             {
                 AssetId = assetId,
@@ -142,16 +147,18 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 SimulationRunId = runId,
                 RunTick = runTick,
                 RelationshipId = null,
-                Payload = new Dictionary<string, object>
-                {
-                    ["tick"] = runTick,
-                    ["depth"] = depth,
-                    ["status"] = mergedState.Status,
-                    ["properties"] = mergedState.Properties,
-                },
+                Payload = BuildStateUpdatePayload(runTick, depth, serializableProps, propertyChanges, mergedState.Status),
             };
             mergedStates[assetId] = mergedState;
-            await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: dryRun, cancellationToken: cancellationToken);
+            if (hasChange && !dryRun)
+            {
+                changedAssetIds.Add(assetId);
+                await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: false, cancellationToken: cancellationToken);
+            }
+            else if (dryRun)
+            {
+                await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: true, cancellationToken: cancellationToken);
+            }
 
             var outgoing = await _relationshipRepository.GetOutgoingAsync(assetId, cancellationToken);
             foreach (var rel in outgoing)
@@ -233,6 +240,10 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 asset,
                 ComputeSimulationDeltaTime(currentState, runRecord));
 
+            var propertyChanges = BuildPropertyChanges(currentState?.Properties, mergedState.Properties);
+            var statusChanged = !string.Equals(currentState?.Status, mergedState.Status, StringComparison.OrdinalIgnoreCase);
+            var hasChange = propertyChanges.Count > 0 || statusChanged;
+            var serializableProps = ToSerializableProperties(mergedState.Properties);
             var nodeEvent = new EventDto
             {
                 AssetId = assetId,
@@ -241,20 +252,21 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
                 SimulationRunId = runId,
                 RunTick = runTick,
                 RelationshipId = null,
-                Payload = new Dictionary<string, object>
-                {
-                    ["tick"] = runTick,
-                    ["depth"] = maxDepth,
-                    ["status"] = mergedState.Status,
-                    ["properties"] = mergedState.Properties,
-                    ["cycleAccumulated"] = true,
-                },
+                Payload = BuildStateUpdatePayload(runTick, maxDepth, serializableProps, propertyChanges, mergedState.Status, cycleAccumulated: true),
             };
             mergedStates[assetId] = mergedState;
-            await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: dryRun, cancellationToken: cancellationToken);
+            if (hasChange && !dryRun)
+            {
+                changedAssetIds.Add(assetId);
+                await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: false, cancellationToken: cancellationToken);
+            }
+            else if (dryRun)
+            {
+                await _applier.ApplyAsync(nodeEvent, mergedState, dryRun: true, cancellationToken: cancellationToken);
+            }
         }
 
-        return mergedStates;
+        return new RunPropagationOutcome(mergedStates, changedAssetIds);
     }
 
     private static TimeSpan ComputeSimulationDeltaTime(StateDto? current, SimulationRunDto? run)
@@ -440,6 +452,77 @@ public sealed class RunSimulationCommandHandler : IRunSimulationCommand
         }
     }
 
+
+    private static Dictionary<string, object> ToSerializableProperties(IReadOnlyDictionary<string, object?> props)
+    {
+        var d = new Dictionary<string, object>();
+        foreach (var kv in props)
+        {
+            if (kv.Value is null) continue;
+            d[kv.Key] = kv.Value;
+        }
+        return d;
+    }
+
+    private static Dictionary<string, object> BuildPropertyChanges(
+        IReadOnlyDictionary<string, object?>? before,
+        IReadOnlyDictionary<string, object?> after)
+    {
+        var changes = new Dictionary<string, object>();
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        if (before != null)
+        {
+            foreach (var k in before.Keys)
+                keys.Add(k);
+        }
+        foreach (var k in after.Keys)
+            keys.Add(k);
+
+        foreach (var key in keys)
+        {
+            object? v0 = null;
+            object? v1 = null;
+            if (before != null)
+                before.TryGetValue(key, out v0);
+            after.TryGetValue(key, out v1);
+            if (ValuesEqual(v0, v1))
+                continue;
+            changes[key] = new Dictionary<string, object?> { ["from"] = v0, ["to"] = v1 };
+        }
+        return changes;
+    }
+
+    private static bool ValuesEqual(object? a, object? b)
+    {
+        if (a is null && b is null) return true;
+        if (a is null || b is null) return false;
+        if (TryToDouble(a, out var da) && TryToDouble(b, out var db))
+            return Math.Abs(da - db) < 1e-9;
+        return Equals(a, b);
+    }
+
+    private static Dictionary<string, object> BuildStateUpdatePayload(
+        int runTick,
+        int depth,
+        Dictionary<string, object> properties,
+        Dictionary<string, object> propertyChanges,
+        string simulationStatus,
+        bool cycleAccumulated = false)
+    {
+        var payload = new Dictionary<string, object>
+        {
+            ["tick"] = runTick,
+            ["tickIndex"] = runTick,
+            ["depth"] = depth,
+            ["properties"] = properties,
+            ["simulationStatus"] = simulationStatus,
+        };
+        if (propertyChanges.Count > 0)
+            payload["propertyChanges"] = propertyChanges;
+        if (cycleAccumulated)
+            payload["cycleAccumulated"] = true;
+        return payload;
+    }
     private static StatePatchDto BuildEffectiveCyclePatch(StateDto? currentState, StatePatchDto accumulatedPatch)
     {
         if (currentState is null)

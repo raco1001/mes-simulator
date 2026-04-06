@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { createAsset } from '@/entities/asset'
 import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
+import {
+  ASSET_NAME_KEY,
+  getMetadataAssetName,
+} from '@/shared/lib/canvasMetadata'
 import { useAssetMetadataForm } from '@/shared/lib/useAssetMetadataForm'
 import {
   ExtraPropertiesSection,
@@ -87,6 +91,17 @@ export function AddAssetModal({
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            표시 이름 (선택)
+            <input
+              type="text"
+              value={getMetadataAssetName(metadata)}
+              onChange={(e) => setMetaValue(ASSET_NAME_KEY, e.target.value)}
+              placeholder="캔버스에 표시할 이름"
+              autoComplete="off"
+              aria-label="asset-display-name"
+            />
           </label>
           {schemaProps.length > 0 && (
             <div className="assets-canvas-page__meta-section">

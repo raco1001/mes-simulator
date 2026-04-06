@@ -53,7 +53,41 @@ export interface EventDto {
   occurredAt: string
   simulationRunId?: string
   relationshipId?: string
+  /** Present on tick lifecycle events when the backend includes it. */
+  runTick?: number
   payload?: Record<string, unknown>
+}
+
+/** GET /api/simulation/runs/{runId} */
+export interface SimulationOverrideEntryDto {
+  assetId: string
+  propertyKey: string
+  value: unknown
+  fromTick: number
+  toTick?: number | null
+}
+
+export interface SimulationRunDetailDto {
+  id: string
+  status: string
+  startedAt: string
+  endedAt?: string | null
+  triggerAssetId: string
+  trigger?: Record<string, unknown>
+  maxDepth?: number
+  engineTickIntervalMs?: number
+  tickIndex: number
+  initialSnapshot?: Record<string, unknown>
+  overrides?: SimulationOverrideEntryDto[]
+}
+
+/** POST /api/simulation/runs/{runId}/overrides */
+export interface AppendSimulationOverrideRequestDto {
+  assetId: string
+  propertyKey: string
+  value: unknown
+  fromTick: number
+  toTick?: number | null
 }
 
 export interface WhatIfPropertyChangeDto {

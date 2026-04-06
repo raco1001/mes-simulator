@@ -47,7 +47,7 @@ public class WhatIfSimulationQueryHandlerTests
                 It.IsAny<RunSimulationRequest>(),
                 true,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(simulated);
+            .ReturnsAsync(new RunPropagationOutcome(simulated, Array.Empty<string>()));
 
         var handler = new WhatIfSimulationQueryHandler(runCommand.Object, assetRepo.Object, relRepo.Object);
 
@@ -110,7 +110,7 @@ public class WhatIfSimulationQueryHandlerTests
                 It.IsAny<RunSimulationRequest>(),
                 true,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(simulated);
+            .ReturnsAsync(new RunPropagationOutcome(simulated, Array.Empty<string>()));
 
         var handler = new WhatIfSimulationQueryHandler(runCommand.Object, assetRepo.Object, relRepo.Object);
 

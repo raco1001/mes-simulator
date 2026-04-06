@@ -18,4 +18,6 @@ class AssetConstants:
         ASSET_HEALTH_UPDATED = "asset.health.updated"
         ALERT_GENERATED = "alert.generated"
         SIMULATION_STATE_UPDATED = "simulation.state.updated"
+        SIMULATION_TICK_STARTED = "simulation.tick.started"
+        SIMULATION_TICK_COMPLETED = "simulation.tick.completed"
         RECOMMENDATION_APPLIED = "recommendation.applied"

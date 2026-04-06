@@ -342,6 +342,7 @@ class TestAssetStateToDto:
         assert dto.properties["temperature"] == -5.0
         assert dto.properties["power"] == 120.0
         assert dto.status == AssetConstants.Status.WARNING
+        assert dto.operational_status == AssetConstants.Status.WARNING
         assert dto.last_event_type == "asset.health.updated"
         assert dto.metadata["humidity"] == 45
 

@@ -51,6 +51,7 @@ graph TD
   P13["Phase 13: Link Schema + Propagation"]
   P14["Phase 14: Pipeline Analytics"]
   P15["Phase 15: What-if + Actions"]
+  P21["Phase 21: Simulation Governance"]
 
   P10 --> P11
   P11 --> P12
@@ -59,11 +60,14 @@ graph TD
   P13 --> P14
   P12 --> P15
   P14 --> P15
+  P12 --> P21
+  P15 --> P21
 ```
 
 - Phase 12와 13은 Phase 11 완료 후 **병렬 진행 가능**
 - Phase 14는 Phase 12 + 13 모두 필요 (시뮬레이션 행동 + 관계 흐름을 분석해야 하므로)
 - Phase 15는 Phase 14 완료 후 진행 (추천이 있어야 What-if가 의미 있음)
+- Phase 21은 시뮬 엔진·What-if가 동작한 뒤 **이벤트 계약·재현·역할 분담**을 고정하는 횡단 Phase (Phase 12·15 이후)
 
 ---
 
@@ -77,6 +81,7 @@ graph TD
 | Phase 10.4 (관계 흐름 정교화) | **Phase 13** | LinkTypeSchema 정식 구현 추가 (as-is는 RelationshipDto.properties만 활용) | 예정 |
 | 신규 | **Phase 14** | Pipeline 피벗: FastAPI + Pandas 분석 + Recommendation 도메인 | **완료** |
 | 신규 | **Phase 15** | What-if dry-run + 추천 대시보드 + Action 피드백 루프 | **완료** |
+| 신규 | **Phase 21** | 시뮬 거버넌스: 델타 이벤트·틱 봉투·override 재현·시뮬 vs 운영 status 분리 | [계획서](./phase-21-simulation-governance.md) |
 | governance-roadmap G-1~G-7 | 각 Phase 내 거버넌스 섹션 | 별도 문서 대신 각 Phase에 분산 내재 | — |
 
 ---
@@ -109,6 +114,7 @@ graph TD
 
 ## 7. 참고 문서
 
+- [Phase 21 — 시뮬레이션 거버넌스](./phase-21-simulation-governance.md)
 - [as-is Phase 10 계획](../as-is-phases/2026-03-27-development-plan.md)
 - [as-is 거버넌스 로드맵](../as-is-phases/governance-roadmap.md)
 - [as-is Phase 8-9 완료 기록](../as-is-phases/2026-03-25-development-plan.md)

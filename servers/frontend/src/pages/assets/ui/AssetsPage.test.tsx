@@ -16,6 +16,7 @@ vi.mock('@/entities/asset', () => ({
 vi.mock('@/entities/simulation', () => ({
   runSimulation: vi.fn(),
   getRunEvents: vi.fn(),
+  getRunningSimulationRuns: vi.fn().mockResolvedValue([]),
   startContinuousRun: vi.fn(),
   stopRun: vi.fn(),
 }))

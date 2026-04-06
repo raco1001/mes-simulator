@@ -15,7 +15,8 @@ import {
   buildMetadataFromTypeSelection,
   mergeAssetMetadataWithSchema,
   EXTRA_PROPERTIES_KEY,
-  isReservedExtraPropertiesKey,
+  applyAssetNameToMetadata,
+  isHiddenFromFlatMetadataKeys,
   stripReservedExtraPropertiesKeys,
   parseExtraPropertiesFromMetadata,
 } from '@/shared/lib/canvasMetadata'
@@ -57,7 +58,9 @@ function deriveFormState(
 } {
   const metaIn = { ...(initialMetadata ?? {}) } as Record<string, unknown>
   const extraProperties = parseExtraProperties(metaIn)
-  const withoutEp = stripReservedExtraPropertiesKeys(metaIn)
+  const withoutEp = applyAssetNameToMetadata(
+    stripReservedExtraPropertiesKeys(metaIn),
+  )
 
   if (mergeOnInit && initialType) {
     const merged = mergeAssetMetadataWithSchema(
@@ -67,7 +70,7 @@ function deriveFormState(
     )
     return {
       type: initialType,
-      metadata: stripReservedExtraPropertiesKeys(merged),
+      metadata: merged,
       extraProperties,
     }
   }
@@ -139,7 +142,7 @@ export function useAssetMetadataForm({
   const extraKeys = useMemo(
     () =>
       Object.keys(metadata).filter(
-        (k) => !schemaKeySet.has(k) && !isReservedExtraPropertiesKey(k),
+        (k) => !schemaKeySet.has(k) && !isHiddenFromFlatMetadataKeys(k),
       ),
     [metadata, schemaKeySet],
   )
@@ -147,14 +150,9 @@ export function useAssetMetadataForm({
   const handleTypeChange = useCallback(
     (newType: string) => {
       setType(newType)
-      setMetadata((prev) => {
-        const built = buildMetadataFromTypeSelection(
-          newType,
-          objectTypeSchemas,
-          prev,
-        )
-        return stripReservedExtraPropertiesKeys(built)
-      })
+      setMetadata((prev) =>
+        buildMetadataFromTypeSelection(newType, objectTypeSchemas, prev),
+      )
     },
     [objectTypeSchemas],
   )
@@ -194,7 +192,9 @@ export function useAssetMetadataForm({
   }, [])
 
   const buildMetadataForSave = useCallback((): Record<string, unknown> => {
-    const out = stripReservedExtraPropertiesKeys({ ...metadata })
+    const out = applyAssetNameToMetadata(
+      stripReservedExtraPropertiesKeys({ ...metadata }),
+    )
     if (extraProperties.length > 0) {
       out[EXTRA_PROPERTIES_KEY] = extraProperties.map(sanitizeExtraPropertyForSave)
     }

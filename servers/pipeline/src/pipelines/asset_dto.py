@@ -46,6 +46,8 @@ class AssetStateDto(BaseModel):
     asset_id: str = Field(..., alias="assetId")
     properties: dict[str, Any] = Field(default_factory=dict)
     status: str
+    operational_status: str | None = Field(None, alias="operationalStatus")
+    simulation_status: str | None = Field(None, alias="simulationStatus")
     last_event_type: str | None = Field(None, alias="lastEventType")
     updated_at: datetime = Field(..., alias="updatedAt")
     metadata: dict[str, Any] = Field(default_factory=dict)

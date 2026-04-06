@@ -32,13 +32,13 @@ public sealed class WhatIfSimulationQueryHandler : IWhatIfSimulationQuery
         var before = await BuildBeforeSnapshotsAsync(affected, cancellationToken);
 
         var runId = $"whatif-{Guid.NewGuid():N}";
-        var simulated = await _runSimulationCommand.RunOnePropagationAsync(
+        var outcome = await _runSimulationCommand.RunOnePropagationAsync(
             runId,
             request with { MaxDepth = maxDepth },
             dryRun: true,
             cancellationToken: cancellationToken);
 
-        var after = BuildAfterSnapshots(affected, before, simulated);
+        var after = BuildAfterSnapshots(affected, before, outcome.States);
         var deltas = BuildDeltas(before, after);
 
         return new WhatIfResult

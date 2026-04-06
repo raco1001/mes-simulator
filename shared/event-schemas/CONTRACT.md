@@ -21,6 +21,8 @@
 | `asset.created` | public | 자산 생성 사실을 서비스 간 계약으로 공유 | pipeline, backend |
 | `asset.health.updated` | public | 자산 상태 관측값 교환의 표준 이벤트 | pipeline, backend |
 | `simulation.state.updated` | public | 시뮬레이션 전파 결과를 외부 파이프라인까지 전달 | pipeline, governance 검증 대상 |
+| `simulation.tick.started` | public | 지속 시뮬 엔진 사이클 시작 봉투 | pipeline (선택적 배치 경계) |
+| `simulation.tick.completed` | public | 지속 시뮬 엔진 사이클 완료 봉투 | pipeline (선택적 배치 경계) |
 | `alert.generated` | public | 알림 생성 결과를 API/UI 경로로 전달 | backend alert consumer, REST API, frontend |
 | `power_changed` | internal (예시) | 내부 구현 상세 관측 이벤트, 현재 shared 스키마 미등록 | 단일 서비스 내부 |
 | `state_transitioned` | internal (예시) | 내부 상태 전이 추적 목적, 외부 계약 불필요 | 단일 서비스 내부 |

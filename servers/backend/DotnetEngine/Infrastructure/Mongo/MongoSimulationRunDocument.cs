@@ -31,4 +31,10 @@ public sealed class MongoSimulationRunDocument
 
     [BsonElement("engineTickIntervalMs")]
     public int EngineTickIntervalMs { get; set; } = 1000;
+
+    [BsonElement("initialSnapshot")]
+    public BsonDocument InitialSnapshot { get; set; } = new BsonDocument();
+
+    [BsonElement("overrides")]
+    public List<BsonDocument> Overrides { get; set; } = new();
 }

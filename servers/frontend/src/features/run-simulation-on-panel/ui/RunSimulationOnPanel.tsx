@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AssetDto } from '@/entities/asset'
 import {
   runSimulation,
   startContinuousRun,
   stopRun,
   getRunEvents,
+  getRunningSimulationRuns,
   subscribeSimulationEvents,
   type EventDto,
 } from '@/entities/simulation'
@@ -34,6 +35,9 @@ export function RunSimulationOnPanel({
   const [sseCleanup, setSseCleanup] = useState<(() => void) | null>(null)
   const [tickCount, setTickCount] = useState(0)
 
+  const onAssetStateUpdateRef = useRef(onAssetStateUpdate)
+  onAssetStateUpdateRef.current = onAssetStateUpdate
+
   useEffect(() => {
     if (selectedAssetId) setTriggerAssetId(selectedAssetId)
   }, [selectedAssetId])
@@ -45,12 +49,51 @@ export function RunSimulationOnPanel({
   }, [sseCleanup])
 
   const startSseSubscription = useCallback(() => {
-    const cleanup = subscribeSimulationEvents((tickEvent) => {
-      onAssetStateUpdate(tickEvent.assetId, tickEvent.properties, tickEvent.status)
-      setTickCount((c) => c + 1)
+    setSseCleanup((prev) => {
+      prev?.()
+      return subscribeSimulationEvents((tickEvent) => {
+        onAssetStateUpdateRef.current(
+          tickEvent.assetId,
+          tickEvent.properties,
+          tickEvent.status,
+        )
+        setTickCount((c) => c + 1)
+      })
     })
-    setSseCleanup(() => cleanup)
-  }, [onAssetStateUpdate])
+  }, [])
+
+  const syncRunningFromServer = useCallback(async (): Promise<boolean> => {
+    try {
+      const runs = await getRunningSimulationRuns()
+      const active = runs.filter(
+        (r) =>
+          r.id &&
+          (r.status === 'Running' || String(r.status).toLowerCase() === 'running'),
+      )
+      if (active.length === 0) return false
+      const first = active[0]
+      setMode('continuous')
+      setActiveRunId(first.id!)
+      setRunning(true)
+      setSimError(null)
+      setResultMessage(`실행 중인 런: ${first.id}`)
+      startSseSubscription()
+      return true
+    } catch {
+      return false
+    }
+  }, [startSseSubscription])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const recovered = await syncRunningFromServer()
+      if (cancelled || !recovered) return
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [syncRunningFromServer])
 
   const handleSingleRun = async () => {
     if (!triggerAssetId) return
@@ -98,8 +141,11 @@ export function RunSimulationOnPanel({
         setResultMessage(`지속 실행 시작: ${result.runId}`)
         startSseSubscription()
       } else {
-        setSimError(result.message ?? '시작 실패')
-        setRunning(false)
+        const recovered = await syncRunningFromServer()
+        if (!recovered) {
+          setSimError(result.message ?? '시작 실패')
+          setRunning(false)
+        }
       }
     } catch (err) {
       setSimError(err instanceof Error ? err.message : '시뮬레이션 시작 실패')

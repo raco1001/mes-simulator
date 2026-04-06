@@ -78,7 +78,7 @@ public static class MetadataBsonConverter
         return string.Concat(parts);
     }
 
-    private static BsonValue? ToBsonValue(object? value)
+    public static BsonValue? ToBsonValue(object? value)
     {
         if (value == null)
             return BsonNull.Value;
@@ -183,7 +183,7 @@ public static class MetadataBsonConverter
         return arr;
     }
 
-    private static object? ToObject(BsonValue bv)
+    public static object? ToObject(BsonValue bv)
     {
         if (bv == null || bv.IsBsonNull)
             return null;

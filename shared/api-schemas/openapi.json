@@ -677,6 +677,29 @@
         }
       }
     },
+    "/api/simulation/running": {
+      "get": {
+        "summary": "실행 중인 시뮬레이션 런 목록",
+        "tags": [
+          "Simulation"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SimulationRunDetailDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/simulation/runs/{runId}/stop": {
       "post": {
         "summary": "지속 시뮬레이션 중단",
@@ -808,6 +831,75 @@
           }
         }
       }
+    },
+    "/api/simulation/runs/{runId}": {
+      "get": {
+        "summary": "시뮬레이션 Run 조회 (스냅샷·override 이력 포함)",
+        "tags": [
+          "Simulation"
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationRunDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/simulation/runs/{runId}/overrides": {
+      "post": {
+        "summary": "Run에 속성 override 이력 추가 (Phase 21 재현)",
+        "tags": [
+          "Simulation"
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendSimulationOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -876,6 +968,16 @@
               "warning",
               "error"
             ]
+          },
+          "operationalStatus": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pipeline-derived operational status (Phase 21)."
+          },
+          "simulationStatus": {
+            "type": "string",
+            "nullable": true,
+            "description": "Simulation-layer status when present."
           },
           "lastEventType": {
             "type": "string",
@@ -1442,6 +1544,114 @@
         "properties": {
           "error": {
             "type": "string"
+          }
+        }
+      },
+      "SimulationOverrideEntryDto": {
+        "type": "object",
+        "required": [
+          "assetId",
+          "propertyKey",
+          "value",
+          "fromTick"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "propertyKey": {
+            "type": "string"
+          },
+          "value": {},
+          "fromTick": {
+            "type": "integer"
+          },
+          "toTick": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "SimulationRunDetailDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "startedAt",
+          "triggerAssetId",
+          "trigger",
+          "maxDepth",
+          "engineTickIntervalMs",
+          "tickIndex",
+          "initialSnapshot",
+          "overrides"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "triggerAssetId": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "maxDepth": {
+            "type": "integer"
+          },
+          "engineTickIntervalMs": {
+            "type": "integer"
+          },
+          "tickIndex": {
+            "type": "integer"
+          },
+          "initialSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "overrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimulationOverrideEntryDto"
+            }
+          }
+        }
+      },
+      "AppendSimulationOverrideRequest": {
+        "type": "object",
+        "required": [
+          "assetId",
+          "propertyKey",
+          "value",
+          "fromTick"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string"
+          },
+          "propertyKey": {
+            "type": "string"
+          },
+          "value": {},
+          "fromTick": {
+            "type": "integer"
+          },
+          "toTick": {
+            "type": "integer",
+            "nullable": true
           }
         }
       }

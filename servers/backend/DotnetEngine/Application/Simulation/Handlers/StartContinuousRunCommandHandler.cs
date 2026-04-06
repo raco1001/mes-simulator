@@ -1,23 +1,31 @@
+using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.ValueObjects;
+using DotnetEngine.Application.Relationship.Ports.Driven;
 using System.Linq;
 
 namespace DotnetEngine.Application.Simulation.Handlers;
 
 /// <summary>
-/// 지속 시뮬레이션 시작 Use Case. Run 생성(Status=Running), 전파는 호출하지 않음.
-/// 동시에 Running인 Run이 1개를 넘지 않도록 start 시 검사.
+/// 지속 시뮬레이션 시작 Use Case. Run 생성(Status=Running), 참여 에셋 초기 스냅샷 저장. 전파는 호출하지 않음.
 /// </summary>
 public sealed class StartContinuousRunCommandHandler : IStartContinuousRunCommand
 {
     private readonly ISimulationRunRepository _simulationRunRepository;
+    private readonly IAssetRepository _assetRepository;
+    private readonly IRelationshipRepository _relationshipRepository;
 
-    public StartContinuousRunCommandHandler(ISimulationRunRepository simulationRunRepository)
+    public StartContinuousRunCommandHandler(
+        ISimulationRunRepository simulationRunRepository,
+        IAssetRepository assetRepository,
+        IRelationshipRepository relationshipRepository)
     {
         _simulationRunRepository = simulationRunRepository;
+        _assetRepository = assetRepository;
+        _relationshipRepository = relationshipRepository;
     }
 
     public async Task<StartContinuousRunResult> StartAsync(RunSimulationRequest request, CancellationToken cancellationToken = default)
@@ -51,7 +59,30 @@ public sealed class StartContinuousRunCommandHandler : IStartContinuousRunComman
             EngineTickIntervalMs = engineTick,
             TickIndex = 0,
         };
+
+        var participating = await SimulationParticipation.GetParticipatingAssetIdsAsync(
+            request.TriggerAssetId,
+            _relationshipRepository,
+            cancellationToken);
+        var snapshot = new Dictionary<string, object>();
+        foreach (var assetId in participating)
+        {
+            var state = await _assetRepository.GetStateByAssetIdAsync(assetId, cancellationToken);
+            if (state is null)
+                continue;
+            var props = state.Properties
+                .Where(kv => kv.Value != null)
+                .ToDictionary(kv => kv.Key, kv => kv.Value!);
+            snapshot[assetId] = new Dictionary<string, object>
+            {
+                ["properties"] = props,
+                ["simulationStatus"] = state.SimulationStatus ?? state.Status,
+            };
+        }
+
         await _simulationRunRepository.CreateAsync(runDto, cancellationToken);
+        if (snapshot.Count > 0)
+            await _simulationRunRepository.ReplaceInitialSnapshotAsync(runId, snapshot, cancellationToken);
 
         return new StartContinuousRunResult
         {

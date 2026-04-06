@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Node } from '@xyflow/react'
-import type { AssetDto } from '@/entities/asset'
+import { getAssetLabel, type AssetDto } from '@/entities/asset'
 import {
   createRelationship,
   deleteRelationship,
@@ -131,7 +131,7 @@ export function CreateRelationshipOnPanel({
   const assetLabel = (id: string | null) => {
     if (!id) return '(캔버스에서 클릭)'
     const node = nodes.find((n) => n.id === id)
-    return node ? `${node.data.asset.type} (${id.slice(0, 8)}...)` : id
+    return node ? getAssetLabel(node.data.asset) : id
   }
 
   // ── Mapping helpers ──
