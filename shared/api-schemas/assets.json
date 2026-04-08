@@ -20,7 +20,7 @@
         },
         "metadata": {
           "type": "object",
-          "description": "추가 메타데이터",
+          "description": "추가 메타데이터. Well-known keys: assetName (string, UI 표시 이름), extraProperties 또는 extra_properties (배열, 확장 속성 정의 — ObjectType ownProperties와 유사 항목), canvasPosition ({ x: number, y: number }, React Flow 노드 좌표).",
           "additionalProperties": true
         },
         "createdAt": {
@@ -87,7 +87,7 @@
         },
         "metadata": {
           "type": "object",
-          "description": "추가 메타데이터",
+          "description": "추가 메타데이터. Well-known keys: assetName (string, UI 표시 이름), extraProperties 또는 extra_properties (배열, 확장 속성 정의).",
           "additionalProperties": true
         }
       }
@@ -103,7 +103,7 @@
         },
         "metadata": {
           "type": "object",
-          "description": "추가 메타데이터",
+          "description": "추가 메타데이터. Well-known keys: assetName (string, UI 표시 이름), extraProperties 또는 extra_properties (배열, 확장 속성 정의).",
           "additionalProperties": true
         }
       }

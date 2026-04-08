@@ -6,6 +6,7 @@ using DotnetEngine.Application.Asset.Ports.Driving;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Health.Handlers;
 using DotnetEngine.Application.Health.Ports;
+using DotnetEngine.Application.Relationship;
 using DotnetEngine.Application.Relationship.Handlers;
 using DotnetEngine.Application.Relationship.Ports.Driving;
 using DotnetEngine.Application.Relationship.Ports.Driven;
@@ -31,12 +32,15 @@ using DotnetEngine.Infrastructure.Simulation;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    // namingPolicy: null → enum member names as defined in C# (PascalCase: Number, Settable, …).
+    // Matches frontend TypeScript unions and extraProperties dataType after round-trip.
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null));
 });
 builder.Services.AddScoped<IGetHealthQuery, GetHealthQueryHandler>();
 
@@ -129,6 +133,7 @@ builder.Services.AddScoped<ICreateLinkTypeSchemaCommand, CreateLinkTypeSchemaCom
 builder.Services.AddScoped<IUpdateLinkTypeSchemaCommand, UpdateLinkTypeSchemaCommandHandler>();
 
 builder.Services.AddScoped<IGetRelationshipsQuery, GetRelationshipsQueryHandler>();
+builder.Services.AddScoped<IRelationshipPropertyMappingValidator, RelationshipPropertyMappingValidator>();
 builder.Services.AddScoped<ICreateRelationshipCommand, CreateRelationshipCommandHandler>();
 builder.Services.AddScoped<IUpdateRelationshipCommand, UpdateRelationshipCommandHandler>();
 builder.Services.AddScoped<IDeleteRelationshipCommand, DeleteRelationshipCommandHandler>();

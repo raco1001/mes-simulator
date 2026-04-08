@@ -51,14 +51,28 @@ public sealed class SimulationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> StartContinuousRun([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
-            return BadRequest(new { error = "triggerAssetId is required" });
+        var triggerIds = request.ResolveTriggerAssetIds();
+        if (triggerIds.Count == 0)
+            return BadRequest(new { error = "triggerAssetIds (non-empty) or triggerAssetId is required" });
+        if (RunSimulationRequestExtensions.IsMultiSeedPatchDisallowed(triggerIds, request.Patch))
+            return BadRequest(new { error = "Multiple trigger seeds cannot be combined with a non-empty patch." });
 
         var result = await _startContinuousRunCommand.StartAsync(request, cancellationToken);
         if (!result.Success)
             return StatusCode(StatusCodes.Status409Conflict, result);
 
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>
+    /// GET /api/simulation/running — Status=Running 인 런 전부 (UI 복구·중지용).
+    /// </summary>
+    [HttpGet("running")]
+    [ProducesResponseType(typeof(IReadOnlyList<SimulationRunDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRunningRuns(CancellationToken cancellationToken)
+    {
+        var list = await _simulationRunRepository.GetRunningAsync(cancellationToken);
+        return Ok(list);
     }
 
     /// <summary>
@@ -87,10 +101,15 @@ public sealed class SimulationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateRun([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
-            return BadRequest(new { error = "triggerAssetId is required" });
+        var triggerIds = request.ResolveTriggerAssetIds();
+        if (triggerIds.Count == 0)
+            return BadRequest(new { error = "triggerAssetIds (non-empty) or triggerAssetId is required" });
+        if (RunSimulationRequestExtensions.IsMultiSeedPatchDisallowed(triggerIds, request.Patch))
+            return BadRequest(new { error = "Multiple trigger seeds cannot be combined with a non-empty patch." });
 
         var result = await _runSimulationCommand.RunAsync(request, cancellationToken);
+        if (!result.Success)
+            return BadRequest(result);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
@@ -99,8 +118,11 @@ public sealed class SimulationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> WhatIf([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
-            return BadRequest(new { error = "triggerAssetId is required" });
+        var triggerIds = request.ResolveTriggerAssetIds();
+        if (triggerIds.Count == 0)
+            return BadRequest(new { error = "triggerAssetIds (non-empty) or triggerAssetId is required" });
+        if (RunSimulationRequestExtensions.IsMultiSeedPatchDisallowed(triggerIds, request.Patch))
+            return BadRequest(new { error = "Multiple trigger seeds cannot be combined with a non-empty patch." });
 
         var result = await _whatIfSimulationQuery.RunAsync(request, cancellationToken);
         return Ok(result);
@@ -142,6 +164,60 @@ public sealed class SimulationController : ControllerBase
 
         return Ok(result);
     }
+
+
+    /// <summary>
+    /// GET /api/simulation/runs/{runId} — Run 메타·초기 스냅샷·override 이력.
+    /// </summary>
+    [HttpGet("runs/{runId}")]
+    [ProducesResponseType(typeof(SimulationRunDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRun(string runId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(runId))
+            return NotFound();
+        var run = await _simulationRunRepository.GetByIdAsync(runId, cancellationToken);
+        if (run == null)
+            return NotFound();
+        return Ok(run);
+    }
+
+    /// <summary>
+    /// POST /api/simulation/runs/{runId}/overrides — override 이력 append (재현용).
+    /// </summary>
+    [HttpPost("runs/{runId}/overrides")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AppendOverride(string runId, [FromBody] AppendSimulationOverrideRequestBody body, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(runId) || body == null)
+            return NotFound();
+        var run = await _simulationRunRepository.GetByIdAsync(runId, cancellationToken);
+        if (run == null)
+            return NotFound();
+
+        var entry = new SimulationOverrideEntryDto
+        {
+            AssetId = body.AssetId,
+            PropertyKey = body.PropertyKey,
+            Value = JsonElementToObject(body.Value),
+            FromTick = body.FromTick,
+            ToTick = body.ToTick,
+        };
+        await _simulationRunRepository.AppendOverrideAsync(runId, entry, cancellationToken);
+        return NoContent();
+    }
+
+    private static object JsonElementToObject(JsonElement el) => el.ValueKind switch
+    {
+        JsonValueKind.Number => el.TryGetInt64(out var l) ? l : el.GetDouble(),
+        JsonValueKind.String => el.GetString() ?? "",
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Null => "",
+        JsonValueKind.Undefined => "",
+        _ => el.GetRawText(),
+    };
 
     /// <summary>
     /// GET /api/simulation/stream — 실시간 시뮬레이션 상태 SSE 스트림.

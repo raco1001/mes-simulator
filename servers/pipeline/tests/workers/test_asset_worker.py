@@ -2,8 +2,6 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
-
 from domains.asset.constants import AssetConstants
 from pipelines.asset_dto import AssetHealthUpdatedEventDto, SimulationStateUpdatedEventDto
 from workers.asset_worker import AssetWorker
@@ -12,11 +10,19 @@ from workers.asset_worker import AssetWorker
 class TestAssetWorkerAlertPublish:
     """Worker publishes alert.generated to Kafka only when state is WARNING or ERROR."""
 
-    def test_process_health_updated_publishes_alert_when_warning(self) -> None:
+    @staticmethod
+    def _worker_with_mocks() -> AssetWorker:
         worker = AssetWorker()
         worker.producer = MagicMock()
         worker.repository = MagicMock()
         worker.repository.get_recent_property_series.return_value = {}
+        worker.repository.get_asset.return_value = None
+        worker.object_type_repository = MagicMock()
+        worker.object_type_repository.get_by_object_type.return_value = None
+        return worker
+
+    def test_process_health_updated_publishes_alert_when_warning(self) -> None:
+        worker = self._worker_with_mocks()
 
         event = AssetHealthUpdatedEventDto(
             eventType="asset.health.updated",
@@ -39,10 +45,7 @@ class TestAssetWorkerAlertPublish:
         assert isinstance(value["payload"]["metrics"], list)
 
     def test_process_health_updated_does_not_publish_when_normal(self) -> None:
-        worker = AssetWorker()
-        worker.producer = MagicMock()
-        worker.repository = MagicMock()
-        worker.repository.get_recent_property_series.return_value = {}
+        worker = self._worker_with_mocks()
 
         event = AssetHealthUpdatedEventDto(
             eventType="asset.health.updated",
@@ -55,10 +58,7 @@ class TestAssetWorkerAlertPublish:
         worker.producer.send.assert_not_called()
 
     def test_process_simulation_state_updated_publishes_alert_when_error(self) -> None:
-        worker = AssetWorker()
-        worker.producer = MagicMock()
-        worker.repository = MagicMock()
-        worker.repository.get_recent_property_series.return_value = {}
+        worker = self._worker_with_mocks()
 
         event = SimulationStateUpdatedEventDto(
             eventType="simulation.state.updated",

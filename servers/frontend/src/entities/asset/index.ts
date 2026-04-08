@@ -1,4 +1,9 @@
-export type { AssetDto, CreateAssetRequest, UpdateAssetRequest } from './model/types'
+export type {
+  AssetDto,
+  CreateAssetRequest,
+  ExtraProperty,
+  UpdateAssetRequest,
+} from './model/types'
 export {
   getAssets,
   getAssetById,
@@ -6,3 +11,4 @@ export {
   updateAsset,
   deleteAsset,
 } from './api/assetApi'
+export { getAssetLabel } from './lib/getAssetLabel'

@@ -3,7 +3,11 @@
   "title": "Event Schema Version 1",
   "description": "이벤트 스키마 버전 1 정의",
   "type": "object",
-  "required": ["version", "releasedAt", "schemas"],
+  "required": [
+    "version",
+    "releasedAt",
+    "schemas"
+  ],
   "properties": {
     "version": {
       "type": "string",
@@ -66,7 +70,9 @@
     "alert.generated": "schemas/alert.generated.json",
     "recommendation.generated": "schemas/recommendation.generated.json",
     "recommendation.applied": "schemas/recommendation.applied.json",
-    "simulation.state.updated": "schemas/simulation.state.updated.json"
+    "simulation.state.updated": "schemas/simulation.state.updated.json",
+    "simulation.tick.started": "schemas/simulation.tick.started.json",
+    "simulation.tick.completed": "schemas/simulation.tick.completed.json"
   },
   "eventEnvelope": "schemas/event-envelope.json",
   "topics": "topics/topics.json",

@@ -91,6 +91,18 @@ class TestAssetRepository:
         assert "$set" in call_args[0][1]
         assert call_args[1]["upsert"] is True
 
+    def test_get_asset_returns_document_or_none(self, repository: AssetRepository) -> None:
+        mock_collection = MagicMock()
+        repository._db.__getitem__.return_value = mock_collection
+        mock_collection.find_one.return_value = {"_id": "a1", "type": "Drone"}
+
+        doc = repository.get_asset("a1")
+        assert doc == {"_id": "a1", "type": "Drone"}
+        mock_collection.find_one.assert_called_once_with({"_id": "a1"})
+
+        mock_collection.find_one.return_value = None
+        assert repository.get_asset("missing") is None
+
     def test_close_closes_client(self, repository: AssetRepository) -> None:
         """Test closing repository connection."""
         # Ensure client is initialized

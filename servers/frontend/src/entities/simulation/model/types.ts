@@ -2,9 +2,21 @@
  * Simulation run request (POST /api/simulation/runs body)
  */
 export interface RunSimulationRequestDto {
-  triggerAssetId: string
+  /** Legacy single seed; omit when using triggerAssetIds. */
+  triggerAssetId?: string
+  /** Canonical multi-seed list; when non-empty, takes precedence over triggerAssetId on the server. */
+  triggerAssetIds?: string[]
   patch?: StatePatchDto
+  /** BFS depth; omit or ≤0 uses server default (leaf-oriented). */
   maxDepth?: number
+  runTick?: number
+  /** Continuous engine polling (ms), 1–5000. */
+  engineTickIntervalMs?: number
+  /**
+   * When true, server clears persisted states for participating assets before the run
+   * (what-if excludes DB writes). Re-seeds from asset/schema; event log kept.
+   */
+  resetState?: boolean
 }
 
 export interface StatePatchDto {
@@ -49,7 +61,44 @@ export interface EventDto {
   occurredAt: string
   simulationRunId?: string
   relationshipId?: string
+  /** Present on tick lifecycle events when the backend includes it. */
+  runTick?: number
   payload?: Record<string, unknown>
+}
+
+/** GET /api/simulation/runs/{runId} */
+export interface SimulationOverrideEntryDto {
+  assetId: string
+  propertyKey: string
+  value: unknown
+  fromTick: number
+  toTick?: number | null
+}
+
+export interface SimulationRunDetailDto {
+  id: string
+  status: string
+  startedAt: string
+  endedAt?: string | null
+  /** First seed (same as triggerAssetIds[0] when present). */
+  triggerAssetId: string
+  /** All seeds for this run (deduped). */
+  triggerAssetIds: string[]
+  trigger?: Record<string, unknown>
+  maxDepth?: number
+  engineTickIntervalMs?: number
+  tickIndex: number
+  initialSnapshot?: Record<string, unknown>
+  overrides?: SimulationOverrideEntryDto[]
+}
+
+/** POST /api/simulation/runs/{runId}/overrides */
+export interface AppendSimulationOverrideRequestDto {
+  assetId: string
+  propertyKey: string
+  value: unknown
+  fromTick: number
+  toTick?: number | null
 }
 
 export interface WhatIfPropertyChangeDto {

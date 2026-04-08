@@ -1,8 +1,9 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import './AppLayout.css'
 import { useCallback, useEffect, useState } from 'react'
 import { AlertToast } from '@/entities/alert/ui/AlertToast'
 import { subscribeAlerts, type AlertDto } from '@/entities/alert'
+import { AppHeader } from '@/widgets/app-header'
 
 interface AlertToastItem {
   id: string
@@ -36,17 +37,7 @@ export function AppLayout() {
 
   return (
     <div className="app-layout">
-      <nav className="app-nav">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          홈
-        </NavLink>
-        <NavLink to="/monitoring" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          모니터링
-        </NavLink>
-        <NavLink to="/recommendations" className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}>
-          추천
-        </NavLink>
-      </nav>
+      <AppHeader />
       <main className={`app-main ${isCanvasHome ? '' : 'app-main--padded'}`}>
         <Outlet />
         {!isCanvasHome && recentAlerts.length > 0 && (

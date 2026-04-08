@@ -1,3 +1,4 @@
+using DotnetEngine.Application.Asset;
 using DotnetEngine.Application.Asset.Ports.Driving;
 using Microsoft.AspNetCore.Mvc;
 
@@ -97,9 +98,19 @@ public sealed class AssetController : ControllerBase
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
-        var deleted = await _deleteAssetCommand.DeleteAsync(id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
+        var result = await _deleteAssetCommand.DeleteAsync(id, cancellationToken);
+        return result switch
+        {
+            DeleteAssetResult.Deleted => NoContent(),
+            DeleteAssetResult.NotFound => NotFound(),
+            DeleteAssetResult.HasRelationships => Conflict(new
+            {
+                error = "이 에셋에 연결된 관계가 있습니다. 관계를 먼저 삭제한 뒤 다시 시도하세요.",
+            }),
+            _ => NotFound(),
+        };
     }
 }

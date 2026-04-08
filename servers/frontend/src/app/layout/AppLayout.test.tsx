@@ -35,6 +35,7 @@ vi.mock('@/entities/simulation', () => ({
   startContinuousRun: vi.fn(),
   stopRun: vi.fn(),
   getRunEvents: vi.fn(),
+  getRunningSimulationRuns: vi.fn().mockResolvedValue([]),
   subscribeSimulationEvents: vi.fn(() => () => {}),
 }))
 
@@ -47,11 +48,12 @@ describe('AppLayout and routes', () => {
     vi.mocked(getRelationships).mockResolvedValue([])
   })
 
-  it('shows nav links 홈, 모니터링, 추천', async () => {
+  it('shows nav links 홈, 모니터링, 추천 and app title', async () => {
     renderAppAtRoute('/')
     expect(screen.getByRole('link', { name: '홈' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '모니터링' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '추천' })).toBeInTheDocument()
+    expect(screen.getByText('Ontology Simulator')).toBeInTheDocument()
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalled()

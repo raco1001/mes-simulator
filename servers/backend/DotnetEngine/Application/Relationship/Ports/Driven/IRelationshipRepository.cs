@@ -13,4 +13,9 @@ public interface IRelationshipRepository
     Task<RelationshipDto> AddAsync(RelationshipDto dto, CancellationToken cancellationToken = default);
     Task<RelationshipDto?> UpdateAsync(string id, RelationshipDto dto, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// True if any relationship has this asset as source or target.
+    /// </summary>
+    Task<bool> ExistsForAssetAsync(string assetId, CancellationToken cancellationToken = default);
 }

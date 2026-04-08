@@ -1,0 +1,65 @@
+/**
+ * Canvas-scoped light/dark tokens. Applied via data-canvas-theme on .assets-canvas-page.
+ * React Flow pane/edges: colorMode on <ReactFlow> adds .light / .dark for --xy-* defaults.
+ */
+
+.assets-canvas-page[data-canvas-theme='light'] {
+  color-scheme: light;
+  color: var(--app-fg);
+
+  --canvas-node-idle-border: #94a3b8;
+  --canvas-edge-stroke: #94a3b8;
+  --canvas-accent-ok: #2e7d32;
+  --canvas-accent-warn: #ef6c00;
+
+  --app-bg: #ffffff;
+  --app-bg-secondary: #f1f3f5;
+  --app-border: #dee2e6;
+  --app-fg: #1a1a1a;
+  --app-muted: #6c757d;
+  --app-accent: #0d6efd;
+  --app-error: #dc3545;
+
+  --app-modal-overlay: rgba(15, 23, 42, 0.45);
+  --app-toolbar-btn-bg: #ffffff;
+  --app-toolbar-btn-hover-border: #0d6efd;
+}
+
+.assets-canvas-page[data-canvas-theme='dark'] {
+  color-scheme: dark;
+  color: var(--app-fg);
+
+  --canvas-node-idle-border: #94a3b8;
+  --canvas-edge-stroke: #8b9aab;
+  --canvas-accent-ok: #66bb6a;
+  --canvas-accent-warn: #ffb74d;
+
+  --app-bg: #1a1a1a;
+  --app-bg-secondary: #2a2a2a;
+  --app-border: #444;
+  --app-fg: rgba(255, 255, 255, 0.87);
+  --app-muted: #888;
+  --app-accent: #5b9bd5;
+  --app-error: #c62828;
+
+  --app-modal-overlay: rgba(0, 0, 0, 0.55);
+  --app-toolbar-btn-bg: #2a2a2a;
+  --app-toolbar-btn-hover-border: #5b9bd5;
+}
+
+/* React Flow: edge stroke aligned with theme (overrides xy defaults where needed) */
+.assets-canvas-page[data-canvas-theme='light'] .react-flow.light .react-flow__edge-path {
+  stroke: #adb5bd;
+}
+
+.assets-canvas-page[data-canvas-theme='light'] .react-flow.light .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--app-accent);
+}
+
+.assets-canvas-page[data-canvas-theme='dark'] .react-flow.dark .react-flow__edge-path {
+  stroke: #6b6b6b;
+}
+
+.assets-canvas-page[data-canvas-theme='dark'] .react-flow.dark .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--app-accent);
+}

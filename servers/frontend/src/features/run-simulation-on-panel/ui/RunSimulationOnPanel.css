@@ -1,0 +1,259 @@
+/* ============================================
+   RunSimulationOnPanel — side panel
+   ============================================ */
+
+.assets-canvas-page__sim-panel {
+  width: 360px;
+}
+
+.sim-panel__mode-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  border: 1px solid var(--app-border, #555);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sim-panel__mode-toggle button {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sim-panel__mode-toggle button.active {
+  background: var(--app-accent, #5b9bd5);
+  color: #fff;
+}
+
+.sim-panel__mode-toggle button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sim-panel__reset-state {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  line-height: 1.35;
+}
+
+.sim-panel__reset-state input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.sim-panel__trigger-list {
+  margin-bottom: 0.75rem;
+}
+
+.sim-panel__trigger-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sim-panel__link-btn {
+  padding: 0;
+  font-size: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--app-accent, #5b9bd5);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.sim-panel__link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sim-panel__trigger-checkboxes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--app-border, #555);
+  border-radius: 4px;
+}
+
+.sim-panel__trigger-checkboxes li {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--app-border, #444);
+}
+
+.sim-panel__trigger-checkboxes li:last-child {
+  border-bottom: none;
+}
+
+.sim-panel__trigger-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.sim-panel__hint {
+  font-size: 0.75rem;
+  color: var(--app-muted, #888);
+  margin: 0 0 0.5rem;
+}
+
+.sim-panel__running-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-muted, #888);
+}
+
+.sim-panel__section {
+  margin-bottom: 1rem;
+}
+
+.sim-panel__section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.sim-panel__section select,
+.sim-panel__section input[type="number"] {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  margin-top: 0.25rem;
+  box-sizing: border-box;
+}
+
+.sim-panel__actions {
+  margin-bottom: 1rem;
+}
+
+.sim-panel__run-btn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: var(--app-accent, #5b9bd5);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sim-panel__run-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.sim-panel__run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sim-panel__stop-btn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: var(--app-error, #c00);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sim-panel__stop-btn:hover {
+  opacity: 0.9;
+}
+
+.sim-panel__result {
+  font-size: 0.8rem;
+  color: var(--app-accent, #5b9bd5);
+  margin: 0.5rem 0;
+}
+
+.sim-panel__live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4caf50;
+  padding: 0.4rem 0.6rem;
+  background: rgba(76, 175, 80, 0.08);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.sim-panel__live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  animation: live-blink 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.sim-panel__events {
+  margin-top: 0.75rem;
+}
+
+.sim-panel__events-title {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.sim-panel__events-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.sim-panel__event-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--app-border, #333);
+}
+
+.sim-panel__event-type {
+  font-weight: 600;
+  color: var(--app-accent, #5b9bd5);
+}
+
+.sim-panel__event-asset {
+  color: var(--app-muted, #888);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.sim-panel__event-item time {
+  margin-left: auto;
+  color: var(--app-muted, #888);
+  flex-shrink: 0;
+}

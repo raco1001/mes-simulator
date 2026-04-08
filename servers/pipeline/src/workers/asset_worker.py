@@ -15,13 +15,20 @@ from pipelines.asset_dto import (
     AssetHealthUpdatedEventDto,
     SimulationStateUpdatedEventDto,
 )
-from pipelines.asset_pipeline import asset_state_to_dto, build_alert_event, calculate_state
+from pipelines.asset_pipeline import (
+    asset_state_to_dto,
+    build_alert_event,
+    build_effective_schema,
+    calculate_derived_properties,
+    calculate_state,
+)
 from pipelines.recommendation_pipeline import (
     build_trend_results,
     generate_recommendations,
     recommendation_to_event_payload,
 )
 from repositories.mongo.asset_repository import AssetRepository
+from repositories.mongo.object_type_repository import ObjectTypeRepository
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +45,7 @@ class AssetWorker:
         self.consumer = AssetEventConsumer(self.settings)
         self.producer = AssetEventProducer(self.settings)
         self.repository = AssetRepository(self.settings)
+        self.object_type_repository = ObjectTypeRepository(self.settings)
         self.running = True
 
     def process_asset_created(self, event: AssetCreatedEventDto) -> None:
@@ -64,8 +72,15 @@ class AssetWorker:
         """Process asset.health.updated event."""
         logger.info(f"Processing asset.health.updated: {event.asset_id}")
 
-        # Calculate state from event
-        state = calculate_state(event)
+        asset_doc = self.repository.get_asset(event.asset_id) or {}
+        asset_type = asset_doc.get("type", "unknown") if isinstance(asset_doc, dict) else "unknown"
+        schema = self.object_type_repository.get_by_object_type(str(asset_type))
+        metadata = asset_doc.get("metadata") if isinstance(asset_doc, dict) else None
+        if not isinstance(metadata, dict):
+            metadata = {}
+        effective_schema = build_effective_schema(schema, metadata)
+
+        state = calculate_state(event, asset_type=str(asset_type), schema=effective_schema)
         state_dto = asset_state_to_dto(state)
 
         # Save state
@@ -95,8 +110,36 @@ class AssetWorker:
     def process_simulation_state_updated(self, event: SimulationStateUpdatedEventDto) -> None:
         """Process simulation.state.updated event (backend propagation)."""
         logger.info(f"Processing simulation.state.updated: {event.asset_id}")
-        state = calculate_state(event)
-        state_dto = asset_state_to_dto(state)
+
+        asset_doc = self.repository.get_asset(event.asset_id) or {}
+        asset_type = asset_doc.get("type", "unknown") if isinstance(asset_doc, dict) else "unknown"
+        schema = self.object_type_repository.get_by_object_type(str(asset_type))
+        metadata = asset_doc.get("metadata") if isinstance(asset_doc, dict) else None
+        if not isinstance(metadata, dict):
+            metadata = {}
+        effective_schema = build_effective_schema(schema, metadata)
+
+        payload = dict(event.payload)
+        simulation_status = payload.get("simulationStatus")
+        if simulation_status is not None:
+            payload.pop("status", None)
+        props = payload.get("properties")
+        if not isinstance(props, dict):
+            props = {}
+        merged_props = dict(props)
+        if effective_schema:
+            delta_seconds = float(payload.get("deltaSeconds", 1.0))
+            merged_props = {
+                **props,
+                **calculate_derived_properties(dict(props), effective_schema, delta_seconds),
+            }
+        payload["properties"] = merged_props
+
+        event_merged = event.model_copy(update={"payload": payload})
+        state = calculate_state(event_merged, asset_type=str(asset_type), schema=effective_schema)
+
+        sim_s = simulation_status if isinstance(simulation_status, str) else None
+        state_dto = asset_state_to_dto(state, simulation_status=sim_s)
         self.repository.save_state(state_dto)
         self.repository.save_event(
             asset_id=event.asset_id,
@@ -132,6 +175,16 @@ class AssetWorker:
             elif event_type == AssetConstants.EventType.SIMULATION_STATE_UPDATED:
                 event_dto = SimulationStateUpdatedEventDto(**event)
                 self.process_simulation_state_updated(event_dto)
+            elif event_type in (
+                AssetConstants.EventType.SIMULATION_TICK_STARTED,
+                AssetConstants.EventType.SIMULATION_TICK_COMPLETED,
+            ):
+                logger.info(
+                    "Tick envelope %s runId=%s payload=%s",
+                    event_type,
+                    event.get("runId"),
+                    event.get("payload"),
+                )
             elif event_type == AssetConstants.EventType.RECOMMENDATION_APPLIED:
                 self.process_recommendation_applied(event)
             else:
@@ -167,6 +220,7 @@ class AssetWorker:
         self.consumer.close()
         self.producer.close()
         self.repository.close()
+        self.object_type_repository.close()
 
     def signal_handler(self, signum: int, frame: Any) -> None:
         """Handle shutdown signals."""

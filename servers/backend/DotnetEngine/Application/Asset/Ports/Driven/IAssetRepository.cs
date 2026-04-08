@@ -15,4 +15,9 @@ public interface IAssetRepository
     Task<IReadOnlyList<StateDto>> GetAllStatesAsync(CancellationToken cancellationToken = default);
     Task<StateDto?> GetStateByAssetIdAsync(string assetId, CancellationToken cancellationToken = default);
     Task UpsertStateAsync(StateDto state, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes persisted simulation rows for the given asset ids (no-op if list is empty).
+    /// </summary>
+    Task DeleteStatesByAssetIdsAsync(IReadOnlyList<string> assetIds, CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using DotnetEngine.Application.ObjectType.Dto;
+using DotnetEngine.Application.Relationship.Dto;
 
 namespace DotnetEngine.Application.LinkType.Dto;
 
@@ -12,4 +13,6 @@ public sealed record CreateLinkTypeSchemaRequest
     public LinkConstraint? FromConstraint { get; init; }
     public LinkConstraint? ToConstraint { get; init; }
     public IReadOnlyList<PropertyDefinition> Properties { get; init; } = [];
+    public IReadOnlyList<PropertyMapping> DefaultPropertyMappings { get; init; } = [];
+    public IReadOnlyList<PropertyMappingPairHint> AllowedPropertyMappingPairs { get; init; } = [];
 }

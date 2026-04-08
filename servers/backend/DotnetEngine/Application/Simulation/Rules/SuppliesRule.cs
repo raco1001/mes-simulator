@@ -1,3 +1,4 @@
+using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Domain.Simulation.Constants;
 
@@ -15,10 +16,20 @@ public sealed class SuppliesRule : IPropagationRule
     {
         var fromState = ctx.FromState;
         var incoming = ctx.IncomingPatch;
-        var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+        var source = TransferSpecParser.ResolveSourceProperties(incoming, fromState);
+
+        Dictionary<string, object?> transferred;
+        if (ctx.Relationship.Mappings is { Count: > 0 })
+            transferred = PropertyMappingPropagation.ApplyMappings(ctx.Relationship.Mappings, source);
+        else
+        {
+            var transfers = TransferSpecParser.Parse(ctx.Relationship.Properties);
+            transferred = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState);
+        }
+
         var outgoingPatch = new StatePatchDto
         {
-            Properties = TransferSpecParser.BuildTransferredProperties(transfers, incoming, fromState),
+            Properties = transferred,
             Status = incoming.Status ?? fromState?.Status,
             LastEventType = incoming.LastEventType ?? EventTypes.SimulationStateUpdated,
         };

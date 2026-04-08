@@ -8,6 +8,8 @@ public sealed record StateDto
     public required string AssetId { get; init; }
     public IReadOnlyDictionary<string, object?> Properties { get; init; } = new Dictionary<string, object?>();
     public required string Status { get; init; }
+    public string? OperationalStatus { get; init; }
+    public string? SimulationStatus { get; init; }
     public string? LastEventType { get; init; }
     public required DateTimeOffset UpdatedAt { get; init; }
     public IReadOnlyDictionary<string, object> Metadata { get; init; } = new Dictionary<string, object>();

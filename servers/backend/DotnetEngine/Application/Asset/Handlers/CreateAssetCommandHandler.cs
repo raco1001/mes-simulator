@@ -3,6 +3,7 @@ using DotnetEngine.Application.Asset.Ports.Driving;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.ObjectType.Ports.Driven;
 using DotnetEngine.Application.ObjectType.Dto;
+using DotnetEngine.Application.Simulation;
 
 namespace DotnetEngine.Application.Asset.Handlers;
 
@@ -37,7 +38,7 @@ public sealed class CreateAssetCommandHandler : ICreateAssetCommand
         await _repository.AddAsync(asset, cancellationToken);
 
         var schema = await _objectTypeSchemaRepository.GetByObjectTypeAsync(request.Type, cancellationToken);
-        var initialProperties = BuildInitialProperties(schema);
+        var initialProperties = BuildInitialProperties(schema, asset);
         await _repository.UpsertStateAsync(new StateDto
         {
             AssetId = id,
@@ -51,13 +52,12 @@ public sealed class CreateAssetCommandHandler : ICreateAssetCommand
         return asset;
     }
 
-    private static IReadOnlyDictionary<string, object?> BuildInitialProperties(ObjectTypeSchemaDto? schema)
+    private static IReadOnlyDictionary<string, object?> BuildInitialProperties(
+        ObjectTypeSchemaDto? schema,
+        AssetDto asset)
     {
-        if (schema is null)
-            return new Dictionary<string, object?>();
-
         var properties = new Dictionary<string, object?>();
-        foreach (var p in schema.ResolvedProperties ?? schema.OwnProperties)
+        foreach (var p in EffectivePropertySetResolver.Resolve(schema, asset))
         {
             if (p.BaseValue is not null)
                 properties[p.Key] = p.BaseValue;

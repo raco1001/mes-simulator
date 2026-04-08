@@ -1,0 +1,137 @@
+.assets-canvas-page__object-type-panel {
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+}
+
+.object-type-panel__list {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--app-border, #444);
+}
+
+.object-type-panel__list-title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted, #888);
+  margin-bottom: 0.5rem;
+}
+
+.object-type-panel__empty {
+  font-size: 0.85rem;
+  color: var(--app-muted, #888);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.object-type-panel__list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.object-type-panel__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+
+.object-type-panel__ot-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 100px;
+}
+
+.object-type-panel__list button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.object-type-panel__new-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.object-type-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.object-type-panel__form-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.object-type-panel__traits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.object-type-panel__traits label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+}
+
+.object-type-panel__props > span {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.object-type-panel__prop-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.object-type-panel__prop-row input[placeholder='key'] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.object-type-panel__prop-unit {
+  flex: 0 1 160px;
+  min-width: 120px;
+}
+
+.object-type-panel__prop-required {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.object-type-panel__derived-settings {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  width: 100%;
+}
+
+.object-type-panel__derived-settings input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.object-type-panel__derived-settings select {
+  width: 90px;
+}
+
+.object-type-panel__save-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}

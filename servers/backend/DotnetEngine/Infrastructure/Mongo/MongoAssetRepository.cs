@@ -70,6 +70,14 @@ public sealed class MongoAssetRepository : IAssetRepository
         return true;
     }
 
+    public async Task DeleteStatesByAssetIdsAsync(IReadOnlyList<string> assetIds, CancellationToken cancellationToken = default)
+    {
+        if (assetIds is not { Count: > 0 })
+            return;
+        var filter = Builders<MongoAssetStateDocument>.Filter.In(d => d.AssetId, assetIds);
+        await _statesCollection.DeleteManyAsync(filter, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<StateDto>> GetAllStatesAsync(CancellationToken cancellationToken = default)
     {
         var cursor = await _statesCollection.FindAsync(FilterDefinition<MongoAssetStateDocument>.Empty, cancellationToken: cancellationToken);
@@ -148,6 +156,8 @@ public sealed class MongoAssetRepository : IAssetRepository
             AssetId = dto.AssetId,
             Properties = MetadataBsonConverter.ToBsonDocument(dto.Properties),
             Status = dto.Status,
+            OperationalStatus = dto.OperationalStatus,
+            SimulationStatus = dto.SimulationStatus,
             LastEventType = dto.LastEventType,
             UpdatedAt = dto.UpdatedAt.UtcDateTime,
             Metadata = MetadataBsonConverter.ToBsonDocument(dto.Metadata)
@@ -156,12 +166,19 @@ public sealed class MongoAssetRepository : IAssetRepository
 
     private static StateDto ToStateDto(MongoAssetStateDocument doc)
     {
+        var status = !string.IsNullOrWhiteSpace(doc.Status)
+            ? doc.Status
+            : doc.OperationalStatus
+              ?? doc.SimulationStatus
+              ?? "normal";
         return new StateDto
         {
             AssetId = doc.AssetId,
             Properties = MetadataBsonConverter.ToDictionary(doc.Properties)
                 .ToDictionary(kv => kv.Key, kv => (object?)kv.Value),
-            Status = doc.Status,
+            Status = status,
+            OperationalStatus = doc.OperationalStatus,
+            SimulationStatus = doc.SimulationStatus,
             LastEventType = doc.LastEventType,
             UpdatedAt = ToDateTimeOffset(doc.UpdatedAt),
             Metadata = MetadataBsonConverter.ToDictionary(doc.Metadata)

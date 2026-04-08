@@ -1,6 +1,8 @@
+using DotnetEngine.Application.Asset;
+
 namespace DotnetEngine.Application.Asset.Ports.Driving;
 
 public interface IDeleteAssetCommand
 {
-    Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default);
+    Task<DeleteAssetResult> DeleteAsync(string id, CancellationToken cancellationToken = default);
 }

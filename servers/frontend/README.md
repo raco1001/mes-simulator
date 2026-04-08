@@ -1,96 +1,84 @@
 # Frontend
 
-Factory MES 시스템의 React 프론트엔드입니다.
+Factory MES의 React 프론트엔드입니다. Canvas 기반 에셋/관계 편집과 시뮬레이션 실행 UI를 제공합니다.  
+React frontend for Factory MES with canvas-based asset/relationship editing and simulation controls.
 
-## 기술 스택
+## 기술 스택 / Tech Stack
 
-- **React 19** + **TypeScript**
-- **Vite** (빌드 도구)
-- **Vitest** + **React Testing Library** (테스트)
+- React 19 + TypeScript
+- Vite
+- Vitest + React Testing Library
 
-## 개발 환경 설정
+## 개발 환경 설정 / Setup
 
-### 1. 패키지 설치
+### 1) 패키지 설치 / Install
 
 ```bash
 npm install
 ```
 
-### 2. 환경 변수 설정
+### 2) 환경 변수 / Environment
 
-`.env` 파일을 생성하고 다음 내용을 추가하세요:
+`.env` (or `.env.local`)
 
 ```bash
 VITE_API_BASE_URL=http://localhost:5000
 ```
 
-또는 `.env.example`을 참고하세요.
-
-### 3. 개발 서버 실행
+### 3) 개발 서버 / Dev Server
 
 ```bash
 npm run dev
 ```
 
-브라우저에서 `http://localhost:5173` 접속
+Open: `http://localhost:5173`
 
-## 빌드 및 테스트
-
-### 빌드
+## 빌드 및 테스트 / Build and Test
 
 ```bash
 npm run build
-```
-
-### 테스트 실행
-
-```bash
-# 모든 테스트 실행
 npm test
-
-# UI 모드로 실행
 npm run test:ui
-
-# 커버리지 포함
 npm run test:coverage
 ```
 
-## 프로젝트 구조
+## 프로젝트 구조 요약 / Structure Snapshot
 
-```
-src/
-├── pages/
-│   └── home/
-│       └── ui/
-│           ├── AssetList.tsx      # Asset 목록 컴포넌트
-│           └── AssetList.test.tsx # 테스트
-├── shared/
-│   └── api/
-│       ├── apiClient.ts           # API 클라이언트
-│       ├── apiClient.test.ts      # API 클라이언트 테스트
-│       ├── types.ts                # API 타입 정의
-│       └── index.ts
-└── test/
-    └── setup.ts                   # 테스트 설정
-```
+현재 구조는 Feature-Sliced Design 기반으로 `entities`, `features`, `pages`, `widgets`, `shared`를 사용합니다.  
+Current structure follows feature-sliced design with `entities`, `features`, `pages`, `widgets`, and `shared`.
 
-## API 엔드포인트
+핵심 UI 영역 / Key UI areas:
+- Canvas page and node/edge rendering
+- Run simulation panel (single run + continuous run trigger selection)
+- Asset/type edit panels and derived-property input helpers
 
-백엔드 API는 `shared/api-schemas/assets.json`에 정의된 스키마를 따릅니다:
+## API 계약 동기화 / API Contract Sync
 
-- `GET /api/assets` - 모든 asset 목록 조회
-- `GET /api/assets/{id}` - 특정 asset 정보 조회
-- `GET /api/states` - 모든 asset의 현재 상태 조회
-- `GET /api/states/{assetId}` - 특정 asset의 현재 상태 조회
+- Backend/OpenAPI source: `../../shared/api-schemas/openapi.json`
+- Frontend simulation/asset DTO usage: `src/entities/**/api` + `src/entities/**/model`
 
-## 백엔드 연결
+계약 변경 시 권장 순서 / Recommended order:
+1. Update `shared/api-schemas/openapi.json`
+2. Sync backend DTO/controller behavior
+3. Sync frontend API types/tests
 
-프론트엔드를 실행하기 전에 백엔드가 실행 중이어야 합니다:
+## 현재 기능 범위 / Current Scope
+
+- 캔버스에서 에셋/관계 편집 및 위치 저장
+- 시뮬레이션 트리거 선택 및 실행 요청
+- 결과 상태(live properties) 표시
+- What-if/추천 연계 기능 확장 기반
+
+진행중 포인트 / In-progress focus:
+- Trigger UX and run-state clarity improvements (phase 22)
+- Multi-seed interaction alignment with backend behavior (phase 23)
+
+## 백엔드 연결 / Backend Dependency
+
+프론트 실행 전에 백엔드가 실행 중이어야 합니다.  
+Backend must be running before frontend requests.
 
 ```bash
-# 백엔드 실행 (별도 터미널)
 cd ../backend
 dotnet run --project DotnetEngine/DotnetEngine.csproj
 ```
-
-백엔드는 기본적으로 `http://localhost:5000`에서 실행됩니다.

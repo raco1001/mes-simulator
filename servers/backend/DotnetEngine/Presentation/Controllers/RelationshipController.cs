@@ -70,8 +70,15 @@ public sealed class RelationshipController : ControllerBase
         {
             return BadRequest();
         }
-        var dto = await _createRelationshipCommand.CreateAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+        try
+        {
+            var dto = await _createRelationshipCommand.CreateAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -87,12 +94,19 @@ public sealed class RelationshipController : ControllerBase
         {
             return BadRequest();
         }
-        var dto = await _updateRelationshipCommand.UpdateAsync(id, request, cancellationToken);
-        if (dto == null)
+        try
         {
-            return NotFound();
+            var dto = await _updateRelationshipCommand.UpdateAsync(id, request, cancellationToken);
+            if (dto == null)
+            {
+                return NotFound();
+            }
+            return Ok(dto);
         }
-        return Ok(dto);
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>

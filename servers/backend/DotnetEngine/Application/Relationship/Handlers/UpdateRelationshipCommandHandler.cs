@@ -1,3 +1,5 @@
+using DotnetEngine.Application.LinkType.Dto;
+using DotnetEngine.Application.LinkType.Ports.Driven;
 using DotnetEngine.Application.Relationship.Dto;
 using DotnetEngine.Application.Relationship.Ports.Driving;
 using DotnetEngine.Application.Relationship.Ports.Driven;
@@ -10,10 +12,17 @@ namespace DotnetEngine.Application.Relationship.Handlers;
 public sealed class UpdateRelationshipCommandHandler : IUpdateRelationshipCommand
 {
     private readonly IRelationshipRepository _repository;
+    private readonly ILinkTypeSchemaRepository _linkTypeSchemaRepository;
+    private readonly IRelationshipPropertyMappingValidator _mappingValidator;
 
-    public UpdateRelationshipCommandHandler(IRelationshipRepository repository)
+    public UpdateRelationshipCommandHandler(
+        IRelationshipRepository repository,
+        ILinkTypeSchemaRepository linkTypeSchemaRepository,
+        IRelationshipPropertyMappingValidator mappingValidator)
     {
         _repository = repository;
+        _linkTypeSchemaRepository = linkTypeSchemaRepository;
+        _mappingValidator = mappingValidator;
     }
 
     public async Task<RelationshipDto?> UpdateAsync(string id, UpdateRelationshipRequest request, CancellationToken cancellationToken = default)
@@ -31,9 +40,21 @@ public sealed class UpdateRelationshipCommandHandler : IUpdateRelationshipComman
             ToAssetId = request.ToAssetId ?? existing.ToAssetId,
             RelationshipType = request.RelationshipType ?? existing.RelationshipType,
             Properties = request.Properties ?? existing.Properties,
+            Mappings = request.Mappings ?? existing.Mappings,
             CreatedAt = existing.CreatedAt,
             UpdatedAt = DateTimeOffset.UtcNow
         };
+
+        var linkSchema = await _linkTypeSchemaRepository.GetByLinkTypeAsync(updated.RelationshipType, cancellationToken);
+        if (updated.Mappings.Count > 0)
+        {
+            await _mappingValidator.ValidateAsync(
+                updated.Mappings,
+                updated.FromAssetId,
+                updated.ToAssetId,
+                linkSchema,
+                cancellationToken);
+        }
 
         return await _repository.UpdateAsync(id, updated, cancellationToken);
     }

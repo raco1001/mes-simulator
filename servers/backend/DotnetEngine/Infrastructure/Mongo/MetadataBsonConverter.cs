@@ -49,12 +49,24 @@ public static class MetadataBsonConverter
     }
 
     /// <summary>
-    /// Normalizes a key to camelCase (e.g. asset_id -> assetId, current_temp -> currentTemp).
+    /// Normalizes a key to camelCase for MongoDB.
+    /// <list type="bullet">
+    /// <item>snake_case (underscores): asset_id → assetId, current_temp → currentTemp.</item>
+    /// <item>Single segment (no underscore): first character lowercased, rest preserved so
+    /// extraProperties, dataType, simulationBehavior stay intact (not flattened to all-lowercase).</item>
+    /// </list>
     /// </summary>
     public static string ToCamelCaseKey(string key)
     {
         if (string.IsNullOrEmpty(key)) return key;
         var parts = key.Split('_');
+        if (parts.Length == 1)
+        {
+            var p = parts[0];
+            if (string.IsNullOrEmpty(p)) return key;
+            return char.ToLowerInvariant(p[0]) + p[1..];
+        }
+
         for (var i = 0; i < parts.Length; i++)
         {
             var p = parts[i];
@@ -66,7 +78,7 @@ public static class MetadataBsonConverter
         return string.Concat(parts);
     }
 
-    private static BsonValue? ToBsonValue(object? value)
+    public static BsonValue? ToBsonValue(object? value)
     {
         if (value == null)
             return BsonNull.Value;
@@ -171,7 +183,7 @@ public static class MetadataBsonConverter
         return arr;
     }
 
-    private static object? ToObject(BsonValue bv)
+    public static object? ToObject(BsonValue bv)
     {
         if (bv == null || bv.IsBsonNull)
             return null;

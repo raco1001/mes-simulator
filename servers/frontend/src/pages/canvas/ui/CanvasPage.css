@@ -1,0 +1,204 @@
+.assets-canvas-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background-color: var(--app-bg);
+}
+
+@keyframes relationship-edge-dash {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.assets-canvas-page .relationship-edge-path--flow {
+  stroke: var(--canvas-accent-ok, #66bb6a) !important;
+  animation: relationship-edge-dash 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assets-canvas-page .relationship-edge-path--flow {
+    animation: none;
+  }
+}
+
+/* ---- Toolbar ---- */
+
+.assets-canvas-page__toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--app-border, #333);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.assets-canvas-page__toolbar > button {
+  background: var(--app-toolbar-btn-bg, var(--app-bg-secondary, #2a2a2a));
+  color: var(--app-fg, #fff);
+  border: 1px solid var(--app-border, #555);
+}
+
+.assets-canvas-page__toolbar > button:hover:not(:disabled) {
+  border-color: var(--app-toolbar-btn-hover-border, var(--app-accent, #5b9bd5));
+}
+
+.assets-canvas-page__toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.assets-canvas-page__toolbar-spacer {
+  flex: 1;
+  min-width: 0.5rem;
+}
+
+.assets-canvas-page__toolbar-cancel {
+  background: var(--app-error, #c00) !important;
+  color: #fff !important;
+  border-color: var(--app-error, #c00) !important;
+}
+
+.assets-canvas-page__rel-indicator {
+  font-size: 0.8rem;
+  color: var(--app-accent, #5b9bd5);
+  padding: 0.25rem 0.75rem;
+  border: 1px dashed var(--app-accent, #5b9bd5);
+  border-radius: 4px;
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ---- Rel Mode cursor ---- */
+
+.assets-canvas-page--rel-mode .react-flow__pane {
+  cursor: crosshair;
+}
+
+.assets-canvas-page--rel-mode .react-flow__node {
+  cursor: pointer;
+}
+
+/* ---- Node highlights in relMode ---- */
+
+.assets-canvas-page--rel-mode .react-flow__node.rel-source-highlight .asset-node {
+  border-color: var(--app-accent, #5b9bd5);
+  box-shadow: 0 0 0 2px var(--app-accent, #5b9bd5), 0 0 12px rgba(91, 155, 213, 0.3);
+}
+
+.assets-canvas-page--rel-mode .react-flow__node.rel-target-highlight .asset-node {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px #4caf50, 0 0 12px rgba(76, 175, 80, 0.3);
+}
+
+/* ---- Main ---- */
+
+.assets-canvas-page__main {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.assets-canvas-page .react-flow {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- Onboarding ---- */
+
+.assets-canvas-page__onboarding {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.assets-canvas-page__onboarding h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--app-fg, #fff);
+}
+
+.assets-canvas-page__onboarding p {
+  margin: 0;
+  color: var(--app-muted, #888);
+  max-width: 400px;
+  font-size: 0.9rem;
+}
+
+.assets-canvas-page__onboarding button {
+  pointer-events: auto;
+  margin-top: 1rem;
+  font-size: 1rem;
+  padding: 0.75em 1.5em;
+}
+
+/* Side panel chrome + shared form blocks: @/widgets/canvas-side-panel */
+
+/* ---- Modal (add asset) ---- */
+
+.assets-canvas-page__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--app-modal-overlay, rgba(0, 0, 0, 0.5));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.assets-canvas-page__modal {
+  background: var(--app-bg, #1a1a1a);
+  border: 1px solid var(--app-border, #333);
+  border-radius: 8px;
+  padding: 1rem;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.assets-canvas-page__modal .assets-canvas-page__side-panel-header {
+  margin-bottom: 1rem;
+}
+
+.assets-canvas-page__modal form label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.assets-canvas-page__modal form input,
+.assets-canvas-page__modal form select,
+.assets-canvas-page__modal form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  box-sizing: border-box;
+}
+
+.assets-canvas-page__modal form textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* ============================================
+   Toolbar active button
+   ============================================ */
+
+.assets-canvas-page__toolbar-active {
+  background: var(--app-accent, #5b9bd5) !important;
+  color: #fff !important;
+  border-color: var(--app-accent, #5b9bd5) !important;
+}

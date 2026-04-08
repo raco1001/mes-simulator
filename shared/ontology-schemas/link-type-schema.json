@@ -45,6 +45,35 @@
         "$ref": "https://shadow-boxing.local/schemas/property-definition.json"
       },
       "default": []
+    },
+    "defaultPropertyMappings": {
+      "type": "array",
+      "description": "Suggested initial relationship property mappings when POST mappings is empty",
+      "items": {
+        "type": "object",
+        "required": ["fromProperty", "toProperty"],
+        "properties": {
+          "fromProperty": { "type": "string" },
+          "toProperty": { "type": "string" },
+          "transformRule": { "type": "string" },
+          "fromUnit": { "type": "string" },
+          "toUnit": { "type": "string" }
+        }
+      },
+      "default": []
+    },
+    "allowedPropertyMappingPairs": {
+      "type": "array",
+      "description": "If non-empty, each instance mapping must match one of these (fromPropertyKey, toPropertyKey) pairs",
+      "items": {
+        "type": "object",
+        "required": ["fromPropertyKey", "toPropertyKey"],
+        "properties": {
+          "fromPropertyKey": { "type": "string" },
+          "toPropertyKey": { "type": "string" }
+        }
+      },
+      "default": []
     }
   },
   "$defs": {

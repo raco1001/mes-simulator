@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Simulation Tick Started Event",
+  "description": "엔진 루프 한 사이클 시작. assetId는 관례적으로 __engine__.",
+  "allOf": [
+    { "$ref": "event-envelope.json" },
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "const": "simulation.tick.started"
+        },
+        "payload": {
+          "type": "object",
+          "required": ["tickIndex", "dueAssetIds"],
+          "properties": {
+            "tickIndex": { "type": "integer" },
+            "dueAssetIds": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "engineCycleId": {
+              "type": "string",
+              "description": "runId와 tickIndex 등을 합친 상관 식별자 (선택)"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "eventType": "simulation.tick.started",
+      "assetId": "__engine__",
+      "timestamp": "2026-04-06T12:00:00Z",
+      "schemaVersion": "v1",
+      "runId": "abc123",
+      "payload": {
+        "tickIndex": 5,
+        "dueAssetIds": ["asset-a", "asset-b"],
+        "engineCycleId": "abc123:5"
+      }
+    }
+  ]
+}

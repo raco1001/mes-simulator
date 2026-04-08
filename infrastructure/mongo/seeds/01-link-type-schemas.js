@@ -70,6 +70,38 @@ const linkTypeSeeds = [
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
+  },
+  {
+    _id: 'Monitors',
+    linkType: 'Monitors',
+    payloadJson: {
+      schemaVersion: 'v1',
+      linkType: 'Monitors',
+      displayName: '모니터링',
+      direction: 'Directed',
+      temporality: 'Durable',
+      fromConstraint: null,
+      toConstraint: null,
+      properties: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  {
+    _id: 'OperatedBy',
+    linkType: 'OperatedBy',
+    payloadJson: {
+      schemaVersion: 'v1',
+      linkType: 'OperatedBy',
+      displayName: '운영 주체',
+      direction: 'Directed',
+      temporality: 'Durable',
+      fromConstraint: null,
+      toConstraint: null,
+      properties: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
   }
 ];
 

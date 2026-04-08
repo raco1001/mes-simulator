@@ -47,7 +47,7 @@ public class WhatIfSimulationQueryHandlerTests
                 It.IsAny<RunSimulationRequest>(),
                 true,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(simulated);
+            .ReturnsAsync(new RunPropagationOutcome(simulated, Array.Empty<string>()));
 
         var handler = new WhatIfSimulationQueryHandler(runCommand.Object, assetRepo.Object, relRepo.Object);
 
@@ -110,7 +110,7 @@ public class WhatIfSimulationQueryHandlerTests
                 It.IsAny<RunSimulationRequest>(),
                 true,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(simulated);
+            .ReturnsAsync(new RunPropagationOutcome(simulated, Array.Empty<string>()));
 
         var handler = new WhatIfSimulationQueryHandler(runCommand.Object, assetRepo.Object, relRepo.Object);
 
@@ -121,5 +121,49 @@ public class WhatIfSimulationQueryHandlerTests
         });
 
         Assert.Empty(result.Deltas);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenResetState_DoesNotLoadBeforeFromPersistedState()
+    {
+        var assetRepo = new Mock<IAssetRepository>();
+        var relRepo = new Mock<IRelationshipRepository>();
+        relRepo.Setup(r => r.GetOutgoingAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<RelationshipDto>());
+
+        var runCommand = new Mock<IRunSimulationCommand>();
+        runCommand
+            .Setup(c => c.RunOnePropagationAsync(
+                It.IsAny<string>(),
+                It.IsAny<RunSimulationRequest>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RunPropagationOutcome(
+                new Dictionary<string, StateDto>
+                {
+                    ["a1"] = new StateDto
+                    {
+                        AssetId = "a1",
+                        Properties = new Dictionary<string, object?> { ["temp"] = 7d },
+                        Status = "normal",
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                    },
+                },
+                Array.Empty<string>()));
+
+        var handler = new WhatIfSimulationQueryHandler(runCommand.Object, assetRepo.Object, relRepo.Object);
+
+        var result = await handler.RunAsync(new RunSimulationRequest
+        {
+            TriggerAssetId = "a1",
+            MaxDepth = 3,
+            ResetState = true,
+        });
+
+        assetRepo.Verify(r => r.GetStateByAssetIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.True(result.Before["a1"].Properties.Count == 0);
+        Assert.Single(result.Deltas);
+        Assert.Null(result.Deltas[0].Changes[0].Before);
+        Assert.Equal(7d, result.Deltas[0].Changes[0].After);
     }
 }

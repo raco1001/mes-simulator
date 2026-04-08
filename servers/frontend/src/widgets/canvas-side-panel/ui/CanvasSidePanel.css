@@ -1,0 +1,322 @@
+/* ---- Side Panel (shared shell for canvas overlays) ---- */
+
+.assets-canvas-page__side-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 360px;
+  max-width: 100%;
+  height: 100%;
+  background: var(--app-bg, #1a1a1a);
+  border-left: 1px solid var(--app-border, #333);
+  padding: 1rem;
+  overflow-y: auto;
+  z-index: 20;
+  animation: slide-in-right 0.2s ease-out;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.assets-canvas-page__side-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.assets-canvas-page__side-panel-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.assets-canvas-page__side-panel-header button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+
+.assets-canvas-page__system-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.assets-canvas-page__copy-id-btn,
+.assets-canvas-page__toggle-system {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--app-bg-secondary, #2a2a2a);
+  border: 1px solid var(--app-border, #555);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.assets-canvas-page__system-fields {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--app-bg-secondary, #2a2a2a);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.assets-canvas-page__system-fields dl { margin: 0; }
+.assets-canvas-page__system-fields dt { color: var(--app-muted, #888); margin-top: 0.35rem; }
+.assets-canvas-page__system-fields dt:first-child { margin-top: 0; }
+.assets-canvas-page__system-fields dd { margin: 0.15rem 0 0 0; word-break: break-all; }
+
+.assets-canvas-page__side-panel form label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.assets-canvas-page__side-panel form label span.required {
+  color: var(--app-error, #c00);
+}
+
+.assets-canvas-page__side-panel form input[type="text"],
+.assets-canvas-page__side-panel form input[type="number"],
+.assets-canvas-page__side-panel form select,
+.assets-canvas-page__side-panel form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  box-sizing: border-box;
+}
+
+.assets-canvas-page__meta-section {
+  margin-bottom: 1rem;
+}
+
+.assets-canvas-page__meta-section > span {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.assets-canvas-page__meta-section-hint {
+  font-size: 0.75rem;
+  color: var(--app-muted, #888);
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.assets-canvas-page__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+/* Flex row: avoid min-width:0 + width:100% collapsing text fields beside select/button */
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row input {
+  flex: 1 1 6rem;
+  min-width: 5rem;
+  width: auto;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 6.5rem;
+  margin-top: 0;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row button[type='button'] {
+  flex-shrink: 0;
+  white-space: nowrap;
+  width: auto;
+  margin-top: 0;
+  align-self: center;
+}
+
+.assets-canvas-page__meta-row-unit {
+  flex: 1 1 7rem;
+  min-width: 6rem;
+  max-width: 12rem;
+}
+
+/* 확장 속성(extraProperties): 상위 flex로 간격·높이 통일 */
+.assets-canvas-page__meta-row--extra {
+  --meta-extra-control-h: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+/* dataType + (optional) unit — select 사이 간격만 좁게 */
+.assets-canvas-page__meta-row-selects {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 0 0 auto;
+  gap: 0.3rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row--extra > input {
+  flex: 1 1 4.5rem;
+  min-width: 4rem;
+  width: auto;
+  max-width: 100%;
+  margin-top: 0;
+  height: var(--meta-extra-control-h);
+  min-height: var(--meta-extra-control-h);
+  box-sizing: border-box;
+  line-height: 1.25;
+  padding: 0 0.45rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row-selects select {
+  flex: 0 0 auto;
+  margin-top: 0;
+  height: var(--meta-extra-control-h);
+  min-height: var(--meta-extra-control-h);
+  box-sizing: border-box;
+  line-height: 1.25;
+  padding: 0 0.4rem;
+  width: auto;
+  min-width: 6.75rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row-selects select:last-of-type:not(:only-of-type) {
+  min-width: 5.25rem;
+  max-width: 11rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row .assets-canvas-page__meta-row-delete {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--meta-extra-control-h);
+  min-height: var(--meta-extra-control-h);
+  max-height: var(--meta-extra-control-h);
+  padding: 0 0.65rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  background: var(--app-bg-secondary, #2a2a2a);
+  border: 1px solid var(--app-border, #555);
+  border-radius: 4px;
+  color: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* extraProperties: Derived(Number) — dependsOn / operation (full width below selects) */
+.assets-canvas-page__meta-row-derived-extra {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.1rem;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row-derived-extra input {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  max-width: 100%;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-row-derived-extra select {
+  flex: 0 0 auto;
+  min-width: 5rem;
+}
+
+/* 스키마 Derived: 타입 정의의 규칙(읽기 전용) */
+.assets-canvas-page__schema-derived-readonly {
+  flex: 1 1 100%;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--app-muted, #aaa);
+  margin: 0.15rem 0 0.35rem 0;
+  padding-left: 0.1rem;
+}
+
+.assets-canvas-page__schema-derived-readonly code {
+  font-size: 0.85em;
+  color: var(--app-fg, #e8e8e8);
+}
+
+.assets-canvas-page__schema-derived-note {
+  margin-left: 0.35rem;
+  opacity: 0.85;
+}
+
+.assets-canvas-page__side-panel form .assets-canvas-page__meta-section-add-btn {
+  margin-top: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  background: var(--app-bg-secondary, #2a2a2a);
+  border: 1px solid var(--app-border, #555);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.assets-canvas-page__error {
+  color: var(--app-error, #c00);
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.assets-canvas-page__rel-hint {
+  font-size: 0.8rem;
+  color: var(--app-muted, #888);
+  margin-bottom: 1rem;
+  word-break: break-all;
+}
+
+.assets-canvas-page__panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.assets-canvas-page__delete-btn {
+  color: var(--app-error, #c00);
+}
+
+.assets-canvas-page__prop-badge {
+  font-size: 0.7rem;
+  color: var(--app-muted, #888);
+  white-space: nowrap;
+}
+
+.assets-canvas-page__side-panel-danger {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--app-border, #444);
+}
+
+.assets-canvas-page__delete-asset-btn {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: rgba(180, 40, 40, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  color: #f48fb1;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.assets-canvas-page__delete-asset-btn:hover:not(:disabled) {
+  background: rgba(244, 67, 54, 0.25);
+}
+
+.assets-canvas-page__delete-asset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

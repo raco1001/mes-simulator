@@ -10,6 +10,7 @@ public sealed record RelationshipDto
     public required string ToAssetId { get; init; }
     public required string RelationshipType { get; init; }
     public IReadOnlyDictionary<string, object> Properties { get; init; } = new Dictionary<string, object>();
+    public IReadOnlyList<PropertyMapping> Mappings { get; init; } = Array.Empty<PropertyMapping>();
     public required DateTimeOffset CreatedAt { get; init; }
     public required DateTimeOffset UpdatedAt { get; init; }
 }

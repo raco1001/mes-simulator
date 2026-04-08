@@ -1,8 +1,10 @@
 import { httpClient } from '@/shared/api'
 import type {
+  AppendSimulationOverrideRequestDto,
   EventDto,
   RunResultDto,
   RunSimulationRequestDto,
+  SimulationRunDetailDto,
   StartContinuousRunResultDto,
   StopSimulationRunResultDto,
   WhatIfResultDto,
@@ -41,6 +43,35 @@ export async function stopRun(runId: string): Promise<StopSimulationRunResultDto
   return httpClient.request<StopSimulationRunResultDto>(
     `/api/simulation/runs/${encodeURIComponent(runId)}/stop`,
     { method: 'POST' },
+  )
+}
+
+/** GET /api/simulation/running — 실행 중(백엔드 Status=Running) 런 목록 */
+export async function getRunningSimulationRuns(): Promise<SimulationRunDetailDto[]> {
+  const data = await httpClient.request<SimulationRunDetailDto[] | undefined>(
+    '/api/simulation/running',
+  )
+  return Array.isArray(data) ? data : []
+}
+
+
+export async function getRun(runId: string): Promise<SimulationRunDetailDto> {
+  return httpClient.request<SimulationRunDetailDto>(
+    `/api/simulation/runs/${encodeURIComponent(runId)}`,
+  )
+}
+
+export async function appendSimulationOverride(
+  runId: string,
+  body: AppendSimulationOverrideRequestDto,
+): Promise<void> {
+  await httpClient.requestVoid(
+    `/api/simulation/runs/${encodeURIComponent(runId)}/overrides`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+    },
   )
 }
 

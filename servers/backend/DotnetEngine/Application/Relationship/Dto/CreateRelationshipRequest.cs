@@ -9,4 +9,5 @@ public sealed record CreateRelationshipRequest
     public required string ToAssetId { get; init; }
     public required string RelationshipType { get; init; }
     public IReadOnlyDictionary<string, object> Properties { get; init; } = new Dictionary<string, object>();
+    public IReadOnlyList<PropertyMapping> Mappings { get; init; } = Array.Empty<PropertyMapping>();
 }
