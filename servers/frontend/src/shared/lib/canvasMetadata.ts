@@ -12,6 +12,9 @@ export const EXTRA_PROPERTIES_KEY = 'extraProperties' as const
 /** 캔버스/폼 표시용 에셋 이름 (ObjectType 코드와 별도) */
 export const ASSET_NAME_KEY = 'assetName' as const
 
+/** React Flow 노드 좌표 — flat 메타 섹션에서 숨김 */
+export const CANVAS_POSITION_KEY = 'canvasPosition' as const
+
 /**
  * 확장 속성 배열 키 (camelCase·레거시·snake_case).
  * flat “추가 메타데이터” 및 strip 시 제외.
@@ -21,14 +24,28 @@ export function isReservedExtraPropertiesKey(key: string): boolean {
   return lower === 'extraproperties' || lower === 'extra_properties'
 }
 
+/** Snake/camel/공백 변형 없이 비교 (Mongo/API 변형 대응) */
+function normalizeWellKnownMetadataKey(key: string): string {
+  return key.trim().toLowerCase().replace(/_/g, '')
+}
+
 /** 전용 입력으로 다루므로 스키마 외 키 목록에서 제외 */
 export function isAssetNameMetadataKey(key: string): boolean {
-  return key.toLowerCase() === 'assetname'
+  return normalizeWellKnownMetadataKey(key) === 'assetname'
+}
+
+/** 캔버스 노드 위치 JSON — flat 메타에서 제외 */
+export function isCanvasPositionMetadataKey(key: string): boolean {
+  return normalizeWellKnownMetadataKey(key) === 'canvasposition'
 }
 
 /** Flat 메타데이터 섹션에 노출하지 않는 well-known 키 */
 export function isHiddenFromFlatMetadataKeys(key: string): boolean {
-  return isReservedExtraPropertiesKey(key) || isAssetNameMetadataKey(key)
+  return (
+    isReservedExtraPropertiesKey(key) ||
+    isAssetNameMetadataKey(key) ||
+    isCanvasPositionMetadataKey(key)
+  )
 }
 
 /** 대소문자 변형 포함 metadata에서 표시 이름 읽기 */
@@ -185,6 +202,33 @@ export function buildMetadataFromTypeSelection(
   return applyAssetNameToMetadata(
     stripReservedExtraPropertiesKeys({ ...injected, ...preserved }),
   )
+}
+
+/**
+ * Live simulation properties on canvas nodes: capacity/threshold first, then per-edge `streamInput*`
+ * keys (Phase 23 fan-in design B), then remaining keys alphabetically.
+ * Well-known UI metadata (e.g. canvasPosition) is stripped — it may still exist in older server payloads.
+ */
+export function orderLivePropertiesForDisplay(
+  entries: [string, unknown][],
+): [string, unknown][] {
+  const visible = entries.filter(([k]) => !isHiddenFromFlatMetadataKeys(k))
+  const rank = (key: string): number => {
+    const k = key.toLowerCase()
+    if (k === 'streamcapacity' || k === 'capacity') return 0
+    if (k.startsWith('streaminput')) return 1
+    return 2
+  }
+  return [...visible].sort(([a], [b]) => {
+    const ra = rank(a)
+    const rb = rank(b)
+    if (ra !== rb) return ra - rb
+    const al = a.toLowerCase()
+    const bl = b.toLowerCase()
+    if (ra === 0 && al === 'streamcapacity' && bl === 'capacity') return -1
+    if (ra === 0 && al === 'capacity' && bl === 'streamcapacity') return 1
+    return a.localeCompare(b)
+  })
 }
 
 /** 패널 오픈 시 에셋 메타 + 스키마 기본값 병합 */

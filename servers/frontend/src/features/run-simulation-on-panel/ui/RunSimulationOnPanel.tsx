@@ -1,114 +1,151 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AssetDto } from '@/entities/asset'
+import type { ObjectTypeSchemaDto } from '@/entities/object-type-schema'
 import {
   runSimulation,
   startContinuousRun,
   stopRun,
   getRunEvents,
-  getRunningSimulationRuns,
-  subscribeSimulationEvents,
   type EventDto,
 } from '@/entities/simulation'
+import { mergeEligibleMappingProperties } from '@/shared/lib/canvasMetadata'
+import type { SimCanvasPhase } from '@/pages/canvas/lib/useCanvasSimulationSync'
 import { CanvasSidePanel } from '@/widgets/canvas-side-panel'
 import './RunSimulationOnPanel.css'
+
+export type CanvasSimulationControl = {
+  simCanvasPhase: SimCanvasPhase
+  running: boolean
+  setRunning: (v: boolean) => void
+  activeRunId: string | null
+  setActiveRunId: (id: string | null) => void
+  tickCount: number
+  setTickCount: React.Dispatch<React.SetStateAction<number>>
+  startSseSubscription: () => void
+  stopSseSubscription: () => void
+  syncRunningFromServer: () => Promise<boolean>
+  onContinuousStarted: () => void
+  onContinuousStopped: () => void
+  onSingleRunStarted: () => void
+  onSingleRunEnded: () => void
+}
+
+export function isTriggerCandidateAsset(
+  asset: AssetDto,
+  objectTypeSchemas: ObjectTypeSchemaDto[],
+): boolean {
+  const schema = objectTypeSchemas.find((s) => s.objectType === asset.type)
+  const merged = mergeEligibleMappingProperties(
+    schema ?? null,
+    asset.metadata,
+  )
+  return merged.length > 0
+}
 
 export function RunSimulationOnPanel({
   assets,
   selectedAssetId,
   onClose,
-  onAssetStateUpdate,
+  simulation,
+  objectTypeSchemas,
 }: {
   assets: AssetDto[]
   selectedAssetId: string | null
   onClose: () => void
-  onAssetStateUpdate: (assetId: string, properties: Record<string, unknown>, status: string) => void
+  simulation: CanvasSimulationControl
+  objectTypeSchemas: ObjectTypeSchemaDto[]
 }) {
   const [mode, setMode] = useState<'single' | 'continuous'>('single')
-  const [triggerAssetId, setTriggerAssetId] = useState(selectedAssetId ?? '')
+  const [triggerAssetIds, setTriggerAssetIds] = useState<string[]>([])
   const [maxDepth, setMaxDepth] = useState('100')
   const [engineTickIntervalMs, setEngineTickIntervalMs] = useState('1000')
-  const [running, setRunning] = useState(false)
-  const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [events, setEvents] = useState<EventDto[]>([])
   const [resultMessage, setResultMessage] = useState<string | null>(null)
   const [simError, setSimError] = useState<string | null>(null)
-  const [sseCleanup, setSseCleanup] = useState<(() => void) | null>(null)
-  const [tickCount, setTickCount] = useState(0)
+  const [resetState, setResetState] = useState(false)
 
-  const onAssetStateUpdateRef = useRef(onAssetStateUpdate)
-  onAssetStateUpdateRef.current = onAssetStateUpdate
+  const {
+    running,
+    activeRunId,
+    setActiveRunId,
+    tickCount,
+    setTickCount,
+    startSseSubscription,
+    syncRunningFromServer,
+    onContinuousStarted,
+    onContinuousStopped,
+    onSingleRunStarted,
+    onSingleRunEnded,
+  } = simulation
+
+  const triggerCandidates = useMemo(
+    () => assets.filter((a) => isTriggerCandidateAsset(a, objectTypeSchemas)),
+    [assets, objectTypeSchemas],
+  )
 
   useEffect(() => {
-    if (selectedAssetId) setTriggerAssetId(selectedAssetId)
-  }, [selectedAssetId])
+    if (running && activeRunId) setMode('continuous')
+  }, [running, activeRunId])
 
   useEffect(() => {
-    return () => {
-      sseCleanup?.()
-    }
-  }, [sseCleanup])
+    if (!selectedAssetId) return
+    if (!triggerCandidates.some((a) => a.id === selectedAssetId)) return
+    setTriggerAssetIds((prev) => {
+      if (prev.includes(selectedAssetId)) return prev
+      return [selectedAssetId, ...prev]
+    })
+  }, [selectedAssetId, triggerCandidates])
 
-  const startSseSubscription = useCallback(() => {
-    setSseCleanup((prev) => {
-      prev?.()
-      return subscribeSimulationEvents((tickEvent) => {
-        onAssetStateUpdateRef.current(
-          tickEvent.assetId,
-          tickEvent.properties,
-          tickEvent.status,
-        )
-        setTickCount((c) => c + 1)
-      })
+  useEffect(() => {
+    setTriggerAssetIds((prev) => {
+      const ids = triggerCandidates.map((a) => a.id)
+      if (ids.length === 0) return []
+      const next = prev.filter((id) => ids.includes(id))
+      if (next.length > 0) return next
+      return ids
+    })
+  }, [triggerCandidates])
+
+  const toggleTriggerId = useCallback((id: string, checked: boolean) => {
+    setTriggerAssetIds((prev) => {
+      if (checked) return prev.includes(id) ? prev : [...prev, id]
+      return prev.filter((x) => x !== id)
     })
   }, [])
 
-  const syncRunningFromServer = useCallback(async (): Promise<boolean> => {
-    try {
-      const runs = await getRunningSimulationRuns()
-      const active = runs.filter(
-        (r) =>
-          r.id &&
-          (r.status === 'Running' || String(r.status).toLowerCase() === 'running'),
-      )
-      if (active.length === 0) return false
-      const first = active[0]
-      setMode('continuous')
-      setActiveRunId(first.id!)
-      setRunning(true)
-      setSimError(null)
-      setResultMessage(`실행 중인 런: ${first.id}`)
-      startSseSubscription()
-      return true
-    } catch {
-      return false
-    }
-  }, [startSseSubscription])
+  const selectAllTriggers = useCallback(() => {
+    setTriggerAssetIds(triggerCandidates.map((a) => a.id))
+  }, [triggerCandidates])
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const recovered = await syncRunningFromServer()
-      if (cancelled || !recovered) return
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [syncRunningFromServer])
+  const clearAllTriggers = useCallback(() => {
+    setTriggerAssetIds([])
+  }, [])
+
+  const resolvedTriggerIds = (): string[] => triggerAssetIds
 
   const handleSingleRun = async () => {
-    if (!triggerAssetId) return
+    const ids = resolvedTriggerIds()
+    if (ids.length === 0) return
     setSimError(null)
     setResultMessage(null)
     setEvents([])
-    setRunning(true)
+    onSingleRunStarted()
     try {
       const depth = parseInt(maxDepth, 10)
-      const tickMs = Math.min(5000, Math.max(1, parseInt(engineTickIntervalMs, 10) || 1000))
-      const result = await runSimulation({
-        triggerAssetId,
+      const tickMs = Math.min(
+        5000,
+        Math.max(1, parseInt(engineTickIntervalMs, 10) || 1000),
+      )
+      const base = {
         maxDepth: Number.isFinite(depth) ? depth : 100,
         engineTickIntervalMs: tickMs,
-      })
+        ...(resetState ? { resetState: true } : {}),
+      }
+      const body =
+        ids.length === 1
+          ? { triggerAssetId: ids[0], ...base }
+          : { triggerAssetIds: ids, ...base }
+      const result = await runSimulation(body)
       setResultMessage(result.message)
       if (result.runId) {
         const evts = await getRunEvents(result.runId)
@@ -117,25 +154,34 @@ export function RunSimulationOnPanel({
     } catch (err) {
       setSimError(err instanceof Error ? err.message : '시뮬레이션 실패')
     } finally {
-      setRunning(false)
+      onSingleRunEnded()
     }
   }
 
   const handleStartContinuous = async () => {
-    if (!triggerAssetId) return
+    const ids = resolvedTriggerIds()
+    if (ids.length === 0) return
     setSimError(null)
     setResultMessage(null)
     setEvents([])
     setTickCount(0)
-    setRunning(true)
+    onContinuousStarted()
     try {
       const depth = parseInt(maxDepth, 10)
-      const tickMs = Math.min(5000, Math.max(1, parseInt(engineTickIntervalMs, 10) || 1000))
-      const result = await startContinuousRun({
-        triggerAssetId,
+      const tickMs = Math.min(
+        5000,
+        Math.max(1, parseInt(engineTickIntervalMs, 10) || 1000),
+      )
+      const base = {
         maxDepth: Number.isFinite(depth) ? depth : 100,
         engineTickIntervalMs: tickMs,
-      })
+        ...(resetState ? { resetState: true } : {}),
+      }
+      const body =
+        ids.length === 1
+          ? { triggerAssetId: ids[0], ...base }
+          : { triggerAssetIds: ids, ...base }
+      const result = await startContinuousRun(body)
       if (result.success && result.runId) {
         setActiveRunId(result.runId)
         setResultMessage(`지속 실행 시작: ${result.runId}`)
@@ -144,12 +190,12 @@ export function RunSimulationOnPanel({
         const recovered = await syncRunningFromServer()
         if (!recovered) {
           setSimError(result.message ?? '시작 실패')
-          setRunning(false)
+          onSingleRunEnded()
         }
       }
     } catch (err) {
       setSimError(err instanceof Error ? err.message : '시뮬레이션 시작 실패')
-      setRunning(false)
+      onSingleRunEnded()
     }
   }
 
@@ -157,14 +203,10 @@ export function RunSimulationOnPanel({
     if (!activeRunId) return
     try {
       await stopRun(activeRunId)
-      sseCleanup?.()
-      setSseCleanup(null)
       setResultMessage('시뮬레이션 중지됨')
+      onContinuousStopped()
     } catch (err) {
       setSimError(err instanceof Error ? err.message : '중지 실패')
-    } finally {
-      setRunning(false)
-      setActiveRunId(null)
     }
   }
 
@@ -197,21 +239,44 @@ export function RunSimulationOnPanel({
       </div>
 
       <div className="sim-panel__section">
-        <label>
-          트리거 에셋
-          <select
-            value={triggerAssetId}
-            onChange={(e) => setTriggerAssetId(e.target.value)}
-            disabled={running}
-          >
-            <option value="">선택하세요...</option>
-            {assets.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.type} ({a.id.slice(0, 8)}...)
-              </option>
+        <div className="sim-panel__trigger-list">
+          <div className="sim-panel__trigger-list-header">
+            <span>트리거 후보 에셋</span>
+            <button
+              type="button"
+              className="sim-panel__link-btn"
+              onClick={selectAllTriggers}
+              disabled={running || triggerCandidates.length === 0}
+            >
+              전체 선택
+            </button>
+            <button
+              type="button"
+              className="sim-panel__link-btn"
+              onClick={clearAllTriggers}
+              disabled={running}
+            >
+              전체 해제
+            </button>
+          </div>
+          <ul className="sim-panel__trigger-checkboxes">
+            {triggerCandidates.map((a) => (
+              <li key={a.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={triggerAssetIds.includes(a.id)}
+                    onChange={(e) => toggleTriggerId(a.id, e.target.checked)}
+                    disabled={running}
+                  />
+                  <span>
+                    {a.type} ({a.id.slice(0, 8)}…)
+                  </span>
+                </label>
+              </li>
             ))}
-          </select>
-        </label>
+          </ul>
+        </div>
         <label>
           최대 전파 깊이 (리프까지 권장: 100+)
           <input
@@ -234,6 +299,18 @@ export function RunSimulationOnPanel({
             disabled={running}
           />
         </label>
+        <label className="sim-panel__reset-state">
+          <input
+            type="checkbox"
+            checked={resetState}
+            onChange={(e) => setResetState(e.target.checked)}
+            disabled={running}
+          />
+          <span>
+            참여 에셋 state 초기화 후 시작 (Mongo states 삭제, 에셋·스키마 기준 재시드. 이벤트
+            이력은 유지)
+          </span>
+        </label>
       </div>
 
       <div className="sim-panel__actions">
@@ -242,7 +319,7 @@ export function RunSimulationOnPanel({
             <button
               type="button"
               onClick={handleSingleRun}
-              disabled={!triggerAssetId}
+              disabled={triggerAssetIds.length === 0}
               className="sim-panel__run-btn"
             >
               실행
@@ -251,13 +328,13 @@ export function RunSimulationOnPanel({
             <button
               type="button"
               onClick={handleStartContinuous}
-              disabled={!triggerAssetId}
+              disabled={resolvedTriggerIds().length === 0}
               className="sim-panel__run-btn"
             >
               시작
             </button>
           )
-        ) : (
+        ) : activeRunId ? (
           <button
             type="button"
             onClick={handleStop}
@@ -265,6 +342,8 @@ export function RunSimulationOnPanel({
           >
             중지
           </button>
+        ) : (
+          <p className="sim-panel__running-hint">1회 실행 중…</p>
         )}
       </div>
 
@@ -280,7 +359,9 @@ export function RunSimulationOnPanel({
 
       {events.length > 0 && (
         <div className="sim-panel__events">
-          <span className="sim-panel__events-title">이벤트 ({events.length}건)</span>
+          <span className="sim-panel__events-title">
+            이벤트 ({events.length}건)
+          </span>
           <ul className="sim-panel__events-list">
             {events.map((evt, i) => (
               <li key={i} className="sim-panel__event-item">

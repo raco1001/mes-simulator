@@ -70,6 +70,14 @@ public sealed class MongoAssetRepository : IAssetRepository
         return true;
     }
 
+    public async Task DeleteStatesByAssetIdsAsync(IReadOnlyList<string> assetIds, CancellationToken cancellationToken = default)
+    {
+        if (assetIds is not { Count: > 0 })
+            return;
+        var filter = Builders<MongoAssetStateDocument>.Filter.In(d => d.AssetId, assetIds);
+        await _statesCollection.DeleteManyAsync(filter, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<StateDto>> GetAllStatesAsync(CancellationToken cancellationToken = default)
     {
         var cursor = await _statesCollection.FindAsync(FilterDefinition<MongoAssetStateDocument>.Empty, cancellationToken: cancellationToken);

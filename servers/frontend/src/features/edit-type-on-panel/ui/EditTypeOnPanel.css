@@ -114,6 +114,22 @@
   font-size: 0.75rem;
 }
 
+.object-type-panel__derived-settings {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  width: 100%;
+}
+
+.object-type-panel__derived-settings input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.object-type-panel__derived-settings select {
+  width: 90px;
+}
+
 .object-type-panel__save-btn {
   margin-top: 0.5rem;
   padding: 0.5rem 1rem;

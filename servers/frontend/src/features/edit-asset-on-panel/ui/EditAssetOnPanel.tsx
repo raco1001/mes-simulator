@@ -10,6 +10,7 @@ import {
   ExtraPropertiesSection,
   FlatExtraMetadataSection,
 } from '@/shared/ui/ExtraPropertiesSection'
+import { SchemaPropertyRows } from '@/shared/ui/SchemaPropertyRows'
 
 export function EditAssetOnPanel({
   asset,
@@ -163,31 +164,14 @@ export function EditAssetOnPanel({
           />
         </label>
 
-        {schemaProps.length > 0 && (
-          <div className="assets-canvas-page__meta-section">
-            <span>스키마 속성</span>
-            {schemaProps.map((p) => (
-              <div key={p.key} className="assets-canvas-page__meta-row">
-                <input value={p.key} readOnly aria-label={`${p.key}-key`} />
-                <input
-                  value={String(metadata[p.key] ?? '')}
-                  readOnly={p.mutability === 'Immutable'}
-                  onChange={
-                    p.mutability === 'Mutable'
-                      ? (e) => setMetaValue(p.key, e.target.value)
-                      : undefined
-                  }
-                  aria-label={`${p.key}-value`}
-                />
-                <span className="assets-canvas-page__prop-badge">
-                  {p.dataType} / {p.simulationBehavior} / {p.mutability}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <SchemaPropertyRows
+          schemaProps={schemaProps}
+          metadata={metadata}
+          setMetaValue={setMetaValue}
+        />
 
         <ExtraPropertiesSection
+          resetKey={asset.id}
           extraProperties={extraProperties}
           onAdd={addExtraProperty}
           onUpdate={updateExtraProperty}

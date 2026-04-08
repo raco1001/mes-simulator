@@ -17,8 +17,12 @@ public sealed class MongoSimulationRunDocument
     [BsonElement("endedAt")]
     public DateTime? EndedAt { get; set; }
 
+    /// <summary>Legacy single seed; prefer <see cref="TriggerAssetIds"/> when present.</summary>
     [BsonElement("triggerAssetId")]
     public string TriggerAssetId { get; set; } = string.Empty;
+
+    [BsonElement("triggerAssetIds")]
+    public List<string> TriggerAssetIds { get; set; } = new();
 
     [BsonElement("trigger")]
     public BsonDocument Trigger { get; set; } = new BsonDocument();

@@ -19,13 +19,24 @@ public static class PropertyMappingPropagation
         {
             if (string.IsNullOrWhiteSpace(m.FromProperty) || string.IsNullOrWhiteSpace(m.ToProperty))
                 continue;
-            if (!source.TryGetValue(m.FromProperty, out var raw) || raw is null)
-                continue;
-            if (!TransferSpecParser.TryCoerceDouble(raw, out var value))
+            object? raw = null;
+            double value;
+            if (SimulationPropertyKeyNormalizer.TryGetValue(source, m.FromProperty, out raw)
+                && raw is not null
+                && TransferSpecParser.TryCoerceDouble(raw, out value))
+            {
+                // use primary FromProperty
+            }
+            else if (TryResolvePowerSourceFallback(source, m.FromProperty, out raw, out value))
+            {
+                // e.g. map "Power" / power but only powerOut is populated on supplier state
+            }
+            else
                 continue;
 
+            // Lenient: if both ends specify units we cannot convert (e.g. kW vs catalog label), still apply the transform.
             if (!SimpleUnitConverter.TryConvert(value, m.FromUnit, m.ToUnit, out var converted))
-                continue;
+                converted = value;
 
             var final = ApplyTransform(m.TransformRule, converted);
             result[m.ToProperty] = final;
@@ -105,4 +116,37 @@ public static class PropertyMappingPropagation
 
     private static bool TryParseDouble(string s, out double d) =>
         double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out d);
+
+    private static string NormalizeMappingFromKey(string key) =>
+        key.Trim().Replace("_", "", StringComparison.Ordinal).ToLowerInvariant();
+
+    /// <summary>
+    /// When FromProperty is the canonical "power" slot but state holds the output on <c>powerOut</c> (common for Power Supplyer UIs).
+    /// </summary>
+    private static bool TryResolvePowerSourceFallback(
+        IReadOnlyDictionary<string, object?> source,
+        string fromProperty,
+        out object? raw,
+        out double value)
+    {
+        raw = null;
+        value = 0;
+        var n = NormalizeMappingFromKey(fromProperty);
+        // Explicit powerOut mapping should use primary path, not this fallback.
+        if (n != "power")
+            return false;
+
+        foreach (var alt in new[] { "powerOut", "powerOutput", "power_out" })
+        {
+            if (SimulationPropertyKeyNormalizer.TryGetValue(source, alt, out var r)
+                && r is not null
+                && TransferSpecParser.TryCoerceDouble(r, out value))
+            {
+                raw = r;
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

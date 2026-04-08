@@ -4,6 +4,13 @@ import type {
   Mutability,
   SimulationBehavior,
 } from '@/entities/object-type-schema'
+import {
+  DERIVED_OPERATIONS,
+  parseDependsOnCsv,
+  readDerivedDependsOn,
+  readDerivedOperation,
+} from '@/shared/lib/derivedPropertyConstraints'
+import { DerivedDependsOnTextInput } from '@/shared/ui/DerivedDependsOnTextInput'
 import { UnitSelect } from '@/shared/ui/UnitSelect'
 
 const DATA_TYPES = [
@@ -30,11 +37,14 @@ export function ExtraPropertiesSection({
   onAdd,
   onUpdate,
   onRemove,
+  resetKey = '',
 }: {
   extraProperties: ExtraProperty[]
   onAdd: () => void
   onUpdate: (index: number, patch: Partial<ExtraProperty>) => void
   onRemove: (index: number) => void
+  /** 에셋/모달 전환 시 dependsOn 입력 draft 초기화용 */
+  resetKey?: string
 }) {
   return (
     <div className="assets-canvas-page__meta-section">
@@ -105,6 +115,44 @@ export function ExtraPropertiesSection({
               />
             ) : null}
           </div>
+          {p.simulationBehavior === 'Derived' && p.dataType === 'Number' ? (
+            <div className="assets-canvas-page__meta-row-derived-extra">
+              <DerivedDependsOnTextInput
+                syncKey={`${resetKey}-${i}`}
+                canonicalCsv={readDerivedDependsOn(p)}
+                placeholder="dependsOn (콤마 구분 속성 키)"
+                onCsvChange={(csv) =>
+                  onUpdate(i, {
+                    constraints: {
+                      ...(p.constraints ?? {}),
+                      dependsOn: parseDependsOnCsv(csv),
+                    },
+                  })
+                }
+                aria-label={`extra-prop-derived-dependson-${i}`}
+                title="이 에셋 상태에 존재하는 속성 키 이름을 콤마로 구분해 입력"
+              />
+              <select
+                value={readDerivedOperation(p)}
+                onChange={(e) =>
+                  onUpdate(i, {
+                    constraints: {
+                      ...(p.constraints ?? {}),
+                      operation: e.target.value,
+                    },
+                  })
+                }
+                aria-label={`extra-prop-derived-operation-${i}`}
+                title="집계 방식"
+              >
+                {DERIVED_OPERATIONS.map((op) => (
+                  <option key={op} value={op}>
+                    {op}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <input
             placeholder="초기값 (BaseValue)"
             value={String(p.value ?? '')}

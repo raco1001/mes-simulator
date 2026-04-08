@@ -5,6 +5,7 @@ using DotnetEngine.Application.Asset.Ports.Driving;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.ObjectType.Ports.Driven;
 using DotnetEngine.Application.ObjectType.Dto;
+using DotnetEngine.Application.Relationship.Ports.Driven;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,7 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 services.RemoveAll<IUpdateAssetCommand>();
                 services.RemoveAll<IDeleteAssetCommand>();
                 services.RemoveAll<IObjectTypeSchemaRepository>();
+                services.RemoveAll<IRelationshipRepository>();
 
                 // Mock repositories
                 var mockAssetRepository = new Mock<IAssetRepository>();
@@ -98,8 +100,14 @@ public class AssetControllerTests : IClassFixture<WebApplicationFactory<Program>
                 mockObjectTypeRepository.Setup(r => r.GetByObjectTypeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync((ObjectTypeSchemaDto?)null);
 
+                var mockRelationshipRepository = new Mock<IRelationshipRepository>();
+                mockRelationshipRepository
+                    .Setup(r => r.ExistsForAssetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(false);
+
                 services.AddSingleton(mockAssetRepository.Object);
                 services.AddSingleton(mockObjectTypeRepository.Object);
+                services.AddSingleton(mockRelationshipRepository.Object);
                 services.AddScoped<IGetAssetsQuery, DotnetEngine.Application.Asset.Handlers.GetAssetsQueryHandler>();
                 services.AddScoped<IGetStatesQuery, DotnetEngine.Application.Asset.Handlers.GetStatesQueryHandler>();
                 services.AddScoped<ICreateAssetCommand, DotnetEngine.Application.Asset.Handlers.CreateAssetCommandHandler>();

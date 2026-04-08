@@ -11,6 +11,13 @@ import {
   type SimulationBehavior,
   type UpdateObjectTypeSchemaRequest,
 } from '@/entities/object-type-schema'
+import {
+  DERIVED_OPERATIONS,
+  parseDependsOnCsv,
+  readDerivedDependsOn,
+  readDerivedOperation,
+} from '@/shared/lib/derivedPropertyConstraints'
+import { DerivedDependsOnTextInput } from '@/shared/ui/DerivedDependsOnTextInput'
 import { UnitSelect } from '@/shared/ui/UnitSelect'
 import './EditTypeOnPanel.css'
 
@@ -139,6 +146,31 @@ export function EditTypeOnPanel({
     setForm((f) => ({
       ...f,
       ownProperties: f.ownProperties.filter((_, i) => i !== index),
+    }))
+  }
+
+  const updateDerivedDependsOn = (index: number, csv: string) => {
+    const dependsOn = parseDependsOnCsv(csv)
+    setForm((f) => ({
+      ...f,
+      ownProperties: f.ownProperties.map((p, i) => {
+        if (i !== index) return p
+        const constraints = { ...(p.constraints ?? {}) } as Record<string, unknown>
+        constraints.dependsOn = dependsOn
+        return { ...p, constraints }
+      }),
+    }))
+  }
+
+  const updateDerivedOperation = (index: number, operation: string) => {
+    setForm((f) => ({
+      ...f,
+      ownProperties: f.ownProperties.map((p, i) => {
+        if (i !== index) return p
+        const constraints = { ...(p.constraints ?? {}) } as Record<string, unknown>
+        constraints.operation = operation
+        return { ...p, constraints }
+      }),
     }))
   }
 
@@ -302,6 +334,26 @@ export function EditTypeOnPanel({
                     value={p.unit}
                     onChange={(unit) => updatePropertyRow(i, { unit: unit || undefined })}
                   />
+                </div>
+              )}
+              {p.simulationBehavior === 'Derived' && (
+                <div className="object-type-panel__derived-settings">
+                  <DerivedDependsOnTextInput
+                    syncKey={`${editingObjectType ?? 'create'}-${i}`}
+                    canonicalCsv={readDerivedDependsOn(p)}
+                    placeholder="dependsOn (comma-separated)"
+                    onCsvChange={(csv) => updateDerivedDependsOn(i, csv)}
+                  />
+                  <select
+                    value={readDerivedOperation(p)}
+                    onChange={(e) => updateDerivedOperation(i, e.target.value)}
+                  >
+                    {DERIVED_OPERATIONS.map((op) => (
+                      <option key={op} value={op}>
+                        {op}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
               <label className="object-type-panel__prop-required">

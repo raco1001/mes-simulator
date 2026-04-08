@@ -1,3 +1,22 @@
+/* ---- Phase (Phase 22 sim canvas) — ByteByteGo-ish neutrals + state tints ---- */
+
+.asset-node--phase-idle {
+  border-color: var(--canvas-node-idle-border, #94a3b8);
+  background: rgba(148, 163, 184, 0.12);
+  box-shadow: none;
+}
+
+.asset-node--phase-stopped {
+  opacity: 1;
+}
+
+.asset-node--phase-running.asset-node--live-ok {
+  border-color: var(--canvas-accent-ok, #4caf50) !important;
+  box-shadow: 0 0 0 1px var(--canvas-accent-ok, #4caf50),
+    0 0 10px rgba(76, 175, 80, 0.25) !important;
+  animation: none !important;
+}
+
 /* ---- Asset Node ---- */
 
 .asset-node {

@@ -18,4 +18,12 @@ public interface IRunSimulationCommand
         RunSimulationRequest request,
         bool dryRun = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Persisted state 없이 에셋·스키마만으로 베이스라인 스냅샷(dict: assetId → { properties, simulationStatus })을 만든다.
+    /// 연속 런 <c>initialSnapshot</c> 저장용.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, object>> BuildBaselineInitialSnapshotAsync(
+        IReadOnlyCollection<string> participatingAssetIds,
+        CancellationToken cancellationToken = default);
 }

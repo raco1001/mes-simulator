@@ -28,8 +28,9 @@ public sealed class WhatIfSimulationQueryHandler : IWhatIfSimulationQuery
         var maxDepth = request.MaxDepth <= 0
             ? SimulationEngineConstants.DefaultLeafPropagationMaxDepth
             : request.MaxDepth;
-        var (affected, depthMap) = await CollectAffectedAsync(request.TriggerAssetId, maxDepth, cancellationToken);
-        var before = await BuildBeforeSnapshotsAsync(affected, cancellationToken);
+        var triggerIds = request.ResolveTriggerAssetIds();
+        var (affected, depthMap) = await CollectAffectedFromSeedsAsync(triggerIds, maxDepth, cancellationToken);
+        var before = await BuildBeforeSnapshotsAsync(affected, request.ResetState, cancellationToken);
 
         var runId = $"whatif-{Guid.NewGuid():N}";
         var outcome = await _runSimulationCommand.RunOnePropagationAsync(
@@ -52,14 +53,20 @@ public sealed class WhatIfSimulationQueryHandler : IWhatIfSimulationQuery
         };
     }
 
-    private async Task<(IReadOnlyList<string> Affected, IReadOnlyDictionary<string, int> DepthMap)> CollectAffectedAsync(
-        string triggerAssetId,
+    private async Task<(IReadOnlyList<string> Affected, IReadOnlyDictionary<string, int> DepthMap)> CollectAffectedFromSeedsAsync(
+        IReadOnlyList<string> seedAssetIds,
         int maxDepth,
         CancellationToken cancellationToken)
     {
         var queue = new Queue<(string AssetId, int Depth)>();
         var depthMap = new Dictionary<string, int>(StringComparer.Ordinal);
-        queue.Enqueue((triggerAssetId, 0));
+        foreach (var raw in seedAssetIds)
+        {
+            var id = raw?.Trim();
+            if (string.IsNullOrEmpty(id))
+                continue;
+            queue.Enqueue((id, 0));
+        }
 
         while (queue.Count > 0)
         {
@@ -79,13 +86,26 @@ public sealed class WhatIfSimulationQueryHandler : IWhatIfSimulationQuery
         return ([.. depthMap.OrderBy(kv => kv.Value).Select(kv => kv.Key)], depthMap);
     }
 
+    /// <param name="resetState">
+    /// When true, "before" is empty so deltas reflect dry-run propagation from baseline only (DB not cleared).
+    /// </param>
     private async Task<IReadOnlyDictionary<string, StateSnapshot>> BuildBeforeSnapshotsAsync(
         IReadOnlyList<string> affected,
+        bool resetState,
         CancellationToken cancellationToken)
     {
         var snapshots = new Dictionary<string, StateSnapshot>(StringComparer.Ordinal);
         foreach (var assetId in affected)
         {
+            if (resetState)
+            {
+                snapshots[assetId] = new StateSnapshot
+                {
+                    Properties = new Dictionary<string, object?>()
+                };
+                continue;
+            }
+
             var state = await _assetRepository.GetStateByAssetIdAsync(assetId, cancellationToken);
             snapshots[assetId] = new StateSnapshot
             {

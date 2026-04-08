@@ -10,6 +10,7 @@ import {
   ExtraPropertiesSection,
   FlatExtraMetadataSection,
 } from '@/shared/ui/ExtraPropertiesSection'
+import { SchemaPropertyRows } from '@/shared/ui/SchemaPropertyRows'
 
 const CREATE_INITIAL_METADATA: Record<string, unknown> = {}
 
@@ -103,28 +104,15 @@ export function AddAssetModal({
               aria-label="asset-display-name"
             />
           </label>
-          {schemaProps.length > 0 && (
-            <div className="assets-canvas-page__meta-section">
-              <span>스키마 속성</span>
-              {schemaProps.map((p) => (
-                <div key={p.key} className="assets-canvas-page__meta-row">
-                  <input value={p.key} readOnly aria-label={`schema-${p.key}-key`} />
-                  <input
-                    value={String(metadata[p.key] ?? '')}
-                    readOnly={p.mutability === 'Immutable'}
-                    onChange={
-                      p.mutability === 'Mutable'
-                        ? (e) => setMetaValue(p.key, e.target.value)
-                        : undefined
-                    }
-                    aria-label={`schema-${p.key}-value`}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <SchemaPropertyRows
+            schemaProps={schemaProps}
+            metadata={metadata}
+            setMetaValue={setMetaValue}
+            ariaLabelPrefix="schema"
+          />
 
           <ExtraPropertiesSection
+            resetKey="add-asset"
             extraProperties={extraProperties}
             onAdd={addExtraProperty}
             onUpdate={updateExtraProperty}

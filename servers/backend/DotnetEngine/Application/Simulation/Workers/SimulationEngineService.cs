@@ -2,12 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using DotnetEngine.Application.Asset.Ports.Driven;
 using DotnetEngine.Application.Relationship.Ports.Driven;
+using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
 using DotnetEngine.Application.Simulation.Ports.Driven;
 using DotnetEngine.Application.Simulation.Ports.Driving;
 using DotnetEngine.Domain.Simulation;
 using DotnetEngine.Domain.Simulation.Constants;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace DotnetEngine.Application.Simulation.Workers;
 
@@ -20,11 +22,16 @@ public sealed class SimulationEngineService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISimulationNotifier _simulationNotifier;
+    private readonly ILogger<SimulationEngineService> _logger;
 
-    public SimulationEngineService(IServiceScopeFactory scopeFactory, ISimulationNotifier simulationNotifier)
+    public SimulationEngineService(
+        IServiceScopeFactory scopeFactory,
+        ISimulationNotifier simulationNotifier,
+        ILogger<SimulationEngineService> logger)
     {
         _scopeFactory = scopeFactory;
         _simulationNotifier = simulationNotifier;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -45,7 +52,16 @@ public sealed class SimulationEngineService : BackgroundService
                 {
                     try
                     {
-                        await ProcessRunAsync(run, runRepo, command, assetRepo, relRepo, eventPublisher, _simulationNotifier, stoppingToken);
+                        await ProcessRunAsync(
+                            run,
+                            runRepo,
+                            command,
+                            assetRepo,
+                            relRepo,
+                            eventPublisher,
+                            _simulationNotifier,
+                            _logger,
+                            stoppingToken);
                     }
                     catch
                     {
@@ -77,9 +93,10 @@ public sealed class SimulationEngineService : BackgroundService
         IRelationshipRepository relRepo,
         IEventPublisher eventPublisher,
         ISimulationNotifier notifier,
+        ILogger<SimulationEngineService> logger,
         CancellationToken cancellationToken)
     {
-        var participating = await SimulationParticipation.GetParticipatingAssetIdsAsync(run.TriggerAssetId, relRepo, cancellationToken);
+        var participating = await SimulationParticipation.GetParticipatingAssetIdsAsync(run.TriggerAssetIds, relRepo, cancellationToken);
         if (participating.Count == 0)
             return;
 
@@ -88,6 +105,16 @@ public sealed class SimulationEngineService : BackgroundService
         await runRepo.UpdateTickIndexAsync(run.Id, nextTick, cancellationToken);
 
         var dueList = due.ToList();
+        var sequentialSingleSeed = dueList.Count != participating.Count;
+        logger.LogDebug(
+            "SimulationEngine tick {Tick} run {RunId}: participating={ParticipatingCount} due={DueCount} sequentialSingleSeed={SequentialSingleSeed} dueIds=[{DueIds}]",
+            nextTick,
+            run.Id,
+            participating.Count,
+            dueList.Count,
+            sequentialSingleSeed,
+            string.Join(',', dueList));
+
         await PublishTickEnvelopeAsync(
             eventPublisher,
             EventTypes.SimulationTickStarted,
@@ -102,7 +129,7 @@ public sealed class SimulationEngineService : BackgroundService
         {
             var request = new RunSimulationRequest
             {
-                TriggerAssetId = run.TriggerAssetId,
+                TriggerAssetIds = run.TriggerAssetIds.ToList(),
                 MaxDepth = run.MaxDepth,
                 Patch = null,
                 RunTick = nextTick,
@@ -186,7 +213,9 @@ public sealed class SimulationEngineService : BackgroundService
             if (state == null) continue;
 
             var properties = state.Properties
-                .Where(kvp => kvp.Value != null)
+                .Where(kvp =>
+                    kvp.Value != null
+                    && !SimulationAssetMetadataKeys.ShouldExcludeFromClientTickPayload(kvp.Key))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value!);
 
             var tickEvent = new SimulationTickEvent(

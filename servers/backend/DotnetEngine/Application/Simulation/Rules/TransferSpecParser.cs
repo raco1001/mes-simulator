@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DotnetEngine.Application.Asset.Dto;
 using DotnetEngine.Application.Relationship.Dto;
+using DotnetEngine.Application.Simulation;
 using DotnetEngine.Application.Simulation.Dto;
 
 namespace DotnetEngine.Application.Simulation.Rules;
@@ -10,12 +11,36 @@ public readonly record struct TransferSpec(string Key, double Ratio, string Targ
 public static class TransferSpecParser
 {
     /// <summary>
-    /// Source properties for Supplies propagation: incoming patch wins, else from-asset state.
+    /// Source properties for Supplies propagation: merge from-asset state with incoming patch (patch overlays).
+    /// If only incoming were used when non-empty, derived/computed fields on <paramref name="fromState"/> (e.g. <c>stream_out</c>)
+    /// would be invisible to <see cref="PropertyMappingPropagation.ApplyMappings"/>.
     /// </summary>
-    public static Dictionary<string, object?> ResolveSourceProperties(StatePatchDto incoming, StateDto? fromState) =>
-        incoming.Properties.Count > 0
-            ? new Dictionary<string, object?>(incoming.Properties)
-            : new Dictionary<string, object?>(fromState?.Properties ?? new Dictionary<string, object?>());
+    public static Dictionary<string, object?> ResolveSourceProperties(StatePatchDto incoming, StateDto? fromState)
+    {
+        var merged = new Dictionary<string, object?>();
+        foreach (var kv in fromState?.Metadata ?? new Dictionary<string, object>())
+        {
+            if (SimulationAssetMetadataKeys.IsReservedForPropertyOverlay(kv.Key) || kv.Value is null)
+                continue;
+            merged[kv.Key] = kv.Value;
+        }
+
+        foreach (var kv in fromState?.Properties ?? new Dictionary<string, object?>())
+        {
+            if (kv.Value is not null)
+                merged[kv.Key] = kv.Value;
+        }
+
+        foreach (var kv in incoming.Properties)
+        {
+            if (kv.Value is null)
+                merged.Remove(kv.Key);
+            else
+                merged[kv.Key] = kv.Value;
+        }
+
+        return merged;
+    }
 
     public static IReadOnlyList<TransferSpec> Parse(IReadOnlyDictionary<string, object> relationshipProperties)
     {

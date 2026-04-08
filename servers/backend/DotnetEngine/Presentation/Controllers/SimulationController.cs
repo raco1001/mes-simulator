@@ -51,8 +51,11 @@ public sealed class SimulationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> StartContinuousRun([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
-            return BadRequest(new { error = "triggerAssetId is required" });
+        var triggerIds = request.ResolveTriggerAssetIds();
+        if (triggerIds.Count == 0)
+            return BadRequest(new { error = "triggerAssetIds (non-empty) or triggerAssetId is required" });
+        if (RunSimulationRequestExtensions.IsMultiSeedPatchDisallowed(triggerIds, request.Patch))
+            return BadRequest(new { error = "Multiple trigger seeds cannot be combined with a non-empty patch." });
 
         var result = await _startContinuousRunCommand.StartAsync(request, cancellationToken);
         if (!result.Success)
@@ -98,10 +101,15 @@ public sealed class SimulationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateRun([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
-            return BadRequest(new { error = "triggerAssetId is required" });
+        var triggerIds = request.ResolveTriggerAssetIds();
+        if (triggerIds.Count == 0)
+            return BadRequest(new { error = "triggerAssetIds (non-empty) or triggerAssetId is required" });
+        if (RunSimulationRequestExtensions.IsMultiSeedPatchDisallowed(triggerIds, request.Patch))
+            return BadRequest(new { error = "Multiple trigger seeds cannot be combined with a non-empty patch." });
 
         var result = await _runSimulationCommand.RunAsync(request, cancellationToken);
+        if (!result.Success)
+            return BadRequest(result);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
@@ -110,8 +118,11 @@ public sealed class SimulationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> WhatIf([FromBody] RunSimulationRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.TriggerAssetId))
-            return BadRequest(new { error = "triggerAssetId is required" });
+        var triggerIds = request.ResolveTriggerAssetIds();
+        if (triggerIds.Count == 0)
+            return BadRequest(new { error = "triggerAssetIds (non-empty) or triggerAssetId is required" });
+        if (RunSimulationRequestExtensions.IsMultiSeedPatchDisallowed(triggerIds, request.Patch))
+            return BadRequest(new { error = "Multiple trigger seeds cannot be combined with a non-empty patch." });
 
         var result = await _whatIfSimulationQuery.RunAsync(request, cancellationToken);
         return Ok(result);

@@ -12,7 +12,10 @@ public sealed record SimulationRunDto
     public required SimulationRunStatus Status { get; init; }
     public required DateTimeOffset StartedAt { get; init; }
     public DateTimeOffset? EndedAt { get; init; }
-    public required string TriggerAssetId { get; init; }
+    /// <summary>All seed asset ids (deduped, order preserved).</summary>
+    public required IReadOnlyList<string> TriggerAssetIds { get; init; }
+    /// <summary>First seed (legacy JSON / Kafka compat).</summary>
+    public string TriggerAssetId => TriggerAssetIds.Count > 0 ? TriggerAssetIds[0] : "";
     /// <summary>상태 패치 표현 (currentTemp, currentPower, status, lastEventType 등).</summary>
     public IReadOnlyDictionary<string, object> Trigger { get; init; } = new Dictionary<string, object>();
     public int MaxDepth { get; init; }
@@ -26,4 +29,3 @@ public sealed record SimulationRunDto
     /// <summary>사용자 변조 이력.</summary>
     public IReadOnlyList<SimulationOverrideEntryDto> Overrides { get; init; } = Array.Empty<SimulationOverrideEntryDto>();
 }
-

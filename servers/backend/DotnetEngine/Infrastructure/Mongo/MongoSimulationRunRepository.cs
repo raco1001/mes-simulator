@@ -102,18 +102,42 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
         return bson;
     }
 
+    private static IReadOnlyList<string> NormalizeTriggerIdsFromDocument(MongoSimulationRunDocument doc)
+    {
+        if (doc.TriggerAssetIds is { Count: > 0 } ids)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var result = new List<string>();
+            foreach (var s in ids)
+            {
+                var t = s?.Trim();
+                if (string.IsNullOrEmpty(t) || !seen.Add(t))
+                    continue;
+                result.Add(t);
+            }
+
+            if (result.Count > 0)
+                return result;
+        }
+
+        if (!string.IsNullOrWhiteSpace(doc.TriggerAssetId))
+            return new[] { doc.TriggerAssetId.Trim() };
+        return Array.Empty<string>();
+    }
+
     private static SimulationRunDto ToDto(MongoSimulationRunDocument doc)
     {
         var status = string.IsNullOrEmpty(doc.Status) || !Enum.TryParse<SimulationRunStatus>(doc.Status, ignoreCase: true, out var s)
             ? SimulationRunStatus.Pending
             : s;
+        var triggerIds = NormalizeTriggerIdsFromDocument(doc);
         return new SimulationRunDto
         {
             Id = doc.Id,
             Status = status,
             StartedAt = ToDateTimeOffset(doc.StartedAt),
             EndedAt = doc.EndedAt.HasValue ? ToDateTimeOffset(doc.EndedAt.Value) : null,
-            TriggerAssetId = doc.TriggerAssetId,
+            TriggerAssetIds = triggerIds,
             Trigger = MetadataBsonConverter.ToDictionary(doc.Trigger),
             MaxDepth = doc.MaxDepth,
             EngineTickIntervalMs = doc.EngineTickIntervalMs <= 0
@@ -161,13 +185,15 @@ public sealed class MongoSimulationRunRepository : ISimulationRunRepository
 
     private static MongoSimulationRunDocument ToDocument(SimulationRunDto dto)
     {
+        var ids = dto.TriggerAssetIds.ToList();
         return new MongoSimulationRunDocument
         {
             Id = dto.Id,
             Status = dto.Status.ToString(),
             StartedAt = dto.StartedAt.UtcDateTime,
             EndedAt = dto.EndedAt?.UtcDateTime,
-            TriggerAssetId = dto.TriggerAssetId,
+            TriggerAssetIds = ids,
+            TriggerAssetId = ids.Count > 0 ? ids[0] : "",
             Trigger = MetadataBsonConverter.ToBsonDocument(dto.Trigger),
             MaxDepth = dto.MaxDepth,
             EngineTickIntervalMs = SimulationEngineConstants.ClampEngineTickIntervalMs(dto.EngineTickIntervalMs),

@@ -4,6 +4,7 @@ import {
   appendSimulationOverride,
   getRun,
   getRunningSimulationRuns,
+  runSimulation,
 } from './simulationApi'
 import type { AppendSimulationOverrideRequestDto, SimulationRunDetailDto } from '../model/types'
 
@@ -23,6 +24,7 @@ describe('simulationApi', () => {
         status: 'Running',
         startedAt: '2026-01-01T00:00:00Z',
         triggerAssetId: 'a1',
+        triggerAssetIds: ['a1'],
         tickIndex: 0,
         overrides: [],
       }
@@ -51,6 +53,7 @@ describe('simulationApi', () => {
           status: 'Running',
           startedAt: '',
           triggerAssetId: 'a1',
+          triggerAssetIds: ['a1'],
           tickIndex: 0,
           overrides: [],
         },
@@ -69,6 +72,54 @@ describe('simulationApi', () => {
       const runs = await getRunningSimulationRuns()
 
       expect(runs).toEqual([])
+    })
+  })
+
+  describe('runSimulation', () => {
+    it('POSTs JSON body with triggerAssetIds when multi-seed', async () => {
+      vi.mocked(httpClient.request).mockResolvedValue({
+        success: true,
+        runId: 'r1',
+        message: 'ok',
+      })
+
+      await runSimulation({
+        triggerAssetIds: ['a', 'b'],
+        maxDepth: 10,
+      })
+
+      expect(httpClient.request).toHaveBeenCalledWith('/api/simulation/runs', {
+        method: 'POST',
+        body: JSON.stringify({
+          triggerAssetIds: ['a', 'b'],
+          maxDepth: 10,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    it('includes resetState in body when set', async () => {
+      vi.mocked(httpClient.request).mockResolvedValue({
+        success: true,
+        runId: 'r1',
+        message: 'ok',
+      })
+
+      await runSimulation({
+        triggerAssetId: 'a1',
+        maxDepth: 5,
+        resetState: true,
+      })
+
+      expect(httpClient.request).toHaveBeenCalledWith('/api/simulation/runs', {
+        method: 'POST',
+        body: JSON.stringify({
+          triggerAssetId: 'a1',
+          maxDepth: 5,
+          resetState: true,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      })
     })
   })
 

@@ -1,52 +1,77 @@
 # Docker Compose
 
-## 구성
+`docker/infra`와 `docker/app`을 분리해 인프라와 애플리케이션을 단계적으로 운영합니다.  
+Infrastructure and application stacks are split into `docker/infra` and `docker/app`.
 
-| 파일 | 용도 |
-|------|------|
-| `docker-compose.infra.yml` | 인프라 (Kafka, MongoDB, UI 도구) |
-| `docker-compose.app.yml` | 앱 (Backend, Frontend, Pipeline) — **기동 중인 인프라 네트워크 사용** |
+## 구성 / Compose Scopes
 
-## 통합 테스트 (인프라 이미 기동 중일 때)
+| Scope | Path | Purpose |
+| --- | --- | --- |
+| Infra | `docker/infra/docker-compose.yml` | Kafka, Zookeeper, MongoDB, Kafka UI, Mongo Express |
+| App | `docker/app/docker-compose.yml` | Backend, Frontend, Pipeline (requires existing `factory-network`) |
 
-1. **인프라가 이미 떠 있는지 확인**
-   ```bash
-   docker network ls | grep factory-network
-   ```
-   없으면:
-   ```bash
-   cd docker && docker compose -f docker-compose.infra.yml up -d
-   ```
+## 기동 순서 / Startup Order
 
-2. **앱만 빌드·기동 후 통합 테스트**
-   ```bash
-   cd docker
-   chmod +x scripts/integration-test.sh
-   ./scripts/integration-test.sh
-   ```
-   또는 수동:
-   ```bash
-   cd docker
-   docker compose -f docker-compose.app.yml build
-   docker compose -f docker-compose.app.yml up -d
-   curl -s http://localhost:5000/api/health
-   curl -s http://localhost:5000/api/assets
-   curl -s http://localhost:5000/api/states
-   curl -s http://localhost:5000/api/alerts
-   ```
+### 1) Infra 먼저 기동 / Start infra first
 
-3. **브라우저 확인**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5000 (Swagger: http://localhost:5000 루트)
+```bash
+cd docker/infra
+docker compose up -d
+```
 
-4. **앱만 종료**
-   ```bash
-   cd docker && docker compose -f docker-compose.app.yml down
-   ```
+### 2) App 기동 / Start app stack
 
-## 주의
+```bash
+cd ../app
+docker compose up -d --build
+```
 
-- `docker-compose.app.yml`은 **외부 네트워크** `factory-network`를 사용합니다.  
-  인프라를 먼저 `docker-compose.infra.yml`로 띄워 두어야 합니다.
-- MongoDB 연결 문자열은 컨테이너 내부에서 호스트명 `mongodb`로 접속합니다.
-- Kafka 연결은 컨테이너 내부에서 `kafka:9093` (PLAINTEXT_INTERNAL 리스너)을 사용합니다.
+### 3) 확인 / Verify endpoints
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:5000/api/health
+- Kafka UI: http://localhost:8080
+- Mongo Express: http://localhost:8081
+
+## 통합 검증 루틴 / Smoke Validation Routine
+
+```bash
+curl -f http://localhost:5000/api/health
+curl -f http://localhost:5000/api/assets
+curl -f http://localhost:5000/api/states
+curl -f http://localhost:5000/api/simulation/runs
+```
+
+추천/분석 흐름을 검증하려면 시뮬레이션 실행 후 Kafka/Mongo 로그를 함께 확인합니다.  
+For analytics/recommendation validation, run simulation traffic and inspect Kafka/Mongo traces.
+
+## 종료 / Shutdown
+
+앱만 종료 / Stop app only:
+
+```bash
+cd docker/app
+docker compose down
+```
+
+인프라까지 종료 / Stop infra too:
+
+```bash
+cd ../infra
+docker compose down
+```
+
+## 운영 메모 / Operational Notes
+
+- `docker/app`은 외부 네트워크 `factory-network`를 사용하므로 `docker/infra`를 먼저 올려야 합니다.
+- Backend Mongo URL: `mongodb://admin:admin123@mongodb:27017/factory_mes?authSource=admin`
+- Backend/Pipeline Kafka broker: `kafka:9093`
+- 토픽 기본값 / Default topics:
+  - `factory.asset.events`
+  - `factory.asset.alert`
+
+## 트러블슈팅 / Troubleshooting
+
+- `network factory-network not found` -> infra compose를 먼저 실행
+- backend unhealthy -> `docker logs mes-backend` 후 Mongo/Kafka 연결 확인
+- pipeline idle -> topic 유입 이벤트 여부와 consumer group 상태 확인

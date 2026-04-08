@@ -4,12 +4,15 @@ import {
   formatAssetMetadataSummary,
   getAssetDisplayTitle,
 } from '@/shared/lib/assetDisplay'
+import { orderLivePropertiesForDisplay } from '@/shared/lib/canvasMetadata'
+import type { SimCanvasPhase } from '@/pages/canvas/lib/useCanvasSimulationSync'
 import './AssetNode.css'
 
 export type AssetNodeData = {
   asset: AssetDto
   liveStatus?: string
   liveProperties?: Record<string, unknown>
+  simCanvasPhase?: SimCanvasPhase
 }
 
 function formatPropValue(v: unknown): string {
@@ -32,15 +35,31 @@ export function AssetNode(props: NodeProps<Node<AssetNodeData, 'asset'>>) {
 
   const liveClass = statusClass(data.liveStatus)
 
+  const phase = data.simCanvasPhase ?? 'idle'
+  const phaseClass =
+    phase === 'idle'
+      ? 'asset-node--phase-idle'
+      : phase === 'stoppedCached'
+        ? 'asset-node--phase-stopped'
+        : 'asset-node--phase-running'
+  const runningOkClass =
+    phase === 'running' && !liveClass ? 'asset-node--live-ok' : ''
+
   const live = data.liveProperties
-  const hasLiveEntries = live && Object.keys(live).length > 0
+  const liveEntries =
+    live && Object.keys(live).length > 0
+      ? orderLivePropertiesForDisplay(Object.entries(live))
+      : []
+  const hasLiveEntries = liveEntries.length > 0
   const displayTitle = getAssetDisplayTitle(asset)
   const showTypeCode = displayTitle !== asset.type
 
   return (
     <>
       <Handle type="target" position={Position.Left} />
-      <div className={`asset-node ${liveClass}`}>
+      <div
+        className={`asset-node ${liveClass} ${phaseClass} ${runningOkClass}`}
+      >
         <div className="asset-node__type">{displayTitle}</div>
         {showTypeCode ? (
           <div className="asset-node__type-code" title={asset.id}>
@@ -49,7 +68,7 @@ export function AssetNode(props: NodeProps<Node<AssetNodeData, 'asset'>>) {
         ) : null}
         {hasLiveEntries ? (
           <div className="asset-node__props">
-            {Object.entries(live).map(([k, v]) => (
+            {liveEntries.map(([k, v]) => (
               <div key={k} className="asset-node__prop-line">
                 <span className="asset-node__prop-key">{k}:</span>{' '}
                 <span className="asset-node__prop-val">{formatPropValue(v)}</span>

@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
 } from 'react'
@@ -29,7 +30,13 @@ import {
   type LinkTypeSchemaDto,
 } from '@/entities/link-type-schema'
 import { getRelationships } from '@/entities/relationship'
+import {
+  getGridFallbackPosition,
+  parseCanvasPositionFromMetadata,
+} from '../lib/flowPosition'
 import { EDGE_TYPE, GRID_X, GRID_Y, NODE_TYPE } from '../lib/canvasConstants'
+import { useCanvasSimulationSync } from '../lib/useCanvasSimulationSync'
+import { CANVAS_POSITION_KEY } from '@/shared/lib/canvasMetadata'
 import {
   CANVAS_THEME_STORAGE_KEY,
   getInitialCanvasTheme,
@@ -78,6 +85,19 @@ export function CanvasPage() {
     getInitialCanvasTheme,
   )
 
+  const canvasPositionSaveTimers = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map())
+
+  useEffect(() => {
+    return () => {
+      for (const t of canvasPositionSaveTimers.current.values()) {
+        clearTimeout(t)
+      }
+      canvasPositionSaveTimers.current.clear()
+    }
+  }, [])
+
   useEffect(() => {
     try {
       window.localStorage.setItem(CANVAS_THEME_STORAGE_KEY, canvasTheme)
@@ -90,6 +110,9 @@ export function CanvasPage() {
     setCanvasTheme((t) => (t === 'light' ? 'dark' : 'light'))
   }, [])
 
+  const canvasReady = !loading && !error
+  const simulation = useCanvasSimulationSync(setNodes, canvasReady)
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -101,12 +124,17 @@ export function CanvasPage() {
         getLinkTypeSchemas().catch(() => []),
       ])
       const assetIds = new Set(assets.map((a) => a.id))
-      const flowNodes: Node<AssetNodeData>[] = assets.map((asset, i) => ({
-        id: asset.id,
-        type: NODE_TYPE,
-        position: { x: i * GRID_X, y: i * GRID_Y },
-        data: { asset },
-      }))
+      const flowNodes: Node<AssetNodeData>[] = assets.map((asset, i) => {
+        const fromMeta = parseCanvasPositionFromMetadata(asset.metadata)
+        const position =
+          fromMeta ?? getGridFallbackPosition(i, GRID_X, GRID_Y)
+        return {
+          id: asset.id,
+          type: NODE_TYPE,
+          position,
+          data: { asset },
+        }
+      })
       const flowEdges: RelationshipEdge[] = relationships
         .filter((r) => assetIds.has(r.fromAssetId) && assetIds.has(r.toAssetId))
         .map((r) => ({
@@ -130,6 +158,53 @@ export function CanvasPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const schedulePersistCanvasPosition = useCallback(
+    (nodeId: string, position: { x: number; y: number }, asset: AssetDto) => {
+      const prev = canvasPositionSaveTimers.current.get(nodeId)
+      if (prev !== undefined) clearTimeout(prev)
+      const t = setTimeout(() => {
+        canvasPositionSaveTimers.current.delete(nodeId)
+        void updateAsset(nodeId, {
+          connections: asset.connections,
+          type: asset.type,
+          metadata: {
+            ...(asset.metadata ?? {}),
+            [CANVAS_POSITION_KEY]: { x: position.x, y: position.y },
+          },
+        })
+          .then((updated) => {
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === nodeId
+                  ? {
+                      ...n,
+                      data: {
+                        ...n.data,
+                        asset: updated,
+                      },
+                    }
+                  : n,
+              ),
+            )
+          })
+          .catch(() => {
+            /* silent; optional toast later */
+          })
+      }, 500)
+      canvasPositionSaveTimers.current.set(nodeId, t)
+    },
+    [setNodes],
+  )
+
+  const onNodeDragStop = useCallback(
+    (_: MouseEvent, node: Node<AssetNodeData>) => {
+      const asset = node.data?.asset
+      if (!asset) return
+      schedulePersistCanvasPosition(node.id, node.position, asset)
+    },
+    [schedulePersistCanvasPosition],
+  )
 
   const enterRelMode = useCallback(() => {
     setRelMode(true)
@@ -186,15 +261,38 @@ export function CanvasPage() {
       if (relMode && n.id === relSourceId) className = 'rel-source-highlight'
       else if (relMode && n.id === relTargetId)
         className = 'rel-target-highlight'
-      return className !== (n.className ?? '') ? { ...n, className } : n
+      return {
+        ...n,
+        className: className || undefined,
+        data: {
+          ...n.data,
+          simCanvasPhase: simulation.simCanvasPhase,
+        },
+      }
     })
-  }, [nodes, relMode, relSourceId, relTargetId])
+  }, [nodes, relMode, relSourceId, relTargetId, simulation.simCanvasPhase])
+
+  const edgesWithSim = useMemo(
+    () =>
+      edges.map((e) => {
+        const rel = e.data?.relationship
+        if (!rel) return e
+        return {
+          ...e,
+          data: {
+            relationship: rel,
+            simCanvasPhase: simulation.simCanvasPhase,
+          },
+        }
+      }),
+    [edges, simulation.simCanvasPhase],
+  )
 
   const selectedNode = selectedNodeId
     ? highlightedNodes.find((n) => n.id === selectedNodeId)
     : null
   const selectedEdge = selectedEdgeId
-    ? edges.find((e) => e.id === selectedEdgeId)
+    ? edgesWithSim.find((e) => e.id === selectedEdgeId)
     : null
   const selectedRelationship = selectedEdge?.data?.relationship ?? null
 
@@ -305,8 +403,9 @@ export function CanvasPage() {
           proOptions={{ hideAttribution: true }}
           colorMode={canvasTheme}
           nodes={highlightedNodes}
-          edges={edges}
+          edges={edgesWithSim}
           onNodesChange={onNodesChange}
+          onNodeDragStop={onNodeDragStop}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
@@ -436,21 +535,8 @@ export function CanvasPage() {
             assets={assets}
             selectedAssetId={selectedNodeId}
             onClose={() => setSimPanelOpen(false)}
-            onAssetStateUpdate={(assetId, properties, status) => {
-              setNodes((nds) =>
-                nds.map((n) => {
-                  if (n.id !== assetId) return n
-                  return {
-                    ...n,
-                    data: {
-                      ...n.data,
-                      liveStatus: status,
-                      liveProperties: properties,
-                    },
-                  }
-                }),
-              )
-            }}
+            simulation={simulation}
+            objectTypeSchemas={objectTypeSchemas}
           />
         )}
       </div>

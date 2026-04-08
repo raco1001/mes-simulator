@@ -60,6 +60,15 @@ public sealed class MongoRelationshipRepository : IRelationshipRepository
         return result.DeletedCount > 0;
     }
 
+    public async Task<bool> ExistsForAssetAsync(string assetId, CancellationToken cancellationToken = default)
+    {
+        var filter = Builders<MongoRelationshipDocument>.Filter.Or(
+            Builders<MongoRelationshipDocument>.Filter.Eq(d => d.FromAssetId, assetId),
+            Builders<MongoRelationshipDocument>.Filter.Eq(d => d.ToAssetId, assetId));
+        var count = await _collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+        return count > 0;
+    }
+
     private static RelationshipDto ToDto(MongoRelationshipDocument doc)
     {
         return new RelationshipDto

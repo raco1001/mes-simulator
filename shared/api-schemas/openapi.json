@@ -175,6 +175,16 @@
           },
           "404": {
             "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict — asset still has relationships",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -1229,12 +1239,19 @@
       },
       "RunSimulationRequest": {
         "type": "object",
-        "required": [
-          "triggerAssetId"
-        ],
+        "description": "Seed assets for simulation. Send non-empty triggerAssetIds (preferred) and/or legacy triggerAssetId. Server dedupes and trims; if both are present, non-empty triggerAssetIds wins. At least one seed is required (validated server-side). Multiple seeds cannot be combined with a non-null patch that carries meaningful fields (MVP).",
         "properties": {
           "triggerAssetId": {
-            "type": "string"
+            "type": "string",
+            "description": "Legacy single seed. Normalized to a one-element list when triggerAssetIds is absent or empty."
+          },
+          "triggerAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Canonical multi-seed list. When non-empty, takes precedence over triggerAssetId."
           },
           "patch": {
             "allOf": [
@@ -1259,6 +1276,11 @@
             "maximum": 5000,
             "default": 1000,
             "description": "Continuous simulation engine polling interval (ms)."
+          },
+          "resetState": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, deletes persisted Mongo states for all participating assets before the run (skipped for what-if dry runs). Re-seeds from asset/schema baseline. Event history is not deleted."
           }
         }
       },
@@ -1579,6 +1601,7 @@
           "status",
           "startedAt",
           "triggerAssetId",
+          "triggerAssetIds",
           "trigger",
           "maxDepth",
           "engineTickIntervalMs",
@@ -1603,7 +1626,15 @@
             "nullable": true
           },
           "triggerAssetId": {
-            "type": "string"
+            "type": "string",
+            "description": "First seed id (legacy / Kafka compat)."
+          },
+          "triggerAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "All seed asset ids for this run (deduped)."
           },
           "trigger": {
             "type": "object",

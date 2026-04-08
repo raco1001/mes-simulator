@@ -1,50 +1,74 @@
-# pipeline
+# Pipeline
 
-Python 기반 데이터 파이프라인 (Kafka consume → MongoDB 저장, 추후 Redis/Postgres).
+Python 기반 데이터 파이프라인 서비스입니다. Kafka 이벤트를 처리하고 MongoDB에 분석/추천 결과를 반영합니다.  
+Python data pipeline service that consumes Kafka events and writes analytics/recommendation outputs to MongoDB.
 
-## 요구 사항
+## 요구 사항 / Requirements
 
-- Python 3.12+ (프로젝트별 버전: `.python-version` → pyenv 사용 시 해당 버전 자동 적용)
-- [uv](https://docs.astral.sh/uv/) (권장), (선택) pyenv
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) (권장 / recommended)
 
-## 설치 및 개발 환경
-
-**uv 사용 (권장):**
+## 설치 및 개발 환경 / Setup
 
 ```bash
-# uv 설치 (최초 1회): curl -LsSf https://astral.sh/uv/install.sh | sh
-cd pipeline
-uv venv                              # .python-version 있으면 해당 Python으로 생성
-source .venv/bin/activate             # Windows: .venv\Scripts\activate
+uv venv
+source .venv/bin/activate
 uv pip install -e ".[dev]"
 ```
 
-**재현 가능 설치 (lock 기준):**
+재현 설치(lock 기반) / Reproducible install:
 
 ```bash
-uv venv && source .venv/bin/activate
-uv pip sync requirements.lock         # requirements.lock 기준 정확히 설치
-uv pip install -e ".[dev]"            # dev 의존성 + editable
+uv venv
+source .venv/bin/activate
+uv pip sync requirements.lock
+uv pip install -e ".[dev]"
 ```
 
-## 테스트
+## 실행 / Run
+
+워크커 실행 / Worker:
 
 ```bash
-pytest tests -v
-# 또는 (가상환경 없이): uv run pytest tests -v
+uv run python -m workers.asset_worker
 ```
 
-## Health Check 실행
+헬스체크 / Health check:
 
 ```bash
-pipeline-health
-# 또는 (가상환경 없이): uv run pipeline-health
-# 또는: python -m workers.health_worker
+uv run pipeline-health
 ```
 
-정상 시 JSON 출력 후 exit code 0.
+## 테스트 / Test
 
-## 구조
+```bash
+uv run pytest tests -v
+```
 
-- [structure.md](structure.md) — 디렉터리 및 아키텍처 개요.
-- [documentation/pipeline/](../documentation/pipeline/) — 설정, 모듈, 운영 문서.
+## 현재 역할 / Current Role
+
+- Kafka asset/simulation 관련 이벤트 소비
+- MongoDB 상태/이벤트 기반 분석 보조
+- 추천(Recommendation) 생성 및 피드백 루프 지원(phase 14/15 맥락)
+
+## 계약 연동 / Contract Alignment
+
+- API: `../../shared/api-schemas/openapi.json`
+- Events: `../../shared/event-schemas/`
+- Ontology: `../../shared/ontology-schemas/`
+
+파이프라인 입력/출력 스키마는 shared contract와 함께 검토해야 합니다.  
+Pipeline input/output assumptions should be validated against shared contracts.
+
+## 트러블슈팅 / Troubleshooting
+
+- Kafka 연결 실패: bootstrap server 및 topic 이름 확인
+- Mongo write 실패: URL/auth/db 이름(`factory_mes`) 확인
+- 처리 지연: consumer group lag와 브로커 상태 확인
+
+## 참고 문서 / References
+
+- `structure.md`
+- `../../documentation/pipeline/README.md`
+- `../../documentation/planning/to-be-phases/phase-14-pipeline-analytics.md`
+- `../../documentation/planning/to-be-phases/phase-15-whatif-actions.md`

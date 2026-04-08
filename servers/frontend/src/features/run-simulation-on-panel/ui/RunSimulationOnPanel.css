@@ -35,6 +35,88 @@
   cursor: not-allowed;
 }
 
+.sim-panel__reset-state {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  line-height: 1.35;
+}
+
+.sim-panel__reset-state input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.sim-panel__trigger-list {
+  margin-bottom: 0.75rem;
+}
+
+.sim-panel__trigger-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sim-panel__link-btn {
+  padding: 0;
+  font-size: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--app-accent, #5b9bd5);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.sim-panel__link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sim-panel__trigger-checkboxes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--app-border, #555);
+  border-radius: 4px;
+}
+
+.sim-panel__trigger-checkboxes li {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--app-border, #444);
+}
+
+.sim-panel__trigger-checkboxes li:last-child {
+  border-bottom: none;
+}
+
+.sim-panel__trigger-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.sim-panel__hint {
+  font-size: 0.75rem;
+  color: var(--app-muted, #888);
+  margin: 0 0 0.5rem;
+}
+
+.sim-panel__running-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-muted, #888);
+}
+
 .sim-panel__section {
   margin-bottom: 1rem;
 }

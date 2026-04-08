@@ -7,6 +7,11 @@
   color-scheme: light;
   color: var(--app-fg);
 
+  --canvas-node-idle-border: #94a3b8;
+  --canvas-edge-stroke: #94a3b8;
+  --canvas-accent-ok: #2e7d32;
+  --canvas-accent-warn: #ef6c00;
+
   --app-bg: #ffffff;
   --app-bg-secondary: #f1f3f5;
   --app-border: #dee2e6;
@@ -23,6 +28,11 @@
 .assets-canvas-page[data-canvas-theme='dark'] {
   color-scheme: dark;
   color: var(--app-fg);
+
+  --canvas-node-idle-border: #94a3b8;
+  --canvas-edge-stroke: #8b9aab;
+  --canvas-accent-ok: #66bb6a;
+  --canvas-accent-warn: #ffb74d;
 
   --app-bg: #1a1a1a;
   --app-bg-secondary: #2a2a2a;
